@@ -1,4 +1,4 @@
-﻿project_id = "pathfinder-westmarch-server"
+project_id = "pathfinder-westmarch-server"
 
 [api]
 enabled = true
