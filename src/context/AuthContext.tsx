@@ -118,45 +118,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const syncUserProfile = async (SupabaseUser: SupabaseUser): Promise<User> => {
     const transformedUser = transformSupabaseUser(SupabaseUser);
-    const existingUserResponse = await userService.getUserByAuthUserId(transformedUser.id);
 
-    if (existingUserResponse.success && existingUserResponse.data) {
-      await userService.updateLastActive(transformedUser.id);
+    try {
+      const existingUserResponse = await userService.getUserByAuthUserId(transformedUser.id);
 
-      const updateResponse = await userService.updateUser(transformedUser.id, {
+      if (existingUserResponse.success && existingUserResponse.data) {
+        await userService.updateLastActive(transformedUser.id);
+
+        const updateResponse = await userService.updateUser(transformedUser.id, {
+          username: transformedUser.username,
+          avatar: transformedUser.avatar,
+          email: transformedUser.email,
+          globalName: transformedUser.globalName,
+          isOnline: true
+        });
+
+        transformedUser.profile = updateResponse.success && updateResponse.data
+          ? updateResponse.data
+          : existingUserResponse.data;
+
+        return transformedUser;
+      }
+
+      const newUserResponse = await userService.createUser({
+        authUserId: transformedUser.id,
         username: transformedUser.username,
-        avatar: transformedUser.avatar,
-        email: transformedUser.email,
         globalName: transformedUser.globalName,
-        isOnline: true
+        email: transformedUser.email,
+        avatar: transformedUser.avatar,
+        bio: '',
+        joinDate: new Date(),
+        lastActive: new Date(),
+        isOnline: true,
+        settings: defaultSettings,
+        stats: defaultStats
       });
 
-      transformedUser.profile = updateResponse.success && updateResponse.data
-        ? updateResponse.data
-        : existingUserResponse.data;
+      if (!newUserResponse.success || !newUserResponse.data) {
+        throw new Error(`Failed to create user profile: ${newUserResponse.error || 'Unknown error'}`);
+      }
 
-      return transformedUser;
+      transformedUser.profile = newUserResponse.data;
+    } catch (err) {
+      console.error('Signed in, but profile sync failed:', err);
+      setError(err instanceof Error ? err.message : 'Signed in, but profile sync failed');
     }
 
-    const newUserResponse = await userService.createUser({
-      authUserId: transformedUser.id,
-      username: transformedUser.username,
-      globalName: transformedUser.globalName,
-      email: transformedUser.email,
-      avatar: transformedUser.avatar,
-      bio: '',
-      joinDate: new Date(),
-      lastActive: new Date(),
-      isOnline: true,
-      settings: defaultSettings,
-      stats: defaultStats
-    });
-
-    if (!newUserResponse.success || !newUserResponse.data) {
-      throw new Error(`Failed to create user profile: ${newUserResponse.error || 'Unknown error'}`);
-    }
-
-    transformedUser.profile = newUserResponse.data;
     return transformedUser;
   };
 
