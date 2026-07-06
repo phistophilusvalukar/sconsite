@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '../config/database';
 import { UserService } from '../services/userService';
 import { UserProfile } from '../types/database';
-import { supabase } from '../config/database';
 
 interface User {
   id: string;
@@ -55,59 +55,43 @@ const defaultStats = {
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const userService = UserService.getInstance();
+  const userService = useMemo(() => UserService.getInstance(), []);
+
+  const user = useMemo(() => {
+    if (!session?.user) return null;
+
+    return {
+      ...transformSupabaseUser(session.user),
+      profile,
+    };
+  }, [session, profile]);
 
   useEffect(() => {
     let isMounted = true;
 
-    const initializeAuth = async () => {
-      try {
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          throw sessionError;
-        }
-
-        if (data.session?.user && isMounted) {
-          const appUser = await syncUserProfile(data.session.user);
-          setUser(appUser);
-        }
-      } catch (err) {
-        console.error('Failed to initialize auth:', err);
-        setError(err instanceof Error ? err.message : 'Failed to initialize authentication');
-        setUser(null);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    initializeAuth();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    supabase.auth.getSession().then(({ data, error: sessionError }) => {
       if (!isMounted) return;
 
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        if (session?.user) {
-          const appUser = await syncUserProfile(session.user);
-          setUser(appUser);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error('Auth state change failed:', err);
-        setError(err instanceof Error ? err.message : 'Authentication failed');
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+      if (sessionError) {
+        console.error('Failed to restore auth session:', sessionError);
+        setError(sessionError.message);
       }
+
+      setSession(data.session ?? null);
+      setIsLoading(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!isMounted) return;
+
+      setSession(nextSession);
+      setProfile(undefined);
+      setError(null);
+      setIsLoading(false);
     });
 
     return () => {
@@ -116,118 +100,112 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const syncUserProfile = async (SupabaseUser: SupabaseUser): Promise<User> => {
-    const transformedUser = transformSupabaseUser(SupabaseUser);
+  useEffect(() => {
+    if (!session?.user) return;
 
-    try {
-      const existingUserResponse = await userService.getUserByAuthUserId(transformedUser.id);
+    let isCurrent = true;
 
-      if (existingUserResponse.success && existingUserResponse.data) {
-        await userService.updateLastActive(transformedUser.id);
-
-        const updateResponse = await userService.updateUser(transformedUser.id, {
-          username: transformedUser.username,
-          avatar: transformedUser.avatar,
-          email: transformedUser.email,
-          globalName: transformedUser.globalName,
-          isOnline: true
-        });
-
-        transformedUser.profile = updateResponse.success && updateResponse.data
-          ? updateResponse.data
-          : existingUserResponse.data;
-
-        return transformedUser;
-      }
-
-      const newUserResponse = await userService.createUser({
-        authUserId: transformedUser.id,
-        username: transformedUser.username,
-        globalName: transformedUser.globalName,
-        email: transformedUser.email,
-        avatar: transformedUser.avatar,
-        bio: '',
-        joinDate: new Date(),
-        lastActive: new Date(),
-        isOnline: true,
-        settings: defaultSettings,
-        stats: defaultStats
+    syncUserProfile(session.user)
+      .then((syncedProfile) => {
+        if (isCurrent) {
+          setProfile(syncedProfile);
+        }
+      })
+      .catch((err) => {
+        console.error('Signed in, but profile sync failed:', err);
+        if (isCurrent) {
+          setError(err instanceof Error ? err.message : 'Signed in, but profile sync failed');
+        }
       });
 
-      if (!newUserResponse.success || !newUserResponse.data) {
-        throw new Error(`Failed to create user profile: ${newUserResponse.error || 'Unknown error'}`);
-      }
+    return () => {
+      isCurrent = false;
+    };
+  }, [session?.user?.id]);
 
-      transformedUser.profile = newUserResponse.data;
-    } catch (err) {
-      console.error('Signed in, but profile sync failed:', err);
-      setError(err instanceof Error ? err.message : 'Signed in, but profile sync failed');
+  const syncUserProfile = async (supabaseUser: SupabaseUser): Promise<UserProfile | undefined> => {
+    const transformedUser = transformSupabaseUser(supabaseUser);
+    const existingUserResponse = await userService.getUserByAuthUserId(transformedUser.id);
+
+    if (existingUserResponse.success && existingUserResponse.data) {
+      await userService.updateLastActive(transformedUser.id);
+
+      const updateResponse = await userService.updateUser(transformedUser.id, {
+        username: transformedUser.username,
+        avatar: transformedUser.avatar,
+        email: transformedUser.email,
+        globalName: transformedUser.globalName,
+        isOnline: true
+      });
+
+      return updateResponse.success && updateResponse.data
+        ? updateResponse.data
+        : existingUserResponse.data;
     }
 
-    return transformedUser;
+    const newUserResponse = await userService.createUser({
+      authUserId: transformedUser.id,
+      username: transformedUser.username,
+      globalName: transformedUser.globalName,
+      email: transformedUser.email,
+      avatar: transformedUser.avatar,
+      bio: '',
+      joinDate: new Date(),
+      lastActive: new Date(),
+      isOnline: true,
+      settings: defaultSettings,
+      stats: defaultStats
+    });
+
+    if (!newUserResponse.success || !newUserResponse.data) {
+      throw new Error(`Failed to create user profile: ${newUserResponse.error || 'Unknown error'}`);
+    }
+
+    return newUserResponse.data;
   };
 
   const login = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+    setIsLoading(true);
+    setError(null);
 
-      const { error: signInError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
+    const { error: signInError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
         },
-      });
+      },
+    });
 
-      if (signInError) {
-        throw signInError;
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
-      setError(errorMessage);
+    if (signInError) {
       setIsLoading(false);
-      throw err;
+      setError(signInError.message);
+      throw signInError;
     }
   };
 
   const logout = async () => {
-    if (user?.id) {
-      await userService.setUserOffline(user.id);
+    const userId = session?.user?.id;
+    if (userId) {
+      await userService.setUserOffline(userId);
     }
 
     await supabase.auth.signOut();
-    setUser(null);
+    setSession(null);
+    setProfile(undefined);
     setError(null);
   };
 
   const refreshUserProfile = async () => {
-    if (!user?.id) return;
+    const userId = session?.user?.id;
+    if (!userId) return;
 
-    try {
-      const userResponse = await userService.getUserByAuthUserId(user.id);
-      if (userResponse.success && userResponse.data) {
-        setUser(prev => prev ? { ...prev, profile: userResponse.data } : null);
-      }
-    } catch (err) {
-      console.error('Failed to refresh user profile:', err);
+    const userResponse = await userService.getUserByAuthUserId(userId);
+    if (userResponse.success && userResponse.data) {
+      setProfile(userResponse.data);
     }
-  };
-
-  const transformSupabaseUser = (SupabaseUser: SupabaseUser): User => {
-    const metadata = SupabaseUser.user_metadata || {};
-    const username = metadata.full_name || metadata.name || metadata.preferred_username || SupabaseUser.email || 'Adventurer';
-
-    return {
-      id: SupabaseUser.id,
-      username,
-      avatar: metadata.avatar_url || metadata.picture || '',
-      email: SupabaseUser.email || '',
-      globalName: metadata.full_name || metadata.name || null,
-    };
   };
 
   return (
@@ -235,7 +213,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       user,
       login,
       logout,
-      isAuthenticated: user !== null,
+      isAuthenticated: Boolean(session?.user),
       isLoading,
       error,
       refreshUserProfile
@@ -243,4 +221,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+const transformSupabaseUser = (supabaseUser: SupabaseUser): User => {
+  const metadata = supabaseUser.user_metadata || {};
+  const username = metadata.full_name || metadata.name || metadata.preferred_username || supabaseUser.email || 'Adventurer';
+
+  return {
+    id: supabaseUser.id,
+    username,
+    avatar: metadata.avatar_url || metadata.picture || '',
+    email: supabaseUser.email || '',
+    globalName: metadata.full_name || metadata.name || null,
+  };
 };
