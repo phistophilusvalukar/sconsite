@@ -6,6 +6,7 @@ import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import CharacterPage from './pages/CharacterPage';
+import CitizenRegistryPage from './pages/CitizenRegistryPage';
 import GuildsPage from './pages/GuildsPage';
 import NewsPage from './pages/NewsPage';
 import ProfilePage from './pages/ProfilePage';
@@ -23,6 +24,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/characters" element={<CharacterPage />} />
+              <Route path="/citizens" element={<CitizenRegistryPage />} />
               <Route path="/guilds" element={<GuildsPage />} />
               <Route path="/news" element={<NewsPage />} />
               <Route path="/profile" element={<ProfilePage />} />

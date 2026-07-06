@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, Menu, X, Users, Scroll, Newspaper, User } from 'lucide-react';
+import { Shield, Menu, X, Users, Scroll, Newspaper, User, ClipboardList } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import GoogleLogin from './GoogleLogin';
 
@@ -13,6 +13,7 @@ const Header: React.FC = () => {
     { name: 'Home', href: '/', icon: Shield },
     { name: 'About', href: '/about', icon: Scroll },
     { name: 'Characters', href: '/characters', icon: User },
+    { name: 'Registry', href: '/citizens', icon: ClipboardList },
     { name: 'Guilds', href: '/guilds', icon: Users },
     { name: 'News', href: '/news', icon: Newspaper },
   ];
