@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Crown, Loader2, Plus, Search, Shield, UserPlus, Users } from 'lucide-react';
+import { Crown, Loader2, LogOut, Plus, Search, Shield, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Character, Guild, UserProfile } from '../types/database';
+import { Character, Guild } from '../types/database';
 import { CharacterService } from '../services/characterService';
 import GuildService from '../services/guildService';
-import { UserService } from '../services/userService';
 
 const GuildsPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -23,7 +22,7 @@ const GuildsPage: React.FC = () => {
     requirements: ''
   });
   const [founderSearch, setFounderSearch] = useState('');
-  const [founderResults, setFounderResults] = useState<UserProfile[]>([]);
+  const [founderResults, setFounderResults] = useState<Character[]>([]);
   const [applicationRole, setApplicationRole] = useState<'Officer' | 'Member' | 'Ally'>('Member');
   const [applicationCharacterId, setApplicationCharacterId] = useState('');
   const [applicationMessage, setApplicationMessage] = useState('');
@@ -31,7 +30,6 @@ const GuildsPage: React.FC = () => {
 
   const guildService = useMemo(() => GuildService.getInstance(), []);
   const characterService = useMemo(() => CharacterService.getInstance(), []);
-  const userService = useMemo(() => UserService.getInstance(), []);
 
   const selectedGuild = guilds.find(guild => guild._id === selectedGuildId);
   const eligibleLeaderCharacters = characters.filter(character => character.level >= 4);
@@ -102,20 +100,20 @@ const GuildsPage: React.FC = () => {
   };
 
   const handleSearchFounders = async () => {
-    if (!founderSearch.trim()) return;
+    if (!founderSearch.trim() || !selectedGuild?._id || !user?.id) return;
 
-    const response = await userService.searchUsers(founderSearch, 8);
+    const response = await guildService.searchEligibleFoundingCharacters(selectedGuild._id, user.id, founderSearch);
     if (response.success && response.data) {
-      setFounderResults(response.data.filter(result => result.authUserId !== user?.id));
+      setFounderResults(response.data);
     } else {
-      alert(response.error || 'Failed to search users');
+      alert(response.error || 'Failed to search characters');
     }
   };
 
-  const handleAddFounder = async (founder: UserProfile) => {
+  const handleAddFounder = async (founder: Character) => {
     if (!selectedGuild?._id || !user?.id) return;
 
-    const result = await guildService.addFoundingMember(selectedGuild._id, user.id, founder.authUserId);
+    const result = await guildService.addFoundingMember(selectedGuild._id, user.id, founder._id || '');
     if (result.success) {
       setFounderSearch('');
       setFounderResults([]);
@@ -127,6 +125,10 @@ const GuildsPage: React.FC = () => {
 
   const handleApply = async () => {
     if (!selectedGuild?._id || !user?.id) return;
+    if (!applicationCharacterId) {
+      alert('Choose a character before applying.');
+      return;
+    }
 
     const result = await guildService.applyToGuild(
       selectedGuild._id,
@@ -151,9 +153,11 @@ const GuildsPage: React.FC = () => {
   };
 
   const getFoundingCount = (guild: Guild) =>
-    guild.memberships?.filter(member => member.membershipStatus === 'Active' && member.roleCategory !== 'Ally').length || 0;
+    guild.memberships?.filter(member => member.membershipStatus === 'Active' && member.roleCategory !== 'Ally' && member.roleCategory !== 'Leader').length || 0;
 
   const isSelectedGuildLeader = Boolean(selectedGuild && user?.id === selectedGuild.leaderId);
+  const currentUserMembership = selectedGuild?.memberships?.find(member => member.userId === user?.id && member.membershipStatus === 'Active');
+  const currentUserHasCharacterInGuild = Boolean(currentUserMembership);
   const pendingApplications = selectedGuild?.applications?.filter(application => application.status === 'Pending') || [];
 
   const getMemberEdit = (memberId: string, roleCategory: 'Officer' | 'Member' | 'Ally', roleTitle = '') =>
@@ -213,6 +217,20 @@ const GuildsPage: React.FC = () => {
       await loadGuilds();
     } else {
       alert(result.error || `Failed to ${decision} application`);
+    }
+  };
+
+  const handleLeaveGuild = async (membershipId?: string) => {
+    if (!membershipId || !selectedGuild?._id || !user?.id) return;
+
+    const confirmed = window.confirm('Leave this guild? Your character will be removed from the roster.');
+    if (!confirmed) return;
+
+    const result = await guildService.leaveGuild(selectedGuild._id, user.id, membershipId);
+    if (result.success) {
+      await Promise.all([loadGuilds(), loadCharacters()]);
+    } else {
+      alert(result.error || 'Failed to leave guild');
     }
   };
 
@@ -288,7 +306,7 @@ const GuildsPage: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-2 text-gray-300">
                     <Users className="w-4 h-4 text-blue-400" />
-                    <span>{getFoundingCount(guild)}/{guild.foundingRequired || 4} founders</span>
+                    <span>{getFoundingCount(guild)}/{guild.foundingRequired || 3} founding members</span>
                   </div>
                 </div>
               </button>
@@ -322,20 +340,39 @@ const GuildsPage: React.FC = () => {
                 <div className="space-y-2">
                   {(selectedGuild.memberships || []).map(member => {
                     const canEditRole = isSelectedGuildLeader && member.roleCategory !== 'Leader' && Boolean(member._id);
+                    const canLeaveGuild = member.userId === user?.id && member.membershipStatus === 'Active';
                     const edit = member._id
                       ? getMemberEdit(member._id, member.roleCategory as 'Officer' | 'Member' | 'Ally', member.roleTitle)
                       : { roleCategory: member.roleCategory, roleTitle: member.roleTitle || '' };
+                    const characterName = member.character?.name || 'Unknown character';
+                    const characterMeta = [
+                      member.character?.class,
+                      member.character?.level ? `Level ${member.character.level}` : ''
+                    ].filter(Boolean).join(' - ');
 
                     return (
                       <div key={member._id} className="p-3 bg-fantasy-800/30 rounded-lg">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                           <div>
-                            <p className="text-white font-medium">{member.roleTitle || member.roleCategory}</p>
-                            <p className="text-xs text-gray-400">{member.userId}</p>
+                            <p className="text-white font-medium">{characterName}</p>
+                            <p className="text-xs text-gray-400">
+                              {member.roleTitle || member.roleCategory}{characterMeta ? ` - ${characterMeta}` : ''}
+                            </p>
                           </div>
-                          {!canEditRole && (
-                            <span className="text-sm text-gray-300">{member.roleCategory}</span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {!canEditRole && (
+                              <span className="text-sm text-gray-300">{member.roleCategory}</span>
+                            )}
+                            {canLeaveGuild && (
+                              <button
+                                onClick={() => handleLeaveGuild(member._id)}
+                                className="flex items-center gap-1 px-3 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg"
+                              >
+                                <LogOut className="w-4 h-4" />
+                                <span>Leave</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {canEditRole && (
@@ -373,14 +410,14 @@ const GuildsPage: React.FC = () => {
                   <div className="mt-6 p-4 bg-fantasy-800/30 rounded-lg">
                     <h3 className="text-lg font-bold text-white mb-3">Add Founding Members</h3>
                     <p className="text-gray-300 text-sm mb-4">
-                      A guild becomes Active when it has 1 leader and 3 additional founding members.
+                      A guild becomes Active when it has a leader and 3 founding member characters.
                     </p>
                     <div className="flex gap-2 mb-3">
                       <input
                         type="text"
                         value={founderSearch}
                         onChange={(e) => setFounderSearch(e.target.value)}
-                        placeholder="Search users by name"
+                        placeholder="Search characters by name"
                         className="flex-1 p-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                       />
                       <button
@@ -392,8 +429,11 @@ const GuildsPage: React.FC = () => {
                     </div>
                     <div className="space-y-2">
                       {founderResults.map(founder => (
-                        <div key={founder.authUserId} className="flex items-center justify-between p-2 bg-fantasy-900/40 rounded">
-                          <span className="text-white">{founder.globalName || founder.username}</span>
+                        <div key={founder._id} className="flex items-center justify-between p-2 bg-fantasy-900/40 rounded">
+                          <div>
+                            <p className="text-white">{founder.name}</p>
+                            <p className="text-xs text-gray-400">Level {founder.level} {founder.class}</p>
+                          </div>
                           <button
                             onClick={() => handleAddFounder(founder)}
                             className="flex items-center space-x-1 px-3 py-1 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 rounded font-medium"
@@ -418,8 +458,11 @@ const GuildsPage: React.FC = () => {
                           <div key={application._id} className="p-3 bg-fantasy-900/40 rounded-lg">
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                               <div>
-                                <p className="text-white font-medium">{application.userId}</p>
+                                <p className="text-white font-medium">{application.character?.name || 'Unknown character'}</p>
                                 <p className="text-sm text-gray-400">Requested role: {application.requestedRoleCategory}</p>
+                                {application.character && (
+                                  <p className="text-sm text-gray-400">Level {application.character.level} {application.character.class}</p>
+                                )}
                                 {application.message && (
                                   <p className="text-sm text-gray-300 mt-2">{application.message}</p>
                                 )}
@@ -447,48 +490,50 @@ const GuildsPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="p-4 bg-fantasy-800/30 rounded-lg">
-                <h3 className="text-lg font-bold text-white mb-3">Apply to Join</h3>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Role Type</label>
-                <select
-                  value={applicationRole}
-                  onChange={(e) => setApplicationRole(e.target.value as 'Officer' | 'Member' | 'Ally')}
-                  className="w-full p-3 mb-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white"
-                >
-                  <option value="Member">Member</option>
-                  <option value="Officer">Officer</option>
-                  <option value="Ally">Ally</option>
-                </select>
+              {!currentUserHasCharacterInGuild && (
+                <div className="p-4 bg-fantasy-800/30 rounded-lg">
+                  <h3 className="text-lg font-bold text-white mb-3">Apply to Join</h3>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Role Type</label>
+                  <select
+                    value={applicationRole}
+                    onChange={(e) => setApplicationRole(e.target.value as 'Officer' | 'Member' | 'Ally')}
+                    className="w-full p-3 mb-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white"
+                  >
+                    <option value="Member">Member</option>
+                    <option value="Officer">Officer</option>
+                    <option value="Ally">Ally</option>
+                  </select>
 
-                <label className="block text-sm font-medium text-gray-400 mb-2">Character</label>
-                <select
-                  value={applicationCharacterId}
-                  onChange={(e) => setApplicationCharacterId(e.target.value)}
-                  className="w-full p-3 mb-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white"
-                >
-                  <option value="">No character selected</option>
-                  {characters.map(character => (
-                    <option key={character._id} value={character._id}>
-                      {character.name} - Level {character.level}
-                    </option>
-                  ))}
-                </select>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Character</label>
+                  <select
+                    value={applicationCharacterId}
+                    onChange={(e) => setApplicationCharacterId(e.target.value)}
+                    className="w-full p-3 mb-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white"
+                  >
+                    <option value="">Choose a character</option>
+                    {characters.map(character => (
+                      <option key={character._id} value={character._id}>
+                        {character.name} - Level {character.level}
+                      </option>
+                    ))}
+                  </select>
 
-                <textarea
-                  value={applicationMessage}
-                  onChange={(e) => setApplicationMessage(e.target.value)}
-                  rows={4}
-                  placeholder="Application message"
-                  className="w-full p-3 mb-4 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 resize-none"
-                />
+                  <textarea
+                    value={applicationMessage}
+                    onChange={(e) => setApplicationMessage(e.target.value)}
+                    rows={4}
+                    placeholder="Application message"
+                    className="w-full p-3 mb-4 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 resize-none"
+                  />
 
-                <button
-                  onClick={handleApply}
-                  className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg"
-                >
-                  Submit Application
-                </button>
-              </div>
+                  <button
+                    onClick={handleApply}
+                    className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg"
+                  >
+                    Submit Application
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
