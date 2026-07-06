@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (err) {
         console.error('Failed to initialize auth:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize authentication');
-        await supabase.auth.signOut();
+        setUser(null);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const syncUserProfile = async (SupabaseUser: SupabaseUser): Promise<User> => {
     const transformedUser = transformSupabaseUser(SupabaseUser);
-    const existingUserResponse = await userService.getUserBySupabaseUserId(transformedUser.id);
+    const existingUserResponse = await userService.getUserByAuthUserId(transformedUser.id);
 
     if (existingUserResponse.success && existingUserResponse.data) {
       await userService.updateLastActive(transformedUser.id);
@@ -139,7 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const newUserResponse = await userService.createUser({
-      SupabaseUserId: transformedUser.id,
+      authUserId: transformedUser.id,
       username: transformedUser.username,
       globalName: transformedUser.globalName,
       email: transformedUser.email,
@@ -201,7 +201,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user?.id) return;
 
     try {
-      const userResponse = await userService.getUserBySupabaseUserId(user.id);
+      const userResponse = await userService.getUserByAuthUserId(user.id);
       if (userResponse.success && userResponse.data) {
         setUser(prev => prev ? { ...prev, profile: userResponse.data } : null);
       }
