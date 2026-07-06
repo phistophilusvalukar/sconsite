@@ -1,4 +1,4 @@
-﻿/*
+/*
   # Move from custom Discord OAuth to Supabase Google Auth
 
   1. Schema
