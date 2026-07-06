@@ -20,11 +20,11 @@ const Footer: React.FC = () => {
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://discord.gg/pathfinder"
+                href="/about"
                 className="flex items-center space-x-2 text-gray-400 hover:text-yellow-400 transition-colors"
               >
                 <MessageCircle className="w-5 h-5" />
-                <span>Join Discord</span>
+                <span>Community</span>
               </a>
               <a
                 href="https://github.com/pathfinder-westmarch"
@@ -93,7 +93,7 @@ const Footer: React.FC = () => {
 
         <div className="border-t border-fantasy-800/50 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
           <p className="text-gray-400 text-sm">
-            © 2024 Pathfinder Westmarch Server. Built with{' '}
+            Â© 2024 Pathfinder Westmarch Server. Built with{' '}
             <Heart className="w-4 h-4 inline text-red-500" /> for the community.
           </p>
           <div className="flex space-x-4 mt-4 sm:mt-0">

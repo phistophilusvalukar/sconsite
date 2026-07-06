@@ -1,6 +1,6 @@
 export interface UserProfile {
   _id?: string;
-  discordId: string;
+  authUserId: string;
   username: string;
   discriminator?: string;
   globalName?: string | null;

@@ -91,7 +91,7 @@ const CharacterPage: React.FC = () => {
             Character Management
           </h1>
           <p className="text-xl text-gray-300 mb-8">
-            Please log in with Discord to access your characters.
+            Please log in with Google to access your characters.
           </p>
         </div>
       </div>

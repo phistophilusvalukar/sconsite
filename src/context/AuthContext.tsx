@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { DiscordAuthService, DiscordUser } from '../services/discordAuth';
-import { getDiscordAvatarUrl } from '../config/discord';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import { UserService } from '../services/userService';
 import { UserProfile } from '../types/database';
 import { supabase } from '../config/database';
@@ -10,15 +9,14 @@ interface User {
   username: string;
   avatar: string;
   email: string;
-  discriminator?: string;
   globalName?: string | null;
   profile?: UserProfile;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (code: string) => Promise<void>;
-  logout: () => void;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -39,217 +37,199 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const defaultSettings = {
+  allowWallPosts: true,
+  showOnlineStatus: true,
+  profilePrivate: false,
+  notifications: {
+    guildAnnouncements: true,
+    friendRequests: true,
+    eventReminders: false,
+  }
+};
+
+const defaultStats = {
+  totalSessions: 1,
+  totalAchievements: 0,
+  joinedGuilds: 0,
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const discordAuth = DiscordAuthService.getInstance();
   const userService = UserService.getInstance();
 
   useEffect(() => {
-    // Check if user is already authenticated on app load
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          throw sessionError;
+        }
+
+        if (data.session?.user && isMounted) {
+          const appUser = await syncUserProfile(data.session.user);
+          setUser(appUser);
+        }
+      } catch (err) {
+        console.error('Failed to initialize auth:', err);
+        setError(err instanceof Error ? err.message : 'Failed to initialize authentication');
+        await supabase.auth.signOut();
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     initializeAuth();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        if (session?.user) {
+          const appUser = await syncUserProfile(session.user);
+          setUser(appUser);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('Auth state change failed:', err);
+        setError(err instanceof Error ? err.message : 'Authentication failed');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  const initializeAuth = async () => {
-    try {
-      if (discordAuth.isAuthenticated()) {
-        const discordUser = await discordAuth.getCurrentUser();
-        const transformedUser = transformDiscordUser(discordUser);
-        
-        // Get or create user profile in database using Discord ID
-        await syncUserProfile(transformedUser);
-        
-        setUser(transformedUser);
-      }
-    } catch (err) {
-      console.error('Failed to initialize auth:', err);
-      // Clear invalid tokens
-      discordAuth.clearTokens();
-    } finally {
-      setIsLoading(false);
+  const syncUserProfile = async (SupabaseUser: SupabaseUser): Promise<User> => {
+    const transformedUser = transformSupabaseUser(SupabaseUser);
+    const existingUserResponse = await userService.getUserBySupabaseUserId(transformedUser.id);
+
+    if (existingUserResponse.success && existingUserResponse.data) {
+      await userService.updateLastActive(transformedUser.id);
+
+      const updateResponse = await userService.updateUser(transformedUser.id, {
+        username: transformedUser.username,
+        avatar: transformedUser.avatar,
+        email: transformedUser.email,
+        globalName: transformedUser.globalName,
+        isOnline: true
+      });
+
+      transformedUser.profile = updateResponse.success && updateResponse.data
+        ? updateResponse.data
+        : existingUserResponse.data;
+
+      return transformedUser;
     }
+
+    const newUserResponse = await userService.createUser({
+      SupabaseUserId: transformedUser.id,
+      username: transformedUser.username,
+      globalName: transformedUser.globalName,
+      email: transformedUser.email,
+      avatar: transformedUser.avatar,
+      bio: '',
+      joinDate: new Date(),
+      lastActive: new Date(),
+      isOnline: true,
+      settings: defaultSettings,
+      stats: defaultStats
+    });
+
+    if (!newUserResponse.success || !newUserResponse.data) {
+      throw new Error(`Failed to create user profile: ${newUserResponse.error || 'Unknown error'}`);
+    }
+
+    transformedUser.profile = newUserResponse.data;
+    return transformedUser;
   };
 
-  const syncUserProfile = async (user: User) => {
-    try {
-      console.log('Syncing user profile for Discord ID:', user.id);
-      
-      // Create a temporary Supabase user session for database operations
-      // This is a workaround since we're using Discord OAuth instead of Supabase Auth
-      const { error: signInError } = await supabase.auth.signInAnonymously();
-      if (signInError) {
-        console.warn('Failed to create anonymous session:', signInError);
-      }
-      
-      // Try to get existing user profile using Discord ID
-      const existingUserResponse = await userService.getUserByDiscordId(user.id);
-      
-      if (existingUserResponse.success && existingUserResponse.data) {
-        console.log('Found existing user profile, updating...');
-        
-        // Update existing user's last active and basic info
-        await userService.updateLastActive(user.id);
-        
-        // Update user info in case Discord profile changed
-        const updateResponse = await userService.updateUser(user.id, {
-          username: user.username,
-          avatar: user.avatar,
-          email: user.email,
-          discriminator: user.discriminator,
-          globalName: user.globalName,
-          isOnline: true
-        });
-
-        if (updateResponse.success && updateResponse.data) {
-          user.profile = updateResponse.data;
-          console.log('User profile updated successfully');
-        } else {
-          console.warn('Failed to update user profile:', updateResponse.error);
-          // Still use the existing profile even if update failed
-          user.profile = existingUserResponse.data;
-        }
-      } else {
-        console.log('No existing user profile found, creating new one...');
-        
-        // Create new user profile with Discord ID as primary identifier
-        const newUserData = {
-          discordId: user.id, // Discord ID is the primary key
-          username: user.username,
-          discriminator: user.discriminator,
-          globalName: user.globalName,
-          email: user.email,
-          avatar: user.avatar,
-          bio: '',
-          joinDate: new Date(),
-          lastActive: new Date(),
-          isOnline: true,
-          settings: {
-            allowWallPosts: true,
-            showOnlineStatus: true,
-            profilePrivate: false,
-            notifications: {
-              guildAnnouncements: true,
-              friendRequests: true,
-              eventReminders: false,
-            }
-          },
-          stats: {
-            totalSessions: 1, // First login
-            totalAchievements: 0,
-            joinedGuilds: 0,
-          }
-        };
-
-        const newUserResponse = await userService.createUser(newUserData);
-
-        if (newUserResponse.success && newUserResponse.data) {
-          user.profile = newUserResponse.data;
-          console.log('New user profile created successfully');
-        } else {
-          console.error('Failed to create user profile:', newUserResponse.error);
-          throw new Error(`Failed to create user profile: ${newUserResponse.error}`);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to sync user profile:', error);
-      throw error; // Re-throw to handle in login function
-    }
-  };
-
-  const login = async (code: string) => {
+  const login = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      console.log('Starting login process with authorization code...');
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
 
-      // Exchange code for tokens
-      await discordAuth.exchangeCodeForToken(code);
-      console.log('Successfully exchanged code for tokens');
-      
-      // Get user data from Discord
-      const discordUser = await discordAuth.getCurrentUser();
-      console.log('Retrieved Discord user data:', discordUser.username);
-      
-      const transformedUser = transformDiscordUser(discordUser);
-      
-      // Sync with database - this will create or update the user profile
-      await syncUserProfile(transformedUser);
-      console.log('User profile sync completed');
-      
-      setUser(transformedUser);
-      console.log('Login process completed successfully');
+      if (signInError) {
+        throw signInError;
+      }
     } catch (err) {
-      console.error('Login error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
-      
-      // Clear tokens on login failure
-      discordAuth.clearTokens();
-      throw err;
-    } finally {
       setIsLoading(false);
+      throw err;
     }
   };
 
   const logout = async () => {
     if (user?.id) {
-      console.log('Setting user offline before logout...');
-      // Set user offline in database
       await userService.setUserOffline(user.id);
     }
-    
-    // Sign out from Supabase as well
+
     await supabase.auth.signOut();
-    
-    discordAuth.clearTokens();
     setUser(null);
     setError(null);
-    console.log('Logout completed');
   };
 
   const refreshUserProfile = async () => {
     if (!user?.id) return;
 
     try {
-      console.log('Refreshing user profile...');
-      const userResponse = await userService.getUserByDiscordId(user.id);
+      const userResponse = await userService.getUserBySupabaseUserId(user.id);
       if (userResponse.success && userResponse.data) {
         setUser(prev => prev ? { ...prev, profile: userResponse.data } : null);
-        console.log('User profile refreshed successfully');
-      } else {
-        console.warn('Failed to refresh user profile:', userResponse.error);
       }
-    } catch (error) {
-      console.error('Failed to refresh user profile:', error);
+    } catch (err) {
+      console.error('Failed to refresh user profile:', err);
     }
   };
 
-  const transformDiscordUser = (discordUser: DiscordUser): User => {
-    const avatar = discordUser.avatar 
-      ? getDiscordAvatarUrl(discordUser.id, discordUser.avatar)
-      : `https://cdn.discordapp.com/embed/avatars/${parseInt(discordUser.discriminator) % 5}.png`;
+  const transformSupabaseUser = (SupabaseUser: SupabaseUser): User => {
+    const metadata = SupabaseUser.user_metadata || {};
+    const username = metadata.full_name || metadata.name || metadata.preferred_username || SupabaseUser.email || 'Adventurer';
 
     return {
-      id: discordUser.id, // This is the Discord ID that will be used as primary key
-      username: discordUser.global_name || discordUser.username,
-      avatar,
-      email: discordUser.email,
-      discriminator: discordUser.discriminator,
-      globalName: discordUser.global_name,
+      id: SupabaseUser.id,
+      username,
+      avatar: metadata.avatar_url || metadata.picture || '',
+      email: SupabaseUser.email || '',
+      globalName: metadata.full_name || metadata.name || null,
     };
   };
 
-  const isAuthenticated = user !== null;
-
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      logout, 
-      isAuthenticated, 
-      isLoading, 
+    <AuthContext.Provider value={{
+      user,
+      login,
+      logout,
+      isAuthenticated: user !== null,
+      isLoading,
       error,
       refreshUserProfile
     }}>

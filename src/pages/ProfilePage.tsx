@@ -99,7 +99,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleAvatarUpload = () => {
-    alert('Avatar upload functionality will be implemented. For now, your Discord avatar is used automatically.');
+    alert('Avatar upload functionality will be implemented. For now, your Google profile image is used automatically.');
   };
 
   const mockAchievements = [
@@ -293,7 +293,7 @@ const ProfilePage: React.FC = () => {
                       <div className="text-white">{user.email}</div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-1">Discord ID</label>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Account ID</label>
                       <div className="text-white font-mono text-sm">{user.id}</div>
                     </div>
                   </div>

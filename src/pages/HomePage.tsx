@@ -63,11 +63,11 @@ const HomePage: React.FC = () => {
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <a
-                  href="https://discord.gg/pathfinder"
+                  href="/profile"
                   className="px-8 py-4 border-2 border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-midnight-900 font-bold rounded-lg transition-all flex items-center space-x-2"
                 >
                   <MessageCircle className="w-5 h-5" />
-                  <span>Join Discord</span>
+                  <span>Create Profile</span>
                 </a>
               </>
             ) : (

@@ -380,7 +380,7 @@ export class FriendService {
   private transformUserFromDb(dbUser: any): UserProfile {
     return {
       _id: dbUser.id,
-      discordId: dbUser.discord_id,
+      authUserId: dbUser.auth_user_id,
       username: dbUser.username,
       discriminator: dbUser.discriminator,
       globalName: dbUser.global_name,

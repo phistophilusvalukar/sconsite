@@ -199,12 +199,12 @@ const FriendsList: React.FC = () => {
                     <MessageCircle className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleRemoveFriend(friend.discordId)}
-                    disabled={actionLoading[friend.discordId]}
+                    onClick={() => handleRemoveFriend(friend.authUserId)}
+                    disabled={actionLoading[friend.authUserId]}
                     className="p-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
                     title="Remove Friend"
                   >
-                    {actionLoading[friend.discordId] ? (
+                    {actionLoading[friend.authUserId] ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <UserMinus className="w-4 h-4" />

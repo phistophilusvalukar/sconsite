@@ -21,13 +21,13 @@ export class UserService {
     try {
       const supabase = this.dbService.getClient();
 
-      console.log('Creating user with Discord ID:', userData.discordId);
+      console.log('Creating user with auth user ID:', userData.authUserId);
 
-      // Check if user already exists with this Discord ID
+      // Check if user already exists with this auth user ID
       const { data: existingUser, error: checkError } = await supabase
         .from(DATABASE_TABLES.USERS)
         .select('*')
-        .eq('discord_id', userData.discordId)
+        .eq('auth_user_id', userData.authUserId)
         .maybeSingle();
 
       // Log the check error for debugging
@@ -36,16 +36,16 @@ export class UserService {
       }
 
       if (existingUser) {
-        console.log('User already exists with Discord ID:', userData.discordId);
+        console.log('User already exists with auth user ID:', userData.authUserId);
         return {
           success: false,
-          error: 'User already exists with this Discord ID'
+          error: 'User already exists with this auth user ID'
         };
       }
 
       const now = new Date().toISOString();
       const newUser = {
-        discord_id: userData.discordId, // Primary identifier
+        auth_user_id: userData.authUserId, // Primary identifier
         username: userData.username,
         discriminator: userData.discriminator,
         global_name: userData.globalName,
@@ -74,7 +74,7 @@ export class UserService {
         updated_at: now
       };
 
-      console.log('Attempting to insert user:', { discord_id: newUser.discord_id, username: newUser.username });
+      console.log('Attempting to insert user:', { auth_user_id: newUser.auth_user_id, username: newUser.username });
 
       const { data, error } = await supabase
         .from(DATABASE_TABLES.USERS)
@@ -90,7 +90,7 @@ export class UserService {
         };
       }
 
-      console.log('User created successfully:', data.discord_id);
+      console.log('User created successfully:', data.auth_user_id);
       return {
         success: true,
         data: this.transformUserFromDb(data),
@@ -105,17 +105,17 @@ export class UserService {
     }
   }
 
-  async getUserByDiscordId(discordId: string): Promise<ApiResponse<UserProfile>> {
+  async getUserByAuthUserId(authUserId: string): Promise<ApiResponse<UserProfile>> {
     try {
       const supabase = this.dbService.getClient();
 
-      console.log('Looking up user by Discord ID:', discordId);
+      console.log('Looking up user by auth user ID:', authUserId);
 
       // Use a more explicit query approach
       const { data, error, count } = await supabase
         .from(DATABASE_TABLES.USERS)
         .select('*', { count: 'exact' })
-        .eq('discord_id', discordId);
+        .eq('auth_user_id', authUserId);
 
       console.log('Query result:', { data, error, count });
 
@@ -128,7 +128,7 @@ export class UserService {
       }
 
       if (!data || data.length === 0) {
-        console.log('User not found with Discord ID:', discordId);
+        console.log('User not found with auth user ID:', authUserId);
         return {
           success: false,
           error: 'User not found'
@@ -142,7 +142,7 @@ export class UserService {
         data: this.transformUserFromDb(user)
       };
     } catch (error) {
-      console.error('Error fetching user by Discord ID:', error);
+      console.error('Error fetching user by auth user ID:', error);
       return {
         success: false,
         error: 'Failed to fetch user'
@@ -150,11 +150,11 @@ export class UserService {
     }
   }
 
-  async updateUser(discordId: string, updates: Partial<UserProfile>): Promise<ApiResponse<UserProfile>> {
+  async updateUser(authUserId: string, updates: Partial<UserProfile>): Promise<ApiResponse<UserProfile>> {
     try {
       const supabase = this.dbService.getClient();
 
-      console.log('Updating user with Discord ID:', discordId);
+      console.log('Updating user with auth user ID:', authUserId);
 
       const updateData: any = {
         updated_at: new Date().toISOString()
@@ -174,7 +174,7 @@ export class UserService {
       const { data, error } = await supabase
         .from(DATABASE_TABLES.USERS)
         .update(updateData)
-        .eq('discord_id', discordId)
+        .eq('auth_user_id', authUserId)
         .select()
         .single();
 
@@ -208,11 +208,11 @@ export class UserService {
     }
   }
 
-  async updateLastActive(discordId: string): Promise<void> {
+  async updateLastActive(authUserId: string): Promise<void> {
     try {
       const supabase = this.dbService.getClient();
 
-      console.log('Updating last active for Discord ID:', discordId);
+      console.log('Updating last active for auth user ID:', authUserId);
 
       const { error } = await supabase
         .from(DATABASE_TABLES.USERS)
@@ -221,7 +221,7 @@ export class UserService {
           is_online: true,
           updated_at: new Date().toISOString()
         })
-        .eq('discord_id', discordId);
+        .eq('auth_user_id', authUserId);
 
       if (error) {
         console.error('Failed to update last active:', error);
@@ -231,11 +231,11 @@ export class UserService {
     }
   }
 
-  async setUserOffline(discordId: string): Promise<void> {
+  async setUserOffline(authUserId: string): Promise<void> {
     try {
       const supabase = this.dbService.getClient();
 
-      console.log('Setting user offline for Discord ID:', discordId);
+      console.log('Setting user offline for auth user ID:', authUserId);
 
       const { error } = await supabase
         .from(DATABASE_TABLES.USERS)
@@ -243,7 +243,7 @@ export class UserService {
           is_online: false,
           updated_at: new Date().toISOString()
         })
-        .eq('discord_id', discordId);
+        .eq('auth_user_id', authUserId);
 
       if (error) {
         console.error('Failed to set user offline:', error);
@@ -287,16 +287,16 @@ export class UserService {
     }
   }
 
-  async deleteUser(discordId: string): Promise<ApiResponse<boolean>> {
+  async deleteUser(authUserId: string): Promise<ApiResponse<boolean>> {
     try {
       const supabase = this.dbService.getClient();
 
-      console.log('Deleting user with Discord ID:', discordId);
+      console.log('Deleting user with auth user ID:', authUserId);
 
       const { error } = await supabase
         .from(DATABASE_TABLES.USERS)
         .delete()
-        .eq('discord_id', discordId);
+        .eq('auth_user_id', authUserId);
 
       if (error) {
         console.error('Failed to delete user:', error);
@@ -321,17 +321,17 @@ export class UserService {
     }
   }
 
-  async getUserStats(discordId: string): Promise<ApiResponse<any>> {
+  async getUserStats(authUserId: string): Promise<ApiResponse<any>> {
     try {
       const supabase = this.dbService.getClient();
 
-      console.log('Getting user stats for Discord ID:', discordId);
+      console.log('Getting user stats for auth user ID:', authUserId);
 
       // Get user's basic stats
       const { data: user, error: userError } = await supabase
         .from(DATABASE_TABLES.USERS)
         .select('stats, created_at')
-        .eq('discord_id', discordId)
+        .eq('auth_user_id', authUserId)
         .single();
 
       if (userError || !user) {
@@ -350,16 +350,16 @@ export class UserService {
         supabase
           .from(DATABASE_TABLES.WALL_POSTS)
           .select('*', { count: 'exact', head: true })
-          .eq('author_id', discordId),
+          .eq('author_id', authUserId),
         supabase
           .from(DATABASE_TABLES.FRIENDSHIPS)
           .select('*', { count: 'exact', head: true })
-          .or(`requester_id.eq.${discordId},addressee_id.eq.${discordId}`)
+          .or(`requester_id.eq.${authUserId},addressee_id.eq.${authUserId}`)
           .eq('status', 'accepted'),
         supabase
           .from(DATABASE_TABLES.CHARACTERS)
           .select('*', { count: 'exact', head: true })
-          .eq('user_id', discordId)
+          .eq('user_id', authUserId)
       ]);
 
       const stats = {
@@ -386,7 +386,7 @@ export class UserService {
   private transformUserFromDb(dbUser: any): UserProfile {
     return {
       _id: dbUser.id,
-      discordId: dbUser.discord_id, // This is the primary identifier
+      authUserId: dbUser.auth_user_id, // This is the primary identifier
       username: dbUser.username,
       discriminator: dbUser.discriminator,
       globalName: dbUser.global_name,

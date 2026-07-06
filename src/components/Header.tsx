@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Shield, Menu, X, Users, Scroll, Newspaper, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import DiscordLogin from './DiscordLogin';
+import GoogleLogin from './GoogleLogin';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -63,7 +63,7 @@ const Header: React.FC = () => {
                 <span>{user?.username}</span>
               </Link>
             ) : (
-              <DiscordLogin />
+              <GoogleLogin />
             )}
           </div>
 
@@ -116,7 +116,7 @@ const Header: React.FC = () => {
                   </Link>
                 ) : (
                   <div className="px-3">
-                    <DiscordLogin />
+                    <GoogleLogin />
                   </div>
                 )}
               </div>

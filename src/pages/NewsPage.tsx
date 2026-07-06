@@ -37,7 +37,7 @@ const NewsPage: React.FC = () => {
       id: 3,
       title: "Server Update 2.4: Enhanced Character Tools",
       excerpt: "New features for character management, improved FoundryVTT integration, and quality of life improvements now live.",
-      content: "We're excited to announce Server Update 2.4 is now live! This update brings significant improvements to character management, including enhanced FoundryVTT file synchronization, automatic backup systems, and a new character comparison tool. We've also added guild badge tracking, improved social features, and fixed several bugs reported by the community. Check out the full changelog in our Discord announcements channel.",
+      content: "We're excited to announce Server Update 2.4 is now live! This update brings significant improvements to character management, including enhanced FoundryVTT file synchronization, automatic backup systems, and a new character comparison tool. We've also added guild badge tracking, improved social features, and fixed several bugs reported by the community. Check out the full changelog in the community announcements.",
       category: "Updates",
       author: "Thaldrin Stormcaller",
       date: "3 days ago",
@@ -278,7 +278,7 @@ const NewsPage: React.FC = () => {
           </h2>
           <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
             Stay informed about the latest news, events, and developments in our world. 
-            Join our Discord for real-time updates and community discussions.
+            Check back here for updates and community announcements.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
             <input

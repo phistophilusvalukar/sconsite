@@ -32,16 +32,16 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
         const response = await userService.searchUsers(searchQuery, 10);
         if (response.success && response.data) {
           // Filter out current user
-          const filteredResults = response.data.filter(u => u.discordId !== user?.id);
+          const filteredResults = response.data.filter(u => u.authUserId !== user?.id);
           setSearchResults(filteredResults);
           
           // Get friendship statuses
           if (user?.id) {
             const statuses: Record<string, string> = {};
             for (const searchUser of filteredResults) {
-              const statusResponse = await friendService.getFriendshipStatus(user.id, searchUser.discordId);
+              const statusResponse = await friendService.getFriendshipStatus(user.id, searchUser.authUserId);
               if (statusResponse.success && statusResponse.data) {
-                statuses[searchUser.discordId] = statusResponse.data;
+                statuses[searchUser.authUserId] = statusResponse.data;
               }
             }
             setFriendshipStatuses(statuses);
@@ -120,14 +120,14 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
           ) : (
             <div className="p-2">
               {searchResults.map((searchUser) => {
-                const status = friendshipStatuses[searchUser.discordId] || 'none';
+                const status = friendshipStatuses[searchUser.authUserId] || 'none';
                 const statusDisplay = getFriendshipStatusDisplay(status);
                 const StatusIcon = statusDisplay.icon;
-                const isSendingRequest = sendingRequests[searchUser.discordId];
+                const isSendingRequest = sendingRequests[searchUser.authUserId];
 
                 return (
                   <div
-                    key={searchUser.discordId}
+                    key={searchUser.authUserId}
                     className="flex items-center justify-between p-3 hover:bg-fantasy-800/30 rounded-lg"
                   >
                     <div 
@@ -160,7 +160,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleSendFriendRequest(searchUser.discordId);
+                            handleSendFriendRequest(searchUser.authUserId);
                           }}
                           disabled={isSendingRequest}
                           className="p-2 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-600 text-midnight-900 rounded-lg transition-colors flex items-center"

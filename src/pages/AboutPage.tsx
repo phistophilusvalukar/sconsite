@@ -82,11 +82,11 @@ const AboutPage: React.FC = () => {
                 can find their place in our ever-evolving narrative.
               </p>
               <a
-                href="https://discord.gg/pathfinder"
+                href="/profile"
                 className="inline-flex items-center space-x-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 font-bold rounded-lg transition-all transform hover:scale-105"
               >
                 <MessageCircle className="w-5 h-5" />
-                <span>Join Our Discord</span>
+                <span>Create Your Profile</span>
                 <ArrowRight className="w-5 h-5" />
               </a>
             </div>
@@ -241,16 +241,15 @@ const AboutPage: React.FC = () => {
             Join Our Community
           </h2>
           <p className="text-xl text-gray-300 mb-8 leading-relaxed">
-            Ready to become part of something bigger? Connect with us on Discord to learn more 
-            about our world, meet other players, and start planning your first adventure.
+            Ready to become part of something bigger? Create a profile to meet other players, manage your characters, and start planning your first adventure.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="https://discord.gg/pathfinder"
-              className="inline-flex items-center space-x-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-all transform hover:scale-105"
+              href="/profile"
+              className="inline-flex items-center space-x-2 px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 font-bold rounded-lg transition-all transform hover:scale-105"
             >
               <MessageCircle className="w-5 h-5" />
-              <span>Join Discord</span>
+              <span>Get Started</span>
             </a>
             <a
               href="/characters"
