@@ -87,9 +87,13 @@ export interface Guild {
   description: string;
   type: string;
   leaderId: string;
+  createdBy?: string;
+  leaderCharacterId?: string;
+  leaderCharacterName?: string;
   logo?: string;
   region: string;
   established: Date;
+  status: 'Active' | 'Inactive' | 'Recruiting';
   recruitmentStatus: 'open' | 'selective' | 'closed';
   requirements: string;
   badges: string[];
@@ -97,6 +101,10 @@ export interface Guild {
   rank: 'bronze' | 'silver' | 'gold' | 'platinum';
   memberCount: number;
   maxMembers: number;
+  foundingRequired?: number;
+  foundedAt?: Date;
+  memberships?: GuildMembership[];
+  applications?: GuildApplication[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -105,10 +113,32 @@ export interface GuildMembership {
   _id?: string;
   guildId: string;
   userId: string;
+  characterId?: string;
   role: 'member' | 'officer' | 'leader';
+  roleCategory: 'Leader' | 'Officer' | 'Member' | 'Ally';
+  roleTitle?: string;
+  membershipStatus: 'Invited' | 'Applied' | 'Active' | 'Rejected';
   joinDate: Date;
+  acceptedAt?: Date;
+  invitedBy?: string;
   badges: string[];
   contributions: number;
+  user?: UserProfile;
+  character?: Character;
+}
+
+export interface GuildApplication {
+  _id?: string;
+  guildId: string;
+  userId: string;
+  characterId?: string;
+  requestedRoleCategory: 'Officer' | 'Member' | 'Ally';
+  message: string;
+  status: 'Pending' | 'Accepted' | 'Rejected' | 'Withdrawn';
+  createdAt: Date;
+  updatedAt: Date;
+  user?: UserProfile;
+  character?: Character;
 }
 
 // API Response types

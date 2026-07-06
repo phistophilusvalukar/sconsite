@@ -1,541 +1,585 @@
-import React, { useState } from 'react';
-import { Users, Crown, Star, Shield, Sword, Search, Filter, ArrowRight, MapPin, Calendar, Plus, Loader2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Crown, Loader2, Plus, Search, Shield, UserPlus, Users } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Character, Guild, UserProfile } from '../types/database';
+import { CharacterService } from '../services/characterService';
+import GuildService from '../services/guildService';
+import { UserService } from '../services/userService';
 
 const GuildsPage: React.FC = () => {
+  const { isAuthenticated, user } = useAuth();
+  const [guilds, setGuilds] = useState<Guild[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGuild, setSelectedGuild] = useState<number | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [showCreateGuild, setShowCreateGuild] = useState(false);
-  const [filters, setFilters] = useState({
-    type: 'all',
-    rank: 'all',
-    recruitment: 'all'
+  const [newGuild, setNewGuild] = useState({
+    name: '',
+    description: '',
+    leaderCharacterId: '',
+    type: 'Adventuring',
+    region: '',
+    requirements: ''
+  });
+  const [founderSearch, setFounderSearch] = useState('');
+  const [founderResults, setFounderResults] = useState<UserProfile[]>([]);
+  const [applicationRole, setApplicationRole] = useState<'Officer' | 'Member' | 'Ally'>('Member');
+  const [applicationCharacterId, setApplicationCharacterId] = useState('');
+  const [applicationMessage, setApplicationMessage] = useState('');
+  const [roleEdits, setRoleEdits] = useState<Record<string, { roleCategory: 'Officer' | 'Member' | 'Ally'; roleTitle: string }>>({});
+
+  const guildService = useMemo(() => GuildService.getInstance(), []);
+  const characterService = useMemo(() => CharacterService.getInstance(), []);
+  const userService = useMemo(() => UserService.getInstance(), []);
+
+  const selectedGuild = guilds.find(guild => guild._id === selectedGuildId);
+  const eligibleLeaderCharacters = characters.filter(character => character.level >= 4);
+
+  const filteredGuilds = guilds.filter(guild => {
+    const term = searchTerm.toLowerCase();
+    return guild.name.toLowerCase().includes(term)
+      || guild.description.toLowerCase().includes(term)
+      || guild.status.toLowerCase().includes(term);
   });
 
-  const mockGuilds = [
-    {
-      id: 1,
-      name: "Shadowbane Company",
-      description: "Elite mercenaries specializing in dangerous contracts and shadowy operations.",
-      type: "Combat",
-      memberCount: 45,
-      rank: "Platinum",
-      leader: "Magnus Ironforge",
-      established: "Founded 2 years ago",
-      region: "The Northern Wastes",
-      recruitmentStatus: "Open",
-      requirements: "Level 5+, Combat Focus",
-      badges: ["Dragon Slayer", "Dungeon Master", "Guild Wars Victor"],
-      recentActivity: "Completed the Crimson Depths expedition",
-      logo: "https://images.pexels.com/photos/1112048/pexels-photo-1112048.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop"
-    },
-    {
-      id: 2,
-      name: "Seekers of Truth",
-      description: "Scholars and researchers dedicated to uncovering ancient knowledge and mysteries.",
-      type: "Exploration",
-      memberCount: 32,
-      rank: "Gold",
-      leader: "Lyra Moonwhisper",
-      established: "Founded 18 months ago",
-      region: "The Scholarly Sanctum",
-      recruitmentStatus: "Selective",
-      requirements: "Intelligence focus, Research background",
-      badges: ["Lore Master", "Ancient Secrets", "Knowledge Keeper"],
-      recentActivity: "Discovered the Lost Library of Aethros",
-      logo: "https://images.pexels.com/photos/256262/pexels-photo-256262.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop"
-    },
-    {
-      id: 3,
-      name: "Order of the Silver Lance",
-      description: "Noble paladins and clerics sworn to protect the innocent and uphold justice.",
-      type: "Protection",
-      memberCount: 28,
-      rank: "Gold",
-      leader: "Sir Gareth Lightbringer",
-      established: "Founded 3 years ago",
-      region: "The Sacred Citadel",
-      recruitmentStatus: "Open",
-      requirements: "Good alignment, Divine magic preferred",
-      badges: ["Defender of Faith", "Light Bearer", "Sacred Vows"],
-      recentActivity: "Protected the village of Millhaven from raiders",
-      logo: "https://images.pexels.com/photos/1181269/pexels-photo-1181269.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop"
-    },
-    {
-      id: 4,
-      name: "The Wild Hunt",
-      description: "Rangers, druids, and beast masters who protect the natural world from corruption.",
-      type: "Nature",
-      memberCount: 21,
-      rank: "Silver",
-      leader: "Theron Wildstrike",
-      established: "Founded 1 year ago",
-      region: "The Whispering Woods",
-      recruitmentStatus: "Open",
-      requirements: "Nature connection, Outdoor survival skills",
-      badges: ["Beast Friend", "Forest Guardian", "Natural Balance"],
-      recentActivity: "Cleansed the Corrupted Grove",
-      logo: "https://images.pexels.com/photos/1005417/pexels-photo-1005417.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop"
-    }
-  ];
+  useEffect(() => {
+    loadGuilds();
+  }, []);
 
-  const getRankColor = (rank: string) => {
-    switch (rank) {
-      case 'Platinum': return 'text-cyan-400 bg-cyan-400/20';
-      case 'Gold': return 'text-yellow-400 bg-yellow-400/20';
-      case 'Silver': return 'text-gray-300 bg-gray-300/20';
-      default: return 'text-gray-400 bg-gray-400/20';
+  useEffect(() => {
+    if (user?.id) {
+      loadCharacters();
+    }
+  }, [user?.id]);
+
+  const loadGuilds = async () => {
+    setIsLoading(true);
+    try {
+      const response = await guildService.getGuilds();
+      if (response.success && response.data) {
+        setGuilds(response.data);
+      } else {
+        console.error('Failed to load guilds:', response.error);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getRecruitmentColor = (status: string) => {
-    switch (status) {
-      case 'Open': return 'text-emerald-400 bg-emerald-400/20';
-      case 'Selective': return 'text-yellow-400 bg-yellow-400/20';
-      case 'Closed': return 'text-red-400 bg-red-400/20';
-      default: return 'text-gray-400 bg-gray-400/20';
+  const loadCharacters = async () => {
+    if (!user?.id) return;
+
+    const response = await characterService.getUserCharacters(user.id);
+    if (response.success && response.data) {
+      setCharacters(response.data);
     }
   };
 
-  const filteredGuilds = mockGuilds.filter(guild => {
-    const matchesSearch = guild.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guild.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guild.type.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = filters.type === 'all' || guild.type.toLowerCase() === filters.type.toLowerCase();
-    const matchesRank = filters.rank === 'all' || guild.rank.toLowerCase() === filters.rank.toLowerCase();
-    const matchesRecruitment = filters.recruitment === 'all' || guild.recruitmentStatus.toLowerCase() === filters.recruitment.toLowerCase();
+  const handleCreateGuild = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
 
-    return matchesSearch && matchesType && matchesRank && matchesRecruitment;
-  });
+    const result = await guildService.createGuild({
+      ...newGuild,
+      leaderId: user.id
+    });
 
-  const handleApplyToGuild = (guildId: number) => {
-    const guild = mockGuilds.find(g => g.id === guildId);
-    if (guild) {
-      alert(`Application submitted to ${guild.name}! You will be notified when the guild leader reviews your application.`);
+    if (result.success) {
+      setShowCreateGuild(false);
+      setNewGuild({
+        name: '',
+        description: '',
+        leaderCharacterId: '',
+        type: 'Adventuring',
+        region: '',
+        requirements: ''
+      });
+      await loadGuilds();
+    } else {
+      alert(result.error || 'Failed to create guild');
     }
   };
 
-  const handleContactLeader = (guildId: number) => {
-    const guild = mockGuilds.find(g => g.id === guildId);
-    if (guild) {
-      alert(`Contacting ${guild.leader} from ${guild.name}. This feature will be implemented in the messaging system.`);
+  const handleSearchFounders = async () => {
+    if (!founderSearch.trim()) return;
+
+    const response = await userService.searchUsers(founderSearch, 8);
+    if (response.success && response.data) {
+      setFounderResults(response.data.filter(result => result.authUserId !== user?.id));
+    } else {
+      alert(response.error || 'Failed to search users');
     }
   };
 
-  const handleCreateGuild = () => {
-    alert('Guild creation form will be implemented. This will allow you to create your own guild with custom settings, requirements, and description.');
-    setShowCreateGuild(false);
+  const handleAddFounder = async (founder: UserProfile) => {
+    if (!selectedGuild?._id || !user?.id) return;
+
+    const result = await guildService.addFoundingMember(selectedGuild._id, user.id, founder.authUserId);
+    if (result.success) {
+      setFounderSearch('');
+      setFounderResults([]);
+      await loadGuilds();
+    } else {
+      alert(result.error || 'Failed to add founding member');
+    }
   };
+
+  const handleApply = async () => {
+    if (!selectedGuild?._id || !user?.id) return;
+
+    const result = await guildService.applyToGuild(
+      selectedGuild._id,
+      user.id,
+      applicationRole,
+      applicationCharacterId || undefined,
+      applicationMessage
+    );
+
+    if (result.success) {
+      setApplicationMessage('');
+      alert(result.message || 'Application submitted');
+    } else {
+      alert(result.error || 'Failed to apply');
+    }
+  };
+
+  const getStatusClass = (status: Guild['status']) => {
+    if (status === 'Active') return 'bg-emerald-500/20 text-emerald-300';
+    if (status === 'Recruiting') return 'bg-yellow-500/20 text-yellow-300';
+    return 'bg-gray-500/20 text-gray-300';
+  };
+
+  const getFoundingCount = (guild: Guild) =>
+    guild.memberships?.filter(member => member.membershipStatus === 'Active' && member.roleCategory !== 'Ally').length || 0;
+
+  const isSelectedGuildLeader = Boolean(selectedGuild && user?.id === selectedGuild.leaderId);
+  const pendingApplications = selectedGuild?.applications?.filter(application => application.status === 'Pending') || [];
+
+  const getMemberEdit = (memberId: string, roleCategory: 'Officer' | 'Member' | 'Ally', roleTitle = '') =>
+    roleEdits[memberId] || { roleCategory, roleTitle };
+
+  const handleRoleEditChange = (
+    memberId: string,
+    field: 'roleCategory' | 'roleTitle',
+    value: 'Officer' | 'Member' | 'Ally' | string
+  ) => {
+    const member = selectedGuild?.memberships?.find(item => item._id === memberId);
+    if (!member) return;
+
+    setRoleEdits(prev => ({
+      ...prev,
+      [memberId]: {
+        roleCategory: field === 'roleCategory' ? value as 'Officer' | 'Member' | 'Ally' : prev[memberId]?.roleCategory || member.roleCategory as 'Officer' | 'Member' | 'Ally',
+        roleTitle: field === 'roleTitle' ? value : prev[memberId]?.roleTitle || member.roleTitle || ''
+      }
+    }));
+  };
+
+  const handleUpdateRole = async (memberId?: string) => {
+    if (!memberId || !selectedGuild?._id || !user?.id) return;
+    const member = selectedGuild.memberships?.find(item => item._id === memberId);
+    if (!member || member.roleCategory === 'Leader') return;
+
+    const edit = getMemberEdit(memberId, member.roleCategory as 'Officer' | 'Member' | 'Ally', member.roleTitle);
+    const result = await guildService.updateMemberRole(
+      selectedGuild._id,
+      user.id,
+      memberId,
+      edit.roleCategory,
+      edit.roleTitle || edit.roleCategory
+    );
+
+    if (result.success) {
+      setRoleEdits(prev => {
+        const next = { ...prev };
+        delete next[memberId];
+        return next;
+      });
+      await loadGuilds();
+    } else {
+      alert(result.error || 'Failed to update role');
+    }
+  };
+
+  const handleApplicationDecision = async (applicationId: string | undefined, decision: 'accept' | 'reject') => {
+    if (!applicationId || !selectedGuild?._id || !user?.id) return;
+
+    const result = decision === 'accept'
+      ? await guildService.acceptApplication(selectedGuild._id, user.id, applicationId)
+      : await guildService.rejectApplication(selectedGuild._id, user.id, applicationId);
+
+    if (result.success) {
+      await loadGuilds();
+    } else {
+      alert(result.error || `Failed to ${decision} application`);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <Shield className="w-16 h-16 text-yellow-400 mx-auto mb-6" />
+          <h1 className="font-fantasy text-4xl font-bold text-white mb-6">Guild Directory</h1>
+          <p className="text-xl text-gray-300">Please log in to view and manage guilds.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <Users className="w-16 h-16 text-yellow-400 mx-auto mb-6" />
-          <h1 className="font-fantasy text-4xl md:text-6xl font-bold text-white mb-6">
-            Guild Directory
-          </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Join a guild to find like-minded adventurers, participate in exclusive events, 
-            and earn prestigious badges and rewards.
-          </p>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search guilds by name, description, or type..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-fantasy-900/30 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-            />
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="font-fantasy text-4xl font-bold text-white mb-2">Guild Directory</h1>
+            <p className="text-gray-300">Create, recruit, and apply to player-run guilds.</p>
           </div>
-          <button 
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center space-x-2 px-6 py-3 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-lg transition-colors"
-          >
-            <Filter className="w-5 h-5" />
-            <span>Filters</span>
-          </button>
-          <button 
+          <button
             onClick={() => setShowCreateGuild(true)}
-            className="flex items-center space-x-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 font-bold rounded-lg transition-colors"
+            className="flex items-center justify-center space-x-2 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 font-bold rounded-lg transition-colors"
           >
             <Plus className="w-5 h-5" />
             <span>Create Guild</span>
           </button>
         </div>
 
-        {/* Filters Panel */}
-        {showFilters && (
-          <div className="bg-fantasy-900/30 border border-fantasy-700/30 rounded-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold text-white mb-4">Filter Guilds</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Type</label>
-                <select
-                  value={filters.type}
-                  onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-                  className="w-full p-2 bg-fantasy-800/50 border border-fantasy-700/30 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                >
-                  <option value="all">All Types</option>
-                  <option value="combat">Combat</option>
-                  <option value="exploration">Exploration</option>
-                  <option value="protection">Protection</option>
-                  <option value="nature">Nature</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Rank</label>
-                <select
-                  value={filters.rank}
-                  onChange={(e) => setFilters(prev => ({ ...prev, rank: e.target.value }))}
-                  className="w-full p-2 bg-fantasy-800/50 border border-fantasy-700/30 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                >
-                  <option value="all">All Ranks</option>
-                  <option value="platinum">Platinum</option>
-                  <option value="gold">Gold</option>
-                  <option value="silver">Silver</option>
-                  <option value="bronze">Bronze</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Recruitment</label>
-                <select
-                  value={filters.recruitment}
-                  onChange={(e) => setFilters(prev => ({ ...prev, recruitment: e.target.value }))}
-                  className="w-full p-2 bg-fantasy-800/50 border border-fantasy-700/30 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                >
-                  <option value="all">All Status</option>
-                  <option value="open">Open</option>
-                  <option value="selective">Selective</option>
-                  <option value="closed">Closed</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setFilters({ type: 'all', rank: 'all', recruitment: 'all' })}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Guild Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {filteredGuilds.map((guild) => (
-            <div
-              key={guild.id}
-              className={`bg-fantasy-900/30 border border-fantasy-700/30 rounded-xl p-6 hover:bg-fantasy-800/30 transition-all cursor-pointer ${
-                selectedGuild === guild.id ? 'ring-2 ring-yellow-400' : ''
-              }`}
-              onClick={() => setSelectedGuild(guild.id === selectedGuild ? null : guild.id)}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-4">
-                  <img
-                    src={guild.logo}
-                    alt={guild.name}
-                    className="w-16 h-16 rounded-full border-2 border-yellow-400"
-                  />
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-1">{guild.name}</h3>
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRankColor(guild.rank)}`}>
-                        {guild.rank}
-                      </span>
-                      <span className="text-gray-400 text-sm">{guild.type}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${getRecruitmentColor(guild.recruitmentStatus)}`}>
-                  {guild.recruitmentStatus}
-                </div>
-              </div>
-
-              <p className="text-gray-300 mb-4 leading-relaxed">{guild.description}</p>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4 text-blue-400" />
-                  <span className="text-gray-300 text-sm">{guild.memberCount} members</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Crown className="w-4 h-4 text-yellow-400" />
-                  <span className="text-gray-300 text-sm">{guild.leader}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="w-4 h-4 text-green-400" />
-                  <span className="text-gray-300 text-sm">{guild.region}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-purple-400" />
-                  <span className="text-gray-300 text-sm">{guild.established}</span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-4">
-                {guild.badges.slice(0, 3).map((badge, index) => (
-                  <span
-                    key={index}
-                    className="px-2 py-1 bg-fantasy-700/50 text-yellow-400 text-xs rounded-full flex items-center space-x-1"
-                  >
-                    <Star className="w-3 h-3" />
-                    <span>{badge}</span>
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex justify-between items-center">
-                <p className="text-gray-400 text-sm">
-                  Recent: {guild.recentActivity}
-                </p>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedGuild(guild.id === selectedGuild ? null : guild.id);
-                  }}
-                  className="flex items-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 font-medium rounded-lg transition-all transform hover:scale-105"
-                >
-                  <span>View Details</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="relative mb-8">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search guilds..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-fantasy-900/30 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          />
         </div>
 
-        {/* No Results */}
-        {filteredGuilds.length === 0 && (
+        {isLoading ? (
           <div className="text-center py-12">
-            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No Guilds Found</h3>
-            <p className="text-gray-400 mb-6">Try adjusting your search terms or filters.</p>
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setFilters({ type: 'all', rank: 'all', recruitment: 'all' });
-              }}
-              className="px-6 py-2 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-lg transition-colors"
-            >
-              Clear Search
-            </button>
+            <Loader2 className="w-8 h-8 text-yellow-400 mx-auto mb-4 animate-spin" />
+            <p className="text-gray-300">Loading guilds...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {filteredGuilds.map(guild => (
+              <button
+                key={guild._id}
+                onClick={() => setSelectedGuildId(guild._id || null)}
+                className={`text-left bg-fantasy-900/30 border border-fantasy-700/30 rounded-xl p-6 hover:bg-fantasy-800/30 transition-all ${
+                  selectedGuildId === guild._id ? 'ring-2 ring-yellow-400' : ''
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-1">{guild.name}</h3>
+                    <p className="text-sm text-gray-400">{guild.type}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusClass(guild.status)}`}>
+                    {guild.status}
+                  </span>
+                </div>
+                <p className="text-gray-300 mb-4">{guild.description}</p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center space-x-2 text-gray-300">
+                    <Crown className="w-4 h-4 text-yellow-400" />
+                    <span>{guild.leaderCharacterName || 'Leader character'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-gray-300">
+                    <Users className="w-4 h-4 text-blue-400" />
+                    <span>{getFoundingCount(guild)}/{guild.foundingRequired || 4} founders</span>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         )}
 
-        {/* Guild Details Panel */}
+        {!isLoading && filteredGuilds.length === 0 && (
+          <div className="text-center py-12 bg-fantasy-900/20 border border-fantasy-700/30 rounded-xl">
+            <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white mb-2">No guilds yet</h2>
+            <p className="text-gray-300">Create the first guild charter.</p>
+          </div>
+        )}
+
         {selectedGuild && (
           <div className="bg-fantasy-900/30 border border-fantasy-700/30 rounded-xl p-6">
-            {(() => {
-              const guild = mockGuilds.find(g => g.id === selectedGuild);
-              if (!guild) return null;
-              
-              return (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {/* Guild Info */}
-                  <div className="lg:col-span-2">
-                    <div className="flex items-center space-x-4 mb-6">
-                      <img
-                        src={guild.logo}
-                        alt={guild.name}
-                        className="w-20 h-20 rounded-full border-2 border-yellow-400"
-                      />
-                      <div>
-                        <h2 className="font-fantasy text-3xl font-bold text-white mb-2">
-                          {guild.name}
-                        </h2>
-                        <div className="flex items-center space-x-3">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRankColor(guild.rank)}`}>
-                            {guild.rank} Guild
-                          </span>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRecruitmentColor(guild.recruitmentStatus)}`}>
-                            {guild.recruitmentStatus}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6">
+              <div>
+                <h2 className="font-fantasy text-3xl font-bold text-white mb-2">{selectedGuild.name}</h2>
+                <p className="text-gray-300 max-w-3xl">{selectedGuild.description}</p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusClass(selectedGuild.status)}`}>
+                {selectedGuild.status}
+              </span>
+            </div>
 
-                    <p className="text-gray-300 text-lg mb-6 leading-relaxed">
-                      {guild.description}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <h3 className="text-lg font-bold text-white mb-3">Members</h3>
+                <div className="space-y-2">
+                  {(selectedGuild.memberships || []).map(member => {
+                    const canEditRole = isSelectedGuildLeader && member.roleCategory !== 'Leader' && Boolean(member._id);
+                    const edit = member._id
+                      ? getMemberEdit(member._id, member.roleCategory as 'Officer' | 'Member' | 'Ally', member.roleTitle)
+                      : { roleCategory: member.roleCategory, roleTitle: member.roleTitle || '' };
+
+                    return (
+                      <div key={member._id} className="p-3 bg-fantasy-800/30 rounded-lg">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                          <div>
+                            <p className="text-white font-medium">{member.roleTitle || member.roleCategory}</p>
+                            <p className="text-xs text-gray-400">{member.userId}</p>
+                          </div>
+                          {!canEditRole && (
+                            <span className="text-sm text-gray-300">{member.roleCategory}</span>
+                          )}
+                        </div>
+
+                        {canEditRole && (
+                          <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_auto] gap-2 mt-3">
+                            <select
+                              value={edit.roleCategory}
+                              onChange={(e) => handleRoleEditChange(member._id!, 'roleCategory', e.target.value as 'Officer' | 'Member' | 'Ally')}
+                              className="p-2 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white"
+                            >
+                              <option value="Officer">Officer</option>
+                              <option value="Member">Member</option>
+                              <option value="Ally">Ally</option>
+                            </select>
+                            <input
+                              type="text"
+                              value={edit.roleTitle}
+                              onChange={(e) => handleRoleEditChange(member._id!, 'roleTitle', e.target.value)}
+                              placeholder="Role title"
+                              className="p-2 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
+                            />
+                            <button
+                              onClick={() => handleUpdateRole(member._id)}
+                              className="px-4 py-2 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-lg"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {isSelectedGuildLeader && selectedGuild.status === 'Recruiting' && (
+                  <div className="mt-6 p-4 bg-fantasy-800/30 rounded-lg">
+                    <h3 className="text-lg font-bold text-white mb-3">Add Founding Members</h3>
+                    <p className="text-gray-300 text-sm mb-4">
+                      A guild becomes Active when it has 1 leader and 3 additional founding members.
                     </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      <div>
-                        <h4 className="text-white font-semibold mb-3">Guild Information</h4>
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Crown className="w-4 h-4 text-yellow-400" />
-                            <span className="text-gray-300">Leader: {guild.leader}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Users className="w-4 h-4 text-blue-400" />
-                            <span className="text-gray-300">{guild.memberCount} active members</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <MapPin className="w-4 h-4 text-green-400" />
-                            <span className="text-gray-300">{guild.region}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Calendar className="w-4 h-4 text-purple-400" />
-                            <span className="text-gray-300">{guild.established}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h4 className="text-white font-semibold mb-3">Requirements</h4>
-                        <p className="text-gray-300 mb-4">{guild.requirements}</p>
-                        <h4 className="text-white font-semibold mb-3">Recent Activity</h4>
-                        <p className="text-gray-300">{guild.recentActivity}</p>
-                      </div>
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={founderSearch}
+                        onChange={(e) => setFounderSearch(e.target.value)}
+                        placeholder="Search users by name"
+                        className="flex-1 p-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      />
+                      <button
+                        onClick={handleSearchFounders}
+                        className="px-4 py-2 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-lg"
+                      >
+                        Search
+                      </button>
                     </div>
-
-                    <div className="mb-6">
-                      <h4 className="text-white font-semibold mb-3">Guild Badges</h4>
-                      <div className="flex flex-wrap gap-3">
-                        {guild.badges.map((badge, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center space-x-2 px-3 py-2 bg-fantasy-700/50 border border-yellow-400/30 rounded-lg"
+                    <div className="space-y-2">
+                      {founderResults.map(founder => (
+                        <div key={founder.authUserId} className="flex items-center justify-between p-2 bg-fantasy-900/40 rounded">
+                          <span className="text-white">{founder.globalName || founder.username}</span>
+                          <button
+                            onClick={() => handleAddFounder(founder)}
+                            className="flex items-center space-x-1 px-3 py-1 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 rounded font-medium"
                           >
-                            <Star className="w-4 h-4 text-yellow-400" />
-                            <span className="text-yellow-400 font-medium">{badge}</span>
+                            <UserPlus className="w-4 h-4" />
+                            <span>Add</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {isSelectedGuildLeader && (
+                  <div className="mt-6 p-4 bg-fantasy-800/30 rounded-lg">
+                    <h3 className="text-lg font-bold text-white mb-3">Applications</h3>
+                    {pendingApplications.length === 0 ? (
+                      <p className="text-sm text-gray-300">No pending applications.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {pendingApplications.map(application => (
+                          <div key={application._id} className="p-3 bg-fantasy-900/40 rounded-lg">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                              <div>
+                                <p className="text-white font-medium">{application.userId}</p>
+                                <p className="text-sm text-gray-400">Requested role: {application.requestedRoleCategory}</p>
+                                {application.message && (
+                                  <p className="text-sm text-gray-300 mt-2">{application.message}</p>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleApplicationDecision(application._id, 'accept')}
+                                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
+                                >
+                                  Accept
+                                </button>
+                                <button
+                                  onClick={() => handleApplicationDecision(application._id, 'reject')}
+                                  className="px-3 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
+                    )}
                   </div>
+                )}
+              </div>
 
-                  {/* Actions */}
-                  <div>
-                    <div className="bg-fantasy-800/30 rounded-lg p-6">
-                      <h3 className="text-xl font-bold text-white mb-4">Join This Guild</h3>
-                      
-                      {guild.recruitmentStatus === 'Open' ? (
-                        <>
-                          <p className="text-gray-300 mb-4">
-                            This guild is currently accepting new members.
-                          </p>
-                          <button 
-                            onClick={() => handleApplyToGuild(guild.id)}
-                            className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all transform hover:scale-105 mb-3"
-                          >
-                            Apply Now
-                          </button>
-                        </>
-                      ) : guild.recruitmentStatus === 'Selective' ? (
-                        <>
-                          <p className="text-gray-300 mb-4">
-                            This guild reviews applications carefully. Make sure you meet their requirements.
-                          </p>
-                          <button 
-                            onClick={() => handleApplyToGuild(guild.id)}
-                            className="w-full px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg transition-all transform hover:scale-105 mb-3"
-                          >
-                            Submit Application
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-gray-300 mb-4">
-                            This guild is not currently accepting new members.
-                          </p>
-                          <button
-                            disabled
-                            className="w-full px-4 py-3 bg-gray-600 text-gray-400 font-bold rounded-lg cursor-not-allowed mb-3"
-                          >
-                            Recruitment Closed
-                          </button>
-                        </>
-                      )}
+              <div className="p-4 bg-fantasy-800/30 rounded-lg">
+                <h3 className="text-lg font-bold text-white mb-3">Apply to Join</h3>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Role Type</label>
+                <select
+                  value={applicationRole}
+                  onChange={(e) => setApplicationRole(e.target.value as 'Officer' | 'Member' | 'Ally')}
+                  className="w-full p-3 mb-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white"
+                >
+                  <option value="Member">Member</option>
+                  <option value="Officer">Officer</option>
+                  <option value="Ally">Ally</option>
+                </select>
 
-                      <button 
-                        onClick={() => handleContactLeader(guild.id)}
-                        className="w-full px-4 py-3 bg-fantasy-700 hover:bg-fantasy-600 text-white font-medium rounded-lg transition-colors"
-                      >
-                        Contact Guild Leader
-                      </button>
-                    </div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Character</label>
+                <select
+                  value={applicationCharacterId}
+                  onChange={(e) => setApplicationCharacterId(e.target.value)}
+                  className="w-full p-3 mb-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white"
+                >
+                  <option value="">No character selected</option>
+                  {characters.map(character => (
+                    <option key={character._id} value={character._id}>
+                      {character.name} - Level {character.level}
+                    </option>
+                  ))}
+                </select>
 
-                    <div className="mt-6 bg-fantasy-800/30 rounded-lg p-6">
-                      <h4 className="text-white font-semibold mb-3">Guild Stats</h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="text-gray-300">Active Members</span>
-                          <span className="text-white font-medium">{guild.memberCount}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-300">Guild Rank</span>
-                          <span className="text-white font-medium">{guild.rank}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-300">Specialization</span>
-                          <span className="text-white font-medium">{guild.type}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-300">Badges Earned</span>
-                          <span className="text-white font-medium">{guild.badges.length}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+                <textarea
+                  value={applicationMessage}
+                  onChange={(e) => setApplicationMessage(e.target.value)}
+                  rows={4}
+                  placeholder="Application message"
+                  className="w-full p-3 mb-4 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 resize-none"
+                />
+
+                <button
+                  onClick={handleApply}
+                  className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg"
+                >
+                  Submit Application
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Create Guild Modal */}
         {showCreateGuild && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-fantasy-900 border border-fantasy-700 rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-xl font-bold text-white mb-4">Create New Guild</h3>
-              <p className="text-gray-300 mb-6">
-                Guild creation feature is coming soon! This will allow you to create your own guild with custom settings, requirements, and description.
-              </p>
-              <div className="flex space-x-3">
+            <form onSubmit={handleCreateGuild} className="bg-fantasy-900 border border-fantasy-700 rounded-xl p-6 max-w-2xl w-full space-y-4">
+              <h2 className="text-2xl font-bold text-white">Create Guild</h2>
+
+              {eligibleLeaderCharacters.length === 0 && (
+                <div className="p-3 bg-red-900/20 border border-red-700/30 rounded-lg text-red-300 text-sm">
+                  You need at least one level 4+ character to lead a guild.
+                </div>
+              )}
+
+              <input
+                type="text"
+                value={newGuild.name}
+                onChange={(e) => setNewGuild(prev => ({ ...prev, name: e.target.value }))}
+                required
+                placeholder="Guild name"
+                className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
+              />
+
+              <textarea
+                value={newGuild.description}
+                onChange={(e) => setNewGuild(prev => ({ ...prev, description: e.target.value }))}
+                required
+                rows={4}
+                placeholder="Guild description"
+                className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 resize-none"
+              />
+
+              <select
+                value={newGuild.leaderCharacterId}
+                onChange={(e) => setNewGuild(prev => ({ ...prev, leaderCharacterId: e.target.value }))}
+                required
+                className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white"
+              >
+                <option value="">Choose leader character</option>
+                {eligibleLeaderCharacters.map(character => (
+                  <option key={character._id} value={character._id}>
+                    {character.name} - Level {character.level} {character.class}
+                  </option>
+                ))}
+              </select>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  value={newGuild.type}
+                  onChange={(e) => setNewGuild(prev => ({ ...prev, type: e.target.value }))}
+                  placeholder="Guild type"
+                  className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
+                />
+                <input
+                  type="text"
+                  value={newGuild.region}
+                  onChange={(e) => setNewGuild(prev => ({ ...prev, region: e.target.value }))}
+                  placeholder="Region"
+                  className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
+                />
+              </div>
+
+              <textarea
+                value={newGuild.requirements}
+                onChange={(e) => setNewGuild(prev => ({ ...prev, requirements: e.target.value }))}
+                rows={3}
+                placeholder="Requirements"
+                className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 resize-none"
+              />
+
+              <div className="flex gap-3 pt-2">
                 <button
+                  type="button"
                   onClick={() => setShowCreateGuild(false)}
-                  className="flex-1 px-4 py-2 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-lg transition-colors"
+                  className="flex-1 px-4 py-3 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleCreateGuild}
-                  className="flex-1 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 font-bold rounded-lg transition-colors"
+                  type="submit"
+                  disabled={eligibleLeaderCharacters.length === 0}
+                  className="flex-1 px-4 py-3 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-600 text-midnight-900 font-bold rounded-lg"
                 >
-                  Coming Soon
+                  Create Guild
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         )}
-
-        {/* Create Guild CTA */}
-        <div className="mt-12 text-center bg-gradient-to-r from-fantasy-800/30 to-midnight-800/30 rounded-2xl p-8">
-          <Shield className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-          <h2 className="font-fantasy text-2xl font-bold text-white mb-4">
-            Start Your Own Guild
-          </h2>
-          <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
-            Ready to lead? Create your own guild and build a community of adventurers 
-            who share your vision and playstyle.
-          </p>
-          <button 
-            onClick={() => setShowCreateGuild(true)}
-            className="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 font-bold rounded-lg transition-all transform hover:scale-105"
-          >
-            Create Guild
-          </button>
-        </div>
       </div>
     </div>
   );
