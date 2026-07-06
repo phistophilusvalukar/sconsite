@@ -19,6 +19,14 @@ const AuthCallbackPage: React.FC = () => {
       }
 
       try {
+        const code = searchParams.get('code');
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            throw exchangeError;
+          }
+        }
+
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           throw error;

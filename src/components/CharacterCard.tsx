@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Edit, Trash2, Download, Upload, Star, StarOff, Shield, Sword, Users, Calendar } from 'lucide-react';
+import React from 'react';
+import { Calendar, Download, Edit, Shield, Trash2, Users } from 'lucide-react';
 import { Character } from '../types/database';
-import { CharacterFile, FileService } from '../services/fileService';
 
 interface CharacterCardProps {
   character: Character;
@@ -18,75 +17,25 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   onSelect,
   isSelected
 }) => {
-  const [files, setFiles] = useState<CharacterFile[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileService = FileService.getInstance();
-
-  useEffect(() => {
-    loadFiles();
-  }, [character._id]);
-
-  const loadFiles = async () => {
-    if (character._id) {
-      const characterFiles = await fileService.getCharacterFiles(character._id);
-      setFiles(characterFiles);
-    }
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !character._id) return;
-
-    setIsUploading(true);
-    try {
-      const result = await fileService.uploadFile(character._id, file);
-      if (result.success) {
-        await loadFiles();
-        // Reset the input
-        event.target.value = '';
-      } else {
-        alert(result.error || 'Failed to upload file');
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Failed to upload file');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleSetMainFile = async (fileId: string) => {
-    if (!character._id) return;
-
-    const result = await fileService.setMainFile(character._id, fileId);
-    if (result.success) {
-      await loadFiles();
-    } else {
-      alert(result.error || 'Failed to set main file');
-    }
-  };
-
-  const handleDownloadFile = (file: CharacterFile) => {
-    fileService.downloadFile(file);
-  };
-
-  const handleDeleteFile = async (fileId: string) => {
-    if (confirm('Are you sure you want to delete this file?')) {
-      const result = await fileService.deleteFile(fileId);
-      if (result.success) {
-        await loadFiles();
-      } else {
-        alert(result.error || 'Failed to delete file');
-      }
-    }
-  };
-
-  const mainFile = files.find(file => file.isMain);
-  const parsedData = mainFile?.fileData ? getCharacterDataFromJson(mainFile.fileData) : null;
+  const parsedData = character.foundryJson ? getCharacterDataFromJson(character.foundryJson) : null;
 
   // Get character avatar from main file or use default
   const characterAvatar = parsedData?.avatar || character.stats?.avatar || 
     `https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=128&h=128&fit=crop`;
+
+  const handleDownloadJson = () => {
+    if (!character.foundryJson) return;
+
+    const dataBlob = new Blob([JSON.stringify(character.foundryJson, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = character.foundryFileName || `${character.name}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div
@@ -115,8 +64,12 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         Level {parsedData?.level || character.level} {character.class}
       </p>
       
-      {character.race && (
-        <p className="text-gray-400 text-sm mb-3">{character.race}</p>
+      {(character.ancestry || character.race) && (
+        <p className="text-gray-400 text-sm mb-1">{character.ancestry || character.race}</p>
+      )}
+
+      {character.heritage && (
+        <p className="text-gray-500 text-xs mb-3">{character.heritage}</p>
       )}
 
       {/* Character Details from JSON */}
@@ -162,7 +115,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
         <div className="flex items-center space-x-2">
           <Shield className="w-4 h-4 text-yellow-400" />
-          <span className="text-gray-300">{files.length} files</span>
+          <span className="text-gray-300">{character.foundryJson ? 'JSON saved' : 'No JSON'}</span>
         </div>
         <div className="flex items-center space-x-2">
           <Calendar className="w-4 h-4 text-purple-400" />
@@ -172,68 +125,26 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         </div>
       </div>
 
-      {/* File Management */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-semibold text-white">Files</h4>
-          <label className="cursor-pointer">
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleFileUpload}
-              className="hidden"
-              disabled={isUploading}
-            />
-            <div className="p-1 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 rounded transition-colors">
-              <Upload className="w-4 h-4" />
-            </div>
-          </label>
+          <h4 className="text-sm font-semibold text-white">Foundry JSON</h4>
         </div>
-        
-        {files.length > 0 ? (
-          <div className="space-y-1 max-h-24 overflow-y-auto">
-            {files.map((file) => (
-              <div key={file.id} className="flex items-center justify-between p-2 bg-fantasy-700/30 rounded text-xs">
-                <div className="flex items-center space-x-2 flex-1 min-w-0">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSetMainFile(file.id);
-                    }}
-                    className={`p-1 rounded ${file.isMain ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}
-                    title={file.isMain ? 'Main file' : 'Set as main file'}
-                  >
-                    {file.isMain ? <Star className="w-3 h-3 fill-current" /> : <StarOff className="w-3 h-3" />}
-                  </button>
-                  <span className="text-white truncate">{file.fileName}</span>
-                </div>
-                <div className="flex space-x-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownloadFile(file);
-                    }}
-                    className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
-                    title="Download"
-                  >
-                    <Download className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteFile(file.id);
-                    }}
-                    className="p-1 text-gray-400 hover:text-red-400 transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
+        {character.foundryJson ? (
+          <div className="flex items-center justify-between p-2 bg-fantasy-700/30 rounded text-xs">
+            <span className="text-white truncate">{character.foundryFileName || `${character.name}.json`}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownloadJson();
+              }}
+              className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
+              title="Download"
+            >
+              <Download className="w-3 h-3" />
+            </button>
           </div>
         ) : (
-          <p className="text-gray-400 text-xs">No files uploaded</p>
+          <p className="text-gray-400 text-xs">No JSON saved</p>
         )}
       </div>
 

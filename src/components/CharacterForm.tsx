@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Save, X, Upload } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Save, Upload, X } from 'lucide-react';
 import { Character } from '../types/database';
-import { CharacterService } from '../services/characterService';
-import { FileService } from '../services/fileService';
+import { CharacterService, FoundryCharacterData } from '../services/characterService';
 
 interface CharacterFormProps {
   character?: Character;
@@ -19,43 +18,50 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     name: '',
-    class: '',
-    race: '',
+    classPrimary: '',
+    classSecondary: '',
+    ancestry: '',
+    heritage: '',
     level: 1,
     background: '',
-    alignment: '',
     backstory: '',
     notes: '',
     isActive: true
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importFileName, setImportFileName] = useState('');
+  const [importedJson, setImportedJson] = useState<FoundryCharacterData | null>(null);
 
   const characterService = CharacterService.getInstance();
-  const fileService = FileService.getInstance();
 
   useEffect(() => {
     if (character) {
       setFormData({
         name: character.name,
-        class: character.class,
-        race: character.race,
+        classPrimary: character.classPrimary || character.class,
+        classSecondary: character.classSecondary || '',
+        ancestry: character.ancestry || character.race,
+        heritage: character.heritage || '',
         level: character.level,
         background: character.background || '',
-        alignment: character.alignment || '',
         backstory: character.backstory || '',
         notes: character.notes || '',
         isActive: character.isActive
       });
+      setImportedJson(character.foundryJson || null);
+      setImportFileName(character.foundryFileName || '');
     }
   }, [character]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
-              type === 'number' ? parseInt(value) || 0 : value
+      [name]: type === 'checkbox'
+        ? (e.target as HTMLInputElement).checked
+        : type === 'number'
+          ? parseInt(value, 10) || 1
+          : value
     }));
   };
 
@@ -65,24 +71,26 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
 
     try {
       const fileContent = await readFileAsText(file);
-      const jsonData = JSON.parse(fileContent);
-      
-      // Parse FoundryVTT data
+      const jsonData = JSON.parse(fileContent) as FoundryCharacterData;
       const parsedData = characterService.parseFoundryData(jsonData);
-      
-      // Update form with parsed data
+
       setFormData(prev => ({
         ...prev,
         name: parsedData.name || prev.name,
+        classPrimary: parsedData.classPrimary || prev.classPrimary,
+        classSecondary: parsedData.classSecondary || prev.classSecondary,
+        ancestry: parsedData.ancestry || prev.ancestry,
+        heritage: parsedData.heritage || prev.heritage,
+        background: parsedData.background || prev.background,
         backstory: parsedData.backstory || prev.backstory,
-        level: parsedData.stats?.level || prev.level
+        level: parsedData.level || parsedData.stats?.level || prev.level
       }));
 
-      setImportFile(file);
-      alert('Character data imported successfully! Review and save to apply changes.');
+      setImportedJson(jsonData);
+      setImportFileName(file.name);
     } catch (error) {
       console.error('Error importing file:', error);
-      alert('Failed to import file. Please ensure it\'s a valid FoundryVTT character JSON file.');
+      alert('Failed to import file. Please ensure it is a valid FoundryVTT character JSON file.');
     }
   };
 
@@ -91,31 +99,32 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
     setIsLoading(true);
 
     try {
+      const parsedData = importedJson ? characterService.parseFoundryData(importedJson) : {};
       const characterData = {
-        ...formData,
+        name: formData.name,
+        class: [formData.classPrimary, formData.classSecondary].filter(Boolean).join(' - '),
+        classPrimary: formData.classPrimary,
+        classSecondary: formData.classSecondary,
+        race: formData.ancestry,
+        ancestry: formData.ancestry,
+        heritage: formData.heritage,
+        level: formData.level,
+        background: formData.background,
+        backstory: formData.backstory,
+        notes: formData.notes,
+        isActive: formData.isActive,
         userId,
-        stats: {},
-        equipment: []
+        stats: parsedData.stats || character?.stats || {},
+        equipment: character?.equipment || [],
+        foundryJson: importedJson || character?.foundryJson || null,
+        foundryFileName: importFileName || character?.foundryFileName || null
       };
 
-      let result;
-      if (character?._id) {
-        // Update existing character
-        result = await characterService.updateCharacter(character._id, userId, characterData);
-      } else {
-        // Create new character
-        result = await characterService.createCharacter(characterData);
-      }
+      const result = character?._id
+        ? await characterService.updateCharacter(character._id, userId, characterData)
+        : await characterService.createCharacter(characterData);
 
       if (result.success && result.data) {
-        // If we have an import file, upload it and set as main
-        if (importFile && result.data._id) {
-          const uploadResult = await fileService.uploadFile(result.data._id, importFile);
-          if (uploadResult.success && uploadResult.data) {
-            await fileService.setMainFile(result.data._id, uploadResult.data.id);
-          }
-        }
-
         onSave(result.data);
       } else {
         alert(result.error || 'Failed to save character');
@@ -153,10 +162,9 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Import from FoundryVTT */}
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">
-              Import from FoundryVTT (Optional)
+              Import from FoundryVTT
             </label>
             <label className="flex items-center space-x-2 p-3 border-2 border-dashed border-fantasy-700/50 rounded-lg hover:border-yellow-400/50 transition-colors cursor-pointer">
               <Upload className="w-5 h-5 text-gray-400" />
@@ -168,18 +176,17 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
                 className="hidden"
               />
             </label>
-            {importFile && (
+            {importFileName && (
               <p className="text-green-400 text-sm mt-2">
-                ✓ Imported: {importFile.name}
+                Imported: {importFileName}
               </p>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white">Basic Information</h3>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
                   Character Name *
@@ -197,54 +204,63 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Class *
+                  Primary Class *
                 </label>
-                <select
-                  name="class"
-                  value={formData.class}
+                <input
+                  type="text"
+                  name="classPrimary"
+                  value={formData.classPrimary}
                   onChange={handleInputChange}
                   required
-                  className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                >
-                  <option value="">Select a class</option>
-                  <option value="Alchemist">Alchemist</option>
-                  <option value="Barbarian">Barbarian</option>
-                  <option value="Bard">Bard</option>
-                  <option value="Champion">Champion</option>
-                  <option value="Cleric">Cleric</option>
-                  <option value="Druid">Druid</option>
-                  <option value="Fighter">Fighter</option>
-                  <option value="Gunslinger">Gunslinger</option>
-                  <option value="Inventor">Inventor</option>
-                  <option value="Investigator">Investigator</option>
-                  <option value="Kineticist">Kineticist</option>
-                  <option value="Magus">Magus</option>
-                  <option value="Monk">Monk</option>
-                  <option value="Oracle">Oracle</option>
-                  <option value="Psychic">Psychic</option>
-                  <option value="Ranger">Ranger</option>
-                  <option value="Rogue">Rogue</option>
-                  <option value="Sorcerer">Sorcerer</option>
-                  <option value="Summoner">Summoner</option>
-                  <option value="Swashbuckler">Swashbuckler</option>
-                  <option value="Thaumaturge">Thaumaturge</option>
-                  <option value="Witch">Witch</option>
-                  <option value="Wizard">Wizard</option>
-                </select>
+                  className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  placeholder="e.g., Cleric"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Race *
+                  Secondary Class
                 </label>
                 <input
                   type="text"
-                  name="race"
-                  value={formData.race}
+                  name="classSecondary"
+                  value={formData.classSecondary}
+                  onChange={handleInputChange}
+                  className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  placeholder="e.g., Rogue"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white">Lineage</h3>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Ancestry *
+                </label>
+                <input
+                  type="text"
+                  name="ancestry"
+                  value={formData.ancestry}
                   onChange={handleInputChange}
                   required
                   className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                  placeholder="e.g., Human, Elf, Dwarf"
+                  placeholder="e.g., Swarmblood"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Heritage
+                </label>
+                <input
+                  type="text"
+                  name="heritage"
+                  value={formData.heritage}
+                  onChange={handleInputChange}
+                  className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  placeholder="e.g., Wingswarm"
                 />
               </div>
 
@@ -263,64 +279,35 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
                 />
               </div>
             </div>
-
-            {/* Additional Details */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">Additional Details</h3>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Background
-                </label>
-                <input
-                  type="text"
-                  name="background"
-                  value={formData.background}
-                  onChange={handleInputChange}
-                  className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                  placeholder="e.g., Acolyte, Criminal, Noble"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Alignment
-                </label>
-                <select
-                  name="alignment"
-                  value={formData.alignment}
-                  onChange={handleInputChange}
-                  className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                >
-                  <option value="">Select alignment</option>
-                  <option value="Lawful Good">Lawful Good</option>
-                  <option value="Neutral Good">Neutral Good</option>
-                  <option value="Chaotic Good">Chaotic Good</option>
-                  <option value="Lawful Neutral">Lawful Neutral</option>
-                  <option value="True Neutral">True Neutral</option>
-                  <option value="Chaotic Neutral">Chaotic Neutral</option>
-                  <option value="Lawful Evil">Lawful Evil</option>
-                  <option value="Neutral Evil">Neutral Evil</option>
-                  <option value="Chaotic Evil">Chaotic Evil</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    name="isActive"
-                    checked={formData.isActive}
-                    onChange={handleInputChange}
-                    className="form-checkbox h-4 w-4 text-yellow-500 bg-fantasy-800 border-fantasy-600 rounded focus:ring-yellow-400"
-                  />
-                  <span className="text-gray-300">Active Character</span>
-                </label>
-              </div>
-            </div>
           </div>
 
-          {/* Backstory */}
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">
+              Background
+            </label>
+            <input
+              type="text"
+              name="background"
+              value={formData.background}
+              onChange={handleInputChange}
+              className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              placeholder="e.g., Corpse Stitcher"
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                name="isActive"
+                checked={formData.isActive}
+                onChange={handleInputChange}
+                className="form-checkbox h-4 w-4 text-yellow-500 bg-fantasy-800 border-fantasy-600 rounded focus:ring-yellow-400"
+              />
+              <span className="text-gray-300">Active Character</span>
+            </label>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">
               Backstory
@@ -335,7 +322,6 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
             />
           </div>
 
-          {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">
               Notes
@@ -350,7 +336,6 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
             />
           </div>
 
-          {/* Form Actions */}
           <div className="flex space-x-4 pt-6 border-t border-fantasy-700/30">
             <button
               type="button"

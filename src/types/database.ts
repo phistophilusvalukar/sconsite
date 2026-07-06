@@ -62,12 +62,17 @@ export interface Character {
   userId: string;
   name: string;
   class: string;
+  classPrimary?: string;
+  classSecondary?: string;
   level: number;
   race: string;
+  ancestry?: string;
+  heritage?: string;
   background?: string;
-  alignment?: string;
   stats?: any; // JSON data for character stats, appearance, etc.
   equipment?: any[]; // JSON array for equipment
+  foundryJson?: any;
+  foundryFileName?: string;
   backstory?: string;
   notes?: string;
   isActive: boolean;

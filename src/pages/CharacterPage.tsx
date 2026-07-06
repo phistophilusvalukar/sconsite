@@ -191,19 +191,33 @@ const CharacterPage: React.FC = () => {
                       </p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-400">Race</label>
-                      <p className="text-white">{selectedCharacter.race}</p>
+                      <label className="text-sm font-medium text-gray-400">Ancestry</label>
+                      <p className="text-white">{selectedCharacter.ancestry || selectedCharacter.race}</p>
                     </div>
+                    {selectedCharacter.heritage && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Heritage</label>
+                        <p className="text-white">{selectedCharacter.heritage}</p>
+                      </div>
+                    )}
+                    {selectedCharacter.classSecondary && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Dual Class</label>
+                        <p className="text-white">
+                          {selectedCharacter.classPrimary} / {selectedCharacter.classSecondary}
+                        </p>
+                      </div>
+                    )}
+                    {selectedCharacter.foundryJson && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Foundry File</label>
+                        <p className="text-white">{selectedCharacter.foundryFileName || 'Saved JSON'}</p>
+                      </div>
+                    )}
                     {selectedCharacter.background && (
                       <div>
                         <label className="text-sm font-medium text-gray-400">Background</label>
                         <p className="text-white">{selectedCharacter.background}</p>
-                      </div>
-                    )}
-                    {selectedCharacter.alignment && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Alignment</label>
-                        <p className="text-white">{selectedCharacter.alignment}</p>
                       </div>
                     )}
                   </div>
