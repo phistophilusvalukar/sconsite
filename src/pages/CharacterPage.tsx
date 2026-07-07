@@ -225,7 +225,7 @@ const CharacterPage: React.FC = () => {
                   {selectedCharacter.backstory && (
                     <div>
                       <label className="text-sm font-medium text-gray-400">Backstory</label>
-                      <p className="text-white leading-relaxed">{selectedCharacter.backstory}</p>
+                      <p className="text-white leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedCharacter.backstory}} ></p>
                     </div>
                   )}
                   
