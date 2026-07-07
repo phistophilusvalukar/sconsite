@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS schedule_polls (
   CHECK (date_end >= date_start),
   CHECK (start_minutes >= 0 AND start_minutes < 1440),
   CHECK (end_minutes > 0 AND end_minutes <= 1440),
-  CHECK (end_minutes > start_minutes),
   CHECK (slot_minutes IN (15, 30, 60))
 );
 

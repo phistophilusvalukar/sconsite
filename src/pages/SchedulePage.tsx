@@ -10,9 +10,26 @@ interface PollSlot {
   startsAt: Date;
   pollDate: string;
   pollMinutes: number;
+  windowMinutes: number;
 }
 
 type DragMode = 'add' | 'remove' | null;
+
+interface ScheduleGridColumn {
+  key: string;
+  label: string;
+}
+
+interface ScheduleGridRow {
+  key: string;
+  label: string;
+}
+
+interface ScheduleGrid {
+  columns: ScheduleGridColumn[];
+  rows: ScheduleGridRow[];
+  slotByCell: Map<string, PollSlot>;
+}
 
 const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 const timezoneOptions = getTimezoneOptions();
@@ -64,13 +81,13 @@ const SchedulePage: React.FC = () => {
     if (!dragMode) return;
 
     const stopDragging = () => setDragMode(null);
-    window.addEventListener('mouseup', stopDragging);
+    window.addEventListener('pointerup', stopDragging);
 
-    return () => window.removeEventListener('mouseup', stopDragging);
+    return () => window.removeEventListener('pointerup', stopDragging);
   }, [dragMode]);
 
   const slots = useMemo(() => selectedPoll ? buildPollSlots(selectedPoll) : [], [selectedPoll]);
-  const slotsByViewerDate = useMemo(() => groupSlotsByViewerDate(slots, viewerTimezone), [slots, viewerTimezone]);
+  const scheduleGrid = useMemo(() => buildScheduleGrid(slots, viewerTimezone), [slots, viewerTimezone]);
   const availabilityBySlot = useMemo(() => buildAvailabilityMap(selectedPoll?.availability || []), [selectedPoll?.availability]);
   const currentHover = hoveredSlotKey && selectedPoll
     ? getHoverDetails(hoveredSlotKey, selectedPoll, availabilityBySlot)
@@ -107,10 +124,6 @@ const SchedulePage: React.FC = () => {
 
     const startMinutes = timeToMinutes(newPoll.noEarlierThan);
     const endMinutes = timeToMinutes(newPoll.noLaterThan);
-    if (endMinutes <= startMinutes) {
-      alert('No later than must be after no earlier than.');
-      return;
-    }
 
     const result = await scheduleService.createPoll({
       title: newPoll.title,
@@ -152,6 +165,18 @@ const SchedulePage: React.FC = () => {
     const mode: DragMode = availableSlotKeys.has(slotKey) ? 'remove' : 'add';
     setDragMode(mode);
     toggleSlot(slotKey, mode);
+  };
+
+  const handleGridPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragMode) return;
+
+    const target = document.elementFromPoint(event.clientX, event.clientY);
+    const slotButton = target?.closest<HTMLButtonElement>('[data-slot-key]');
+    const slotKey = slotButton?.dataset.slotKey;
+    if (slotKey) {
+      toggleSlot(slotKey, dragMode);
+      setHoveredSlotKey(slotKey);
+    }
   };
 
   const handleSaveAvailability = async () => {
@@ -266,7 +291,7 @@ const SchedulePage: React.FC = () => {
                   >
                     <p className="text-white font-semibold">{poll.title}</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {formatDateRange(poll.dateStart, poll.dateEnd)} · {poll.participants.length} players
+                      {formatDateRange(poll.dateStart, poll.dateEnd)} - {poll.participants.length} players
                     </p>
                   </button>
                 ))}
@@ -289,7 +314,7 @@ const SchedulePage: React.FC = () => {
                     )}
                     <div className="flex flex-wrap gap-3 mt-3 text-sm text-gray-400">
                       <span>{formatDateRange(selectedPoll.dateStart, selectedPoll.dateEnd)}</span>
-                      <span>{minutesToTime(selectedPoll.startMinutes)}-{minutesToTime(selectedPoll.endMinutes)} {selectedPoll.timezone}</span>
+                      <span>{formatTimeWindow(selectedPoll.startMinutes, selectedPoll.endMinutes)} {selectedPoll.timezone}</span>
                       <span>{selectedPoll.slotMinutes} minute slots</span>
                     </div>
                   </div>
@@ -336,39 +361,63 @@ const SchedulePage: React.FC = () => {
                     </div>
 
                     <div className="overflow-x-auto pb-2">
-                      <div className="min-w-[720px] space-y-5">
-                        {slotsByViewerDate.map(group => (
-                          <div key={group.dateLabel}>
-                            <h3 className="text-white font-bold mb-2">{group.dateLabel}</h3>
-                            <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${group.slots.length}, minmax(34px, 1fr))` }}>
-                              {group.slots.map(slot => {
-                                const count = availabilityBySlot.get(slot.key)?.size || 0;
-                                const isAvailable = availableSlotKeys.has(slot.key);
-                                const isSelected = selectedPoll.selectedSlotKey === slot.key;
-
-                                return (
-                                  <button
-                                    key={slot.key}
-                                    type="button"
-                                    onMouseDown={() => handleSlotMouseDown(slot.key)}
-                                    onMouseEnter={() => {
-                                      setHoveredSlotKey(slot.key);
-                                      if (dragMode) toggleSlot(slot.key, dragMode);
-                                    }}
-                                    onFocus={() => setHoveredSlotKey(slot.key)}
-                                    className={`relative h-12 rounded border text-[11px] font-medium transition-all ${
-                                      isAvailable ? 'border-yellow-300 ring-2 ring-yellow-300/60' : 'border-fantasy-700/30'
-                                    } ${isSelected ? 'outline outline-2 outline-white' : ''}`}
-                                    style={{ backgroundColor: getSlotBackground(count, maxAvailability) }}
-                                    title={`${formatSlotTime(slot.startsAt, viewerTimezone)} - ${count} available`}
-                                  >
-                                    <span className="block text-white">{formatSlotTime(slot.startsAt, viewerTimezone)}</span>
-                                    <span className="block text-gray-200">{count}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
+                      <div
+                        className="grid min-w-[640px] select-none gap-1"
+                        style={{ gridTemplateColumns: `72px repeat(${scheduleGrid.columns.length}, minmax(88px, 1fr))` }}
+                        onPointerMove={handleGridPointerMove}
+                      >
+                        <div className="sticky left-0 z-20 rounded border border-fantasy-700/30 bg-fantasy-900/95" />
+                        {scheduleGrid.columns.map(column => (
+                          <div
+                            key={column.key}
+                            className="min-h-11 rounded border border-fantasy-700/30 bg-fantasy-800/60 px-2 py-2 text-center text-xs font-bold text-white sm:text-sm"
+                          >
+                            {column.label}
                           </div>
+                        ))}
+
+                        {scheduleGrid.rows.map(row => (
+                          <React.Fragment key={row.key}>
+                            <div className="sticky left-0 z-10 flex min-h-12 items-center justify-end rounded border border-fantasy-700/30 bg-fantasy-900/95 px-2 text-xs font-semibold text-gray-300">
+                              {row.label}
+                            </div>
+                            {scheduleGrid.columns.map(column => {
+                              const slot = scheduleGrid.slotByCell.get(getGridCellKey(column.key, row.key));
+                              if (!slot) {
+                                return (
+                                  <div
+                                    key={`${column.key}-${row.key}`}
+                                    className="min-h-12 rounded border border-fantasy-800/30 bg-midnight-900/30"
+                                  />
+                                );
+                              }
+
+                              const count = availabilityBySlot.get(slot.key)?.size || 0;
+                              const isAvailable = availableSlotKeys.has(slot.key);
+                              const isSelected = selectedPoll.selectedSlotKey === slot.key;
+
+                              return (
+                                <button
+                                  key={slot.key}
+                                  type="button"
+                                  data-slot-key={slot.key}
+                                  onPointerDown={(event) => {
+                                    event.preventDefault();
+                                    handleSlotMouseDown(slot.key);
+                                  }}
+                                  onPointerEnter={() => setHoveredSlotKey(slot.key)}
+                                  onFocus={() => setHoveredSlotKey(slot.key)}
+                                  className={`min-h-12 touch-none rounded border px-1 text-xs font-bold text-white transition-all ${
+                                    isAvailable ? 'border-yellow-300 ring-2 ring-yellow-300/60' : 'border-fantasy-700/30'
+                                  } ${isSelected ? 'outline outline-2 outline-white' : ''}`}
+                                  style={{ backgroundColor: getSlotBackground(count, maxAvailability) }}
+                                  title={`${formatDateTime(slot.startsAt, viewerTimezone)} - ${count} available`}
+                                >
+                                  <span className="block">{count}</span>
+                                </button>
+                              );
+                            })}
+                          </React.Fragment>
                         ))}
                       </div>
                     </div>
@@ -558,17 +607,22 @@ const SchedulePage: React.FC = () => {
 const buildPollSlots = (poll: SchedulePoll): PollSlot[] => {
   const slots: PollSlot[] = [];
   const dates = getDateRange(poll.dateStart, poll.dateEnd);
+  const windowEndMinutes = poll.endMinutes > poll.startMinutes
+    ? poll.endMinutes
+    : poll.endMinutes + 1440;
 
   dates.forEach(date => {
-    for (let minutes = poll.startMinutes; minutes < poll.endMinutes; minutes += poll.slotMinutes) {
-      const hour = Math.floor(minutes / 60);
-      const minute = minutes % 60;
+    for (let minutes = poll.startMinutes; minutes < windowEndMinutes; minutes += poll.slotMinutes) {
+      const displayMinutes = minutes % 1440;
+      const hour = Math.floor(displayMinutes / 60);
+      const minute = displayMinutes % 60;
       const key = `${date}T${pad(hour)}:${pad(minute)}`;
       slots.push({
         key,
         startsAt: zonedTimeToUtc(date, minutes, poll.timezone),
         pollDate: date,
-        pollMinutes: minutes
+        pollMinutes: displayMinutes,
+        windowMinutes: minutes
       });
     }
   });
@@ -576,23 +630,35 @@ const buildPollSlots = (poll: SchedulePoll): PollSlot[] => {
   return slots;
 };
 
-const groupSlotsByViewerDate = (slots: PollSlot[], timezone: string) => {
-  const groups = new Map<string, PollSlot[]>();
+const buildScheduleGrid = (slots: PollSlot[], timezone: string): ScheduleGrid => {
+  const columns = new Map<string, ScheduleGridColumn>();
+  const rows = new Map<string, ScheduleGridRow>();
+  const slotByCell = new Map<string, PollSlot>();
 
   slots.forEach(slot => {
-    const label = new Intl.DateTimeFormat('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      timeZone: timezone
-    }).format(slot.startsAt);
-    groups.set(label, [...(groups.get(label) || []), slot]);
+    const localParts = getLocalDateTimeParts(slot.startsAt, timezone);
+    const columnKey = localParts.dateKey;
+    const rowKey = String(localParts.minutes);
+    if (!columns.has(columnKey)) {
+      columns.set(columnKey, {
+        key: columnKey,
+        label: formatGridDate(slot.startsAt, timezone)
+      });
+    }
+    if (!rows.has(rowKey)) {
+      rows.set(rowKey, {
+        key: rowKey,
+        label: formatMinutesLabel(localParts.minutes)
+      });
+    }
+    slotByCell.set(getGridCellKey(columnKey, rowKey), slot);
   });
 
-  return Array.from(groups.entries()).map(([dateLabel, groupSlots]) => ({
-    dateLabel,
-    slots: groupSlots.sort((first, second) => first.startsAt.getTime() - second.startsAt.getTime())
-  }));
+  return {
+    columns: Array.from(columns.values()),
+    rows: Array.from(rows.values()),
+    slotByCell
+  };
 };
 
 const buildAvailabilityMap = (availability: ScheduleAvailability[]) => {
@@ -685,12 +751,41 @@ const getSlotBackground = (count: number, maxCount: number) => {
   return `hsl(145 72% ${lightness}%)`;
 };
 
-const formatSlotTime = (date: Date, timezone: string) =>
-  new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
+const getGridCellKey = (columnKey: string, rowKey: string) => `${columnKey}|${rowKey}`;
+
+const getLocalDateTimeParts = (date: Date, timezone: string) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
     minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
+
+  return {
+    dateKey: `${values.year}-${pad(values.month)}-${pad(values.day)}`,
+    minutes: values.hour * 60 + values.minute
+  };
+};
+
+const formatGridDate = (date: Date, timezone: string) =>
+  new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
     timeZone: timezone
   }).format(date);
+
+const formatMinutesLabel = (minutes: number) => {
+  const hour24 = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  const hour12 = ((hour24 + 11) % 12) + 1;
+  const period = hour24 >= 12 ? 'PM' : 'AM';
+  return `${hour12}:${pad(minute)} ${period}`;
+};
 
 const formatDateTime = (date: Date, timezone: string) =>
   new Intl.DateTimeFormat('en-US', {
@@ -705,6 +800,11 @@ const formatDateTime = (date: Date, timezone: string) =>
 
 const formatDateRange = (start: string, end: string) =>
   start === end ? start : `${start} to ${end}`;
+
+const formatTimeWindow = (startMinutes: number, endMinutes: number) => {
+  const nextDayText = endMinutes <= startMinutes ? ' next day' : '';
+  return `${minutesToTime(startMinutes)}-${minutesToTime(endMinutes)}${nextDayText}`;
+};
 
 const timeToMinutes = (value: string) => {
   const [hours, minutes] = value.split(':').map(Number);
