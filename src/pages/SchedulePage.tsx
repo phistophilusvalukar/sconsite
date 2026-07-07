@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Check, Clock, Copy, Loader2, Plus, Save, Users } from 'lucide-react';
+import { CalendarDays, Check, Clock, Copy, Loader2, Plus, Save, Trash2, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ScheduleService from '../services/scheduleService';
@@ -234,6 +234,23 @@ const SchedulePage: React.FC = () => {
     await navigator.clipboard.writeText(link);
   };
 
+  const handleClosePoll = async (poll: SchedulePoll) => {
+    if (!poll._id || !user?.id || poll.creatorId !== user.id) return;
+
+    const confirmed = window.confirm(`Close "${poll.title}"? It will disappear from the active polls list.`);
+    if (!confirmed) return;
+
+    const result = await scheduleService.closePoll(poll._id, user.id);
+    if (result.success) {
+      await loadPolls();
+      if (selectedPoll?._id === poll._id) {
+        navigate('/schedule');
+      }
+    } else {
+      alert(result.error || 'Failed to close poll');
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
@@ -277,23 +294,39 @@ const SchedulePage: React.FC = () => {
               </div>
               <div className="space-y-2">
                 {polls.map(poll => (
-                  <button
+                  <div
                     key={poll._id}
-                    onClick={() => {
-                      setSelectedPoll(poll);
-                      navigate(`/schedule/${poll._id}`);
-                    }}
-                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                    className={`flex items-start gap-2 rounded-lg border p-2 transition-colors ${
                       selectedPoll?._id === poll._id
                         ? 'bg-yellow-500/15 border-yellow-400/70'
                         : 'bg-fantasy-800/30 border-fantasy-700/30 hover:bg-fantasy-800/50'
                     }`}
                   >
-                    <p className="text-white font-semibold">{poll.title}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {formatDateRange(poll.dateStart, poll.dateEnd)} - {poll.participants.length} players
-                    </p>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPoll(poll);
+                        navigate(`/schedule/${poll._id}`);
+                      }}
+                      className="min-w-0 flex-1 rounded-md p-1 text-left"
+                    >
+                      <p className="truncate text-white font-semibold">{poll.title}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {formatDateRange(poll.dateStart, poll.dateEnd)} - {poll.participants.length} players
+                      </p>
+                    </button>
+                    {poll.creatorId === user?.id && (
+                      <button
+                        type="button"
+                        onClick={() => handleClosePoll(poll)}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-900/40 text-red-200 hover:bg-red-800/70 hover:text-white"
+                        aria-label={`Close ${poll.title}`}
+                        title="Close poll"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 ))}
                 {polls.length === 0 && (
                   <div className="text-center py-8">

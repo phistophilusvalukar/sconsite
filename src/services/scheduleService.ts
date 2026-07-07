@@ -39,6 +39,7 @@ class ScheduleService {
 
   async getPolls(): Promise<ApiResponse<SchedulePoll[]>> {
     try {
+      const today = getLocalDateValue();
       const { data, error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.SCHEDULE_POLLS)
         .select(`
@@ -46,6 +47,8 @@ class ScheduleService {
           participants:schedule_participants(*),
           availability:schedule_availability(*)
         `)
+        .eq('status', 'Open')
+        .gte('date_end', today)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -229,6 +232,28 @@ class ScheduleService {
     }
   }
 
+  async closePoll(pollId: string, creatorId: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.SCHEDULE_POLLS)
+        .update({
+          status: 'Closed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', pollId)
+        .eq('creator_id', creatorId);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: true, message: 'Poll closed.' };
+    } catch (error) {
+      console.error('Error closing schedule poll:', error);
+      return { success: false, error: 'Failed to close poll' };
+    }
+  }
+
   private transformPollFromDb(dbPoll: Record<string, unknown>): SchedulePoll {
     const participants = Array.isArray(dbPoll.participants)
       ? dbPoll.participants.map(participant => this.transformParticipantFromDb(participant as Record<string, unknown>))
@@ -282,5 +307,13 @@ class ScheduleService {
     };
   }
 }
+
+const getLocalDateValue = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default ScheduleService;
