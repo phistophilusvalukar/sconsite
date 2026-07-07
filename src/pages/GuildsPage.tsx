@@ -11,6 +11,7 @@ const GuildsPage: React.FC = () => {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isGuildSearchFocused, setIsGuildSearchFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateGuild, setShowCreateGuild] = useState(false);
   const [newGuild, setNewGuild] = useState({
@@ -23,6 +24,7 @@ const GuildsPage: React.FC = () => {
   });
   const [founderSearch, setFounderSearch] = useState('');
   const [founderResults, setFounderResults] = useState<Character[]>([]);
+  const [isSearchingFounders, setIsSearchingFounders] = useState(false);
   const [applicationRole, setApplicationRole] = useState<'Officer' | 'Member' | 'Ally'>('Member');
   const [applicationCharacterId, setApplicationCharacterId] = useState('');
   const [applicationMessage, setApplicationMessage] = useState('');
@@ -41,6 +43,10 @@ const GuildsPage: React.FC = () => {
       || guild.status.toLowerCase().includes(term);
   });
 
+  const guildSuggestions = searchTerm.trim()
+    ? filteredGuilds.slice(0, 6)
+    : guilds.slice(0, 6);
+
   useEffect(() => {
     loadGuilds();
   }, []);
@@ -50,6 +56,30 @@ const GuildsPage: React.FC = () => {
       loadCharacters();
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    const searchFounders = async () => {
+      if (founderSearch.trim().length < 2 || !selectedGuild?._id || !user?.id) {
+        setFounderResults([]);
+        return;
+      }
+
+      setIsSearchingFounders(true);
+      try {
+        const response = await guildService.searchEligibleFoundingCharacters(selectedGuild._id, user.id, founderSearch);
+        if (response.success && response.data) {
+          setFounderResults(response.data);
+        } else {
+          setFounderResults([]);
+        }
+      } finally {
+        setIsSearchingFounders(false);
+      }
+    };
+
+    const debounceTimer = window.setTimeout(searchFounders, 300);
+    return () => window.clearTimeout(debounceTimer);
+  }, [founderSearch, guildService, selectedGuild?._id, user?.id]);
 
   const loadGuilds = async () => {
     setIsLoading(true);
@@ -102,7 +132,9 @@ const GuildsPage: React.FC = () => {
   const handleSearchFounders = async () => {
     if (!founderSearch.trim() || !selectedGuild?._id || !user?.id) return;
 
+    setIsSearchingFounders(true);
     const response = await guildService.searchEligibleFoundingCharacters(selectedGuild._id, user.id, founderSearch);
+    setIsSearchingFounders(false);
     if (response.success && response.data) {
       setFounderResults(response.data);
     } else {
@@ -270,8 +302,30 @@ const GuildsPage: React.FC = () => {
             placeholder="Search guilds..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onFocus={() => setIsGuildSearchFocused(true)}
+            onBlur={() => window.setTimeout(() => setIsGuildSearchFocused(false), 150)}
             className="w-full pl-10 pr-4 py-3 bg-fantasy-900/30 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
           />
+          {isGuildSearchFocused && guildSuggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-fantasy-900/95 border border-fantasy-700/30 rounded-lg shadow-xl z-40 overflow-hidden">
+              {guildSuggestions.map(guild => (
+                <button
+                  key={guild._id}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setSearchTerm(guild.name);
+                    setSelectedGuildId(guild._id || null);
+                    setIsGuildSearchFocused(false);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-fantasy-800/50 transition-colors"
+                >
+                  <span className="block text-white font-semibold">{guild.name}</span>
+                  <span className="block text-sm text-gray-400">{guild.type} - {guild.status}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {isLoading ? (
@@ -413,18 +467,36 @@ const GuildsPage: React.FC = () => {
                       A guild becomes Active when it has a leader and 3 founding member characters.
                     </p>
                     <div className="flex gap-2 mb-3">
-                      <input
-                        type="text"
-                        value={founderSearch}
-                        onChange={(e) => setFounderSearch(e.target.value)}
-                        placeholder="Search characters by name"
-                        className="flex-1 p-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                      />
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={founderSearch}
+                          onChange={(e) => setFounderSearch(e.target.value)}
+                          placeholder="Search characters by name"
+                          className="w-full p-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        />
+                        {founderSearch.trim().length >= 2 && founderResults.length > 0 && (
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-fantasy-900/95 border border-fantasy-700/30 rounded-lg shadow-xl z-40 overflow-hidden">
+                            {founderResults.slice(0, 6).map(founder => (
+                              <button
+                                key={founder._id}
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => setFounderSearch(founder.name)}
+                                className="w-full text-left px-4 py-3 hover:bg-fantasy-800/50 transition-colors"
+                              >
+                                <span className="block text-white font-semibold">{founder.name}</span>
+                                <span className="block text-sm text-gray-400">Level {founder.level} {founder.class}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={handleSearchFounders}
                         className="px-4 py-2 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-lg"
                       >
-                        Search
+                        {isSearchingFounders ? 'Searching...' : 'Search'}
                       </button>
                     </div>
                     <div className="space-y-2">

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, User, UserPlus, MessageCircle, Shield, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, UserPlus, MessageCircle, Shield, Loader2 } from 'lucide-react';
 import { UserService } from '../services/userService';
 import { FriendService } from '../services/friendService';
 import { UserProfile } from '../types/database';
@@ -12,13 +12,14 @@ interface UserSearchProps {
 const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [isResultsOpen, setIsResultsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [friendshipStatuses, setFriendshipStatuses] = useState<Record<string, string>>({});
   const [sendingRequests, setSendingRequests] = useState<Record<string, boolean>>({});
   
   const { user } = useAuth();
-  const userService = UserService.getInstance();
-  const friendService = FriendService.getInstance();
+  const userService = useMemo(() => UserService.getInstance(), []);
+  const friendService = useMemo(() => FriendService.getInstance(), []);
 
   useEffect(() => {
     const searchUsers = async () => {
@@ -34,17 +35,18 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
           // Filter out current user
           const filteredResults = response.data.filter(u => u.authUserId !== user?.id);
           setSearchResults(filteredResults);
+          setIsResultsOpen(true);
           
           // Get friendship statuses
           if (user?.id) {
-            const statuses: Record<string, string> = {};
-            for (const searchUser of filteredResults) {
+            const statusEntries = await Promise.all(filteredResults.map(async (searchUser) => {
               const statusResponse = await friendService.getFriendshipStatus(user.id, searchUser.authUserId);
               if (statusResponse.success && statusResponse.data) {
-                statuses[searchUser.authUserId] = statusResponse.data;
+                return [searchUser.authUserId, statusResponse.data] as const;
               }
-            }
-            setFriendshipStatuses(statuses);
+              return [searchUser.authUserId, 'none'] as const;
+            }));
+            setFriendshipStatuses(Object.fromEntries(statusEntries));
           }
         }
       } catch (error) {
@@ -56,7 +58,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
 
     const debounceTimer = setTimeout(searchUsers, 300);
     return () => clearTimeout(debounceTimer);
-  }, [searchQuery, user?.id]);
+  }, [friendService, searchQuery, user?.id, userService]);
 
   const handleSendFriendRequest = async (targetUserId: string) => {
     if (!user?.id) return;
@@ -85,6 +87,13 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
     alert(`Starting conversation with ${targetUser.username}. This feature will be implemented in the messaging system.`);
   };
 
+  const handleAutocompleteSelect = (targetUser: UserProfile) => {
+    setSearchQuery(targetUser.username);
+    setSearchResults([]);
+    setIsResultsOpen(false);
+    onUserSelect?.(targetUser);
+  };
+
   const getFriendshipStatusDisplay = (status: string) => {
     switch (status) {
       case 'accepted': return { text: 'Friends', color: 'text-emerald-400', icon: MessageCircle };
@@ -100,15 +109,19 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
-          type="text"
-          placeholder="Search for users..."
+          type="search"
+          placeholder="Search by username..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setIsResultsOpen(true);
+          }}
+          onFocus={() => setIsResultsOpen(searchQuery.trim().length >= 2)}
           className="w-full pl-10 pr-4 py-3 bg-fantasy-900/30 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
         />
       </div>
 
-      {searchQuery.length >= 2 && (
+      {isResultsOpen && searchQuery.length >= 2 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-fantasy-900/95 border border-fantasy-700/30 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
           {isLoading ? (
             <div className="p-4 text-center text-gray-400 flex items-center justify-center space-x-2">
@@ -122,7 +135,6 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
               {searchResults.map((searchUser) => {
                 const status = friendshipStatuses[searchUser.authUserId] || 'none';
                 const statusDisplay = getFriendshipStatusDisplay(status);
-                const StatusIcon = statusDisplay.icon;
                 const isSendingRequest = sendingRequests[searchUser.authUserId];
 
                 return (
@@ -132,7 +144,8 @@ const UserSearch: React.FC<UserSearchProps> = ({ onUserSelect }) => {
                   >
                     <div 
                       className="flex items-center space-x-3 flex-1 cursor-pointer"
-                      onClick={() => onUserSelect?.(searchUser)}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleAutocompleteSelect(searchUser)}
                     >
                       <div className="relative">
                         <img

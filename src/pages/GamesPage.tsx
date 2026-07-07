@@ -9,7 +9,8 @@ import {
   Sparkles,
   Ticket,
   UserCheck,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Character, GameApplication, GameApplicationStatus, GameListing, SchedulePoll } from '../types/database';
@@ -18,6 +19,13 @@ import ScheduleService from '../services/scheduleService';
 import CharacterService from '../services/characterService';
 
 const defaultTags = ['Exploration', 'Combat', 'Roleplay', 'Downtime', 'Dungeon', 'Hexcrawl', 'One-shot'];
+const tierTags = ['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5'];
+
+interface ManualInvite {
+  userId: string;
+  displayName: string;
+  characterName: string;
+}
 
 interface GameFormState {
   title: string;
@@ -29,8 +37,7 @@ interface GameFormState {
   characterLevel: number;
   partySize: number;
   tags: string[];
-  manualInviteUserId: string;
-  manualInviteName: string;
+  manualInvites: ManualInvite[];
   invitedUserIds: string[];
 }
 
@@ -54,6 +61,11 @@ const GamesPage: React.FC = () => {
     date: ''
   });
   const [form, setForm] = useState<GameFormState>(() => createInitialForm());
+  const [tagSearch, setTagSearch] = useState('');
+  const [isTagSearchFocused, setIsTagSearchFocused] = useState(false);
+  const [inviteSearch, setInviteSearch] = useState('');
+  const [inviteResults, setInviteResults] = useState<Character[]>([]);
+  const [isInviteSearching, setIsInviteSearching] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -97,16 +109,45 @@ const GamesPage: React.FC = () => {
     }
   }, [characters, form.rewardCharacterId]);
 
+  useEffect(() => {
+    const searchInvites = async () => {
+      if (inviteSearch.trim().length < 2) {
+        setInviteResults([]);
+        return;
+      }
+
+      setIsInviteSearching(true);
+      try {
+        const response = await characterService.searchActiveCharactersByName(inviteSearch, 8);
+        if (response.success && response.data) {
+          const existingInviteUserIds = new Set([
+            user?.id,
+            ...form.manualInvites.map(invite => invite.userId),
+            ...form.invitedUserIds
+          ].filter(Boolean));
+          setInviteResults(response.data.filter(character => !existingInviteUserIds.has(character.userId)));
+        } else {
+          setInviteResults([]);
+        }
+      } finally {
+        setIsInviteSearching(false);
+      }
+    };
+
+    const debounceTimer = window.setTimeout(searchInvites, 300);
+    return () => window.clearTimeout(debounceTimer);
+  }, [characterService, form.invitedUserIds, form.manualInvites, inviteSearch, user?.id]);
+
   const visibleGames = useMemo(() => {
     return games
       .filter(game => game.status === 'Open')
       .filter(game => {
         const query = filters.query.trim().toLowerCase();
         if (!query) return true;
-        return [game.title, game.description, game.gmName, ...game.tags]
+        return [game.title, game.description, game.gmName, game.tier, ...game.tags]
           .some(value => value.toLowerCase().includes(query));
       })
-      .filter(game => !filters.tag || game.tags.includes(filters.tag))
+      .filter(game => !filters.tag || game.tags.includes(filters.tag) || game.tier === filters.tag)
       .filter(game => !filters.tier || game.tier === filters.tier)
       .filter(game => !filters.date || toDateInputValue(game.startTime) === filters.date)
       .sort((first, second) => first.startTime.getTime() - second.startTime.getTime());
@@ -120,8 +161,15 @@ const GamesPage: React.FC = () => {
   }, [games]);
 
   const allTags = useMemo(() => {
-    return Array.from(new Set([...defaultTags, ...games.flatMap(game => game.tags)])).sort();
+    return Array.from(new Set([...defaultTags, ...tierTags, ...games.flatMap(game => game.tags), ...games.map(game => game.tier)])).sort();
   }, [games]);
+
+  const tagSuggestions = useMemo(() => {
+    const term = tagSearch.trim().toLowerCase();
+    return allTags
+      .filter(tag => !term || tag.toLowerCase().includes(term))
+      .slice(0, 8);
+  }, [allTags, tagSearch]);
 
   const selectedPoll = polls.find(poll => poll._id === form.schedulePollId);
   const selectedPollParticipants = selectedPoll?.participants || [];
@@ -158,13 +206,11 @@ const GamesPage: React.FC = () => {
           displayName: participant.displayName,
           source: 'Poll' as const
         }));
-      const manualInvite = form.manualInviteUserId.trim()
-        ? [{
-          userId: form.manualInviteUserId.trim(),
-          displayName: form.manualInviteName.trim() || form.manualInviteUserId.trim(),
-          source: 'Manual' as const
-        }]
-        : [];
+      const manualInvites = form.manualInvites.map(invite => ({
+        userId: invite.userId,
+        displayName: invite.displayName,
+        source: 'Manual' as const
+      }));
 
       const result = await gameService.createGame({
         title: form.title,
@@ -178,7 +224,7 @@ const GamesPage: React.FC = () => {
         characterLevel: form.characterLevel,
         partySize: form.partySize,
         tags: form.tags,
-        invites: [...pollInvites, ...manualInvite]
+        invites: [...pollInvites, ...manualInvites]
       });
 
       if (result.success) {
@@ -191,6 +237,45 @@ const GamesPage: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleTagSelect = (tag: string) => {
+    setFilters(prev => ({
+      ...prev,
+      tag,
+      tier: tierTags.includes(tag) ? tag : prev.tier
+    }));
+    setTagSearch(tag);
+    setIsTagSearchFocused(false);
+  };
+
+  const handleInviteCharacterSelect = (character: Character) => {
+    setForm(prev => {
+      if (prev.manualInvites.some(invite => invite.userId === character.userId) || prev.invitedUserIds.includes(character.userId)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        manualInvites: [
+          ...prev.manualInvites,
+          {
+            userId: character.userId,
+            displayName: `${character.name} (L${character.level})`,
+            characterName: character.name
+          }
+        ]
+      };
+    });
+    setInviteSearch('');
+    setInviteResults([]);
+  };
+
+  const handleRemoveManualInvite = (userId: string) => {
+    setForm(prev => ({
+      ...prev,
+      manualInvites: prev.manualInvites.filter(invite => invite.userId !== userId)
+    }));
   };
 
   const handleApply = async (game: GameListing) => {
@@ -313,14 +398,50 @@ const GamesPage: React.FC = () => {
                     placeholder="Title, GM, tag"
                     className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
                   />
-                  <select
-                    value={filters.tag}
-                    onChange={(event) => setFilters(prev => ({ ...prev, tag: event.target.value }))}
-                    className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white"
-                  >
-                    <option value="">Any tag</option>
-                    {allTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
-                  </select>
+                  <div className="relative">
+                    <input
+                      type="search"
+                      value={tagSearch}
+                      onChange={(event) => {
+                        setTagSearch(event.target.value);
+                        setFilters(prev => ({ ...prev, tag: event.target.value }));
+                      }}
+                      onFocus={() => setIsTagSearchFocused(true)}
+                      onBlur={() => window.setTimeout(() => setIsTagSearchFocused(false), 150)}
+                      placeholder="Tag or tier"
+                      className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
+                    />
+                    {filters.tag && (
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setFilters(prev => ({ ...prev, tag: '', tier: tierTags.includes(filters.tag) ? '' : prev.tier }));
+                          setTagSearch('');
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white"
+                        aria-label="Clear tag filter"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                    {isTagSearchFocused && tagSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-fantasy-900/95 border border-fantasy-700/30 rounded-lg shadow-xl z-40 overflow-hidden">
+                        {tagSuggestions.map(tag => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => handleTagSelect(tag)}
+                            className="w-full text-left px-4 py-3 hover:bg-fantasy-800/50 transition-colors"
+                          >
+                            <span className="text-white font-semibold">{tag}</span>
+                            {tierTags.includes(tag) && <span className="ml-2 text-xs text-yellow-300">Tier</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <select
                     value={filters.tier}
                     onChange={(event) => setFilters(prev => ({ ...prev, tier: event.target.value }))}
@@ -530,21 +651,59 @@ const GamesPage: React.FC = () => {
                         <p className="text-sm text-gray-400">Select a poll to invite its participants.</p>
                       )}
                     </div>
-                    <div className="mt-4 space-y-2">
-                      <input
-                        type="text"
-                        value={form.manualInviteName}
-                        onChange={(event) => setForm(prev => ({ ...prev, manualInviteName: event.target.value }))}
-                        placeholder="Invite name"
-                        className="w-full p-2 bg-fantasy-900/60 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
-                      />
-                      <input
-                        type="text"
-                        value={form.manualInviteUserId}
-                        onChange={(event) => setForm(prev => ({ ...prev, manualInviteUserId: event.target.value }))}
-                        placeholder="Player auth user ID"
-                        className="w-full p-2 bg-fantasy-900/60 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
-                      />
+                    <div className="mt-4 space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="search"
+                          value={inviteSearch}
+                          onChange={(event) => setInviteSearch(event.target.value)}
+                          placeholder="Search character name"
+                          className="w-full pl-8 pr-3 py-2 bg-fantasy-900/60 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
+                        />
+                        {inviteSearch.trim().length >= 2 && (
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-fantasy-900/95 border border-fantasy-700/30 rounded-lg shadow-xl z-50 overflow-hidden">
+                            {isInviteSearching ? (
+                              <div className="flex items-center justify-center gap-2 p-3 text-sm text-gray-400">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Searching...</span>
+                              </div>
+                            ) : inviteResults.length === 0 ? (
+                              <div className="p-3 text-sm text-gray-400">No eligible characters found</div>
+                            ) : (
+                              inviteResults.map(character => (
+                                <button
+                                  key={character._id}
+                                  type="button"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={() => handleInviteCharacterSelect(character)}
+                                  className="w-full text-left px-4 py-3 hover:bg-fantasy-800/50 transition-colors"
+                                >
+                                  <span className="block text-white font-semibold">{character.name}</span>
+                                  <span className="block text-xs text-gray-400">Level {character.level} {character.class}</span>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {form.manualInvites.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {form.manualInvites.map(invite => (
+                            <span key={invite.userId} className="inline-flex items-center gap-2 rounded-lg bg-yellow-500/15 px-3 py-2 text-sm text-yellow-100">
+                              {invite.displayName}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveManualInvite(invite.userId)}
+                                className="text-yellow-200 hover:text-white"
+                                aria-label={`Remove ${invite.characterName}`}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </aside>
@@ -801,8 +960,7 @@ const createInitialForm = (rewardCharacterId = ''): GameFormState => ({
   characterLevel: 1,
   partySize: 4,
   tags: [],
-  manualInviteUserId: '',
-  manualInviteName: '',
+  manualInvites: [],
   invitedUserIds: []
 });
 

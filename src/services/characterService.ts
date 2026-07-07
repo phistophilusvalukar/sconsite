@@ -1,6 +1,6 @@
 import DatabaseService from './database';
 import { DATABASE_TABLES } from '../config/database';
-import { Character, ApiResponse, PaginatedResponse } from '../types/database';
+import { Character, ApiResponse } from '../types/database';
 
 export interface FoundryCharacterData {
   name: string;
@@ -300,6 +300,44 @@ export class CharacterService {
         avatar: jsonData.img || ''
       }
     };
+  }
+
+  async searchActiveCharactersByName(query: string, limit: number = 10): Promise<ApiResponse<Character[]>> {
+    try {
+      const trimmedQuery = query.trim();
+      if (trimmedQuery.length < 2) {
+        return {
+          success: true,
+          data: []
+        };
+      }
+
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTERS)
+        .select('*')
+        .ilike('name', `%${trimmedQuery}%`)
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+        .limit(limit);
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message
+        };
+      }
+
+      return {
+        success: true,
+        data: (data || []).map(character => this.transformCharacterFromDb(character))
+      };
+    } catch (error) {
+      console.error('Error searching active characters:', error);
+      return {
+        success: false,
+        error: 'Failed to search characters'
+      };
+    }
   }
 
   private parseClassNames(className: string): [string, string] {
