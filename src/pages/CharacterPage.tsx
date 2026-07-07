@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, Network, Plus, Shield, Users } from 'lucide-react';
+import { Loader2, Plus, Shield, Users } from 'lucide-react';
 import { Character } from '../types/database';
 import { CharacterService } from '../services/characterService';
 import CharacterCard from '../components/CharacterCard';
 import CharacterDetailsModal from '../components/CharacterDetailsModal';
 import CharacterForm from '../components/CharacterForm';
 
-type CharacterView = 'characters' | 'relationships';
+type CharacterView = 'characters' | 'all';
 
 const CharacterPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [publicCharacters, setPublicCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+  const [selectedCanEdit, setSelectedCanEdit] = useState(false);
   const [activeView, setActiveView] = useState<CharacterView>('characters');
   const [showForm, setShowForm] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState<Character | undefined>(undefined);
@@ -36,6 +38,13 @@ const CharacterPage: React.FC = () => {
         setCharacters(response.data);
       } else {
         console.error('Failed to load characters:', response.error);
+      }
+
+      const publicResponse = await characterService.getPublicCharacters();
+      if (publicResponse.success && publicResponse.data) {
+        setPublicCharacters(publicResponse.data);
+      } else {
+        console.error('Failed to load public characters:', publicResponse.error);
       }
     } catch (error) {
       console.error('Error loading characters:', error);
@@ -79,25 +88,18 @@ const CharacterPage: React.FC = () => {
     setShowForm(false);
     setEditingCharacter(undefined);
     await loadCharacters();
+    setSelectedCanEdit(true);
     setSelectedCharacter(character);
   };
 
-  const handleSaveCharacterMetadata = async (updatedCharacter: Character) => {
-    if (!user?.id || !updatedCharacter._id) return;
+  const handleSelectOwnCharacter = (character: Character) => {
+    setSelectedCanEdit(true);
+    setSelectedCharacter(character);
+  };
 
-    const response = await characterService.updateCharacter(updatedCharacter._id, user.id, {
-      stats: updatedCharacter.stats,
-      foundryJson: updatedCharacter.foundryJson,
-      foundryFileName: updatedCharacter.foundryFileName
-    });
-
-    if (response.success && response.data) {
-      const savedCharacter = response.data;
-      setCharacters(prev => prev.map(character => character._id === savedCharacter._id ? savedCharacter : character));
-      setSelectedCharacter(savedCharacter);
-    } else {
-      alert(response.error || 'Failed to save character details');
-    }
+  const handleSelectPublicCharacter = (character: Character) => {
+    setSelectedCanEdit(false);
+    setSelectedCharacter(character);
   };
 
   const handleCancelForm = () => {
@@ -156,15 +158,15 @@ const CharacterPage: React.FC = () => {
             <span>My Characters</span>
           </button>
           <button
-            onClick={() => setActiveView('relationships')}
+            onClick={() => setActiveView('all')}
             className={`flex items-center justify-center space-x-2 rounded-lg px-5 py-3 text-sm font-semibold transition-colors ${
-              activeView === 'relationships'
+              activeView === 'all'
                 ? 'bg-yellow-500 text-midnight-900'
                 : 'text-gray-300 hover:bg-fantasy-800/40 hover:text-white'
             }`}
           >
-            <Network className="h-4 w-4" />
-            <span>Relationships</span>
+            <Users className="h-4 w-4" />
+            <span>All Characters</span>
           </button>
         </div>
 
@@ -185,7 +187,7 @@ const CharacterPage: React.FC = () => {
                 character={character}
                 onEdit={handleEditCharacter}
                 onDelete={handleDeleteCharacter}
-                onSelect={setSelectedCharacter}
+                onSelect={handleSelectOwnCharacter}
                 isSelected={selectedCharacter?._id === character._id}
               />
             ))}
@@ -204,8 +206,8 @@ const CharacterPage: React.FC = () => {
           </div>
         )}
 
-        {!isLoading && activeView === 'relationships' && (
-          <RelationshipOverview characters={characters} onSelectCharacter={setSelectedCharacter} />
+        {!isLoading && activeView === 'all' && (
+          <AllCharactersView characters={publicCharacters} currentUserId={user?.id || ''} onSelectCharacter={handleSelectPublicCharacter} />
         )}
 
         {/* Empty State */}
@@ -228,10 +230,11 @@ const CharacterPage: React.FC = () => {
         {selectedCharacter && (
           <CharacterDetailsModal
             character={selectedCharacter}
-            characters={characters}
+            characters={mergeCharacters(characters, publicCharacters)}
+            currentUserId={user?.id || ''}
+            canEdit={selectedCanEdit}
             onClose={() => setSelectedCharacter(null)}
             onEdit={handleEditCharacter}
-            onSaveMetadata={handleSaveCharacterMetadata}
           />
         )}
 
@@ -249,23 +252,13 @@ const CharacterPage: React.FC = () => {
   );
 };
 
-function RelationshipOverview({ characters, onSelectCharacter }: { characters: Character[]; onSelectCharacter: (character: Character) => void }) {
-  const links = characters.flatMap(character => {
-    const relationships = Array.isArray(character.stats?.relationships) ? character.stats.relationships : [];
-    return relationships.map((relationship: { targetCharacterId: string; label: string; id: string }) => ({
-      id: relationship.id,
-      source: character,
-      target: characters.find(item => item._id === relationship.targetCharacterId),
-      label: relationship.label
-    }));
-  });
-
+function AllCharactersView({ characters, currentUserId, onSelectCharacter }: { characters: Character[]; currentUserId: string; onSelectCharacter: (character: Character) => void }) {
   if (characters.length === 0) {
     return (
       <div className="text-center py-16">
         <Users className="w-16 h-16 text-gray-400 mx-auto mb-6" />
-        <h2 className="text-2xl font-bold text-white mb-4">No Relationship Map Yet</h2>
-        <p className="text-gray-300">Create characters first, then connect them from a character details window.</p>
+        <h2 className="text-2xl font-bold text-white mb-4">No Public Characters Yet</h2>
+        <p className="text-gray-300">Active characters will appear here for other players to browse.</p>
       </div>
     );
   }
@@ -274,33 +267,35 @@ function RelationshipOverview({ characters, onSelectCharacter }: { characters: C
     <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/20 p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="font-fantasy text-2xl font-bold text-white">Relationship Map</h2>
-          <p className="text-sm text-gray-400">Open a character to add direct relationships and explore deeper connections.</p>
+          <h2 className="font-fantasy text-2xl font-bold text-white">All Characters</h2>
+          <p className="text-sm text-gray-400">Browse public characters, read journals, and join the conversation.</p>
         </div>
-        <Network className="h-8 w-8 text-yellow-300" />
+        <Users className="h-8 w-8 text-yellow-300" />
       </div>
 
-      {links.length === 0 ? (
-        <div className="rounded-lg bg-midnight-900/60 p-8 text-center text-gray-300">
-          No relationships have been added yet.
-        </div>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {links.map(link => (
-            <button
-              key={`${link.source._id}-${link.id}`}
-              onClick={() => onSelectCharacter(link.source)}
-              className="rounded-lg border border-fantasy-700/30 bg-midnight-900/60 p-4 text-left transition-colors hover:border-yellow-400/60"
-            >
-              <p className="font-semibold text-white">{link.source.name}</p>
-              <p className="my-2 text-sm text-yellow-200">{link.label}</p>
-              <p className="text-sm text-gray-300">{link.target?.name || 'Unknown character'}</p>
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {characters.map(character => (
+          <button
+            key={character._id}
+            onClick={() => onSelectCharacter(character)}
+            className="rounded-lg border border-fantasy-700/30 bg-midnight-900/60 p-4 text-left transition-colors hover:border-yellow-400/60"
+          >
+            <p className="font-semibold text-white">{character.name}</p>
+            <p className="mt-1 text-sm text-yellow-200">Level {character.level} {character.class}</p>
+            <p className="mt-2 text-sm text-gray-300">{character.ancestry || character.race}{character.userId === currentUserId ? ' - Yours' : ''}</p>
+          </button>
+        ))}
+      </div>
     </div>
   );
+}
+
+function mergeCharacters(primary: Character[], secondary: Character[]) {
+  const byId = new Map<string, Character>();
+  [...primary, ...secondary].forEach(character => {
+    if (character._id) byId.set(character._id, character);
+  });
+  return Array.from(byId.values());
 }
 
 export default CharacterPage;

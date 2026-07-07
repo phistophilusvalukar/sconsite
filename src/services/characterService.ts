@@ -1,6 +1,13 @@
 import DatabaseService from './database';
 import { DATABASE_TABLES } from '../config/database';
-import { Character, ApiResponse } from '../types/database';
+import {
+  ApiResponse,
+  Character,
+  CharacterJournalComment,
+  CharacterJournalEntry,
+  CharacterRelationship,
+  FoundryJsonEntry
+} from '../types/database';
 
 export interface FoundryCharacterData {
   name: string;
@@ -145,6 +152,34 @@ export class CharacterService {
     }
   }
 
+  async getPublicCharacters(): Promise<ApiResponse<Character[]>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTERS)
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message
+        };
+      }
+
+      return {
+        success: true,
+        data: (data || []).map(character => this.transformCharacterFromDb(character))
+      };
+    } catch (error) {
+      console.error('Error fetching public characters:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch public characters'
+      };
+    }
+  }
+
   async getCharacterById(characterId: string): Promise<ApiResponse<Character>> {
     try {
       const supabase = this.dbService.getClient();
@@ -265,6 +300,278 @@ export class CharacterService {
     }
   }
 
+  async getFoundryFiles(characterId: string): Promise<ApiResponse<FoundryJsonEntry[]>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
+        .select('*')
+        .eq('character_id', characterId)
+        .order('sort_order', { ascending: true });
+
+      if (error) return { success: false, error: error.message };
+
+      return {
+        success: true,
+        data: (data || []).map(file => this.transformFoundryFileFromDb(file))
+      };
+    } catch (error) {
+      console.error('Error fetching Foundry files:', error);
+      return { success: false, error: 'Failed to fetch Foundry files' };
+    }
+  }
+
+  async addFoundryFile(characterId: string, ownerId: string, name: string, json: unknown, sortOrder: number): Promise<ApiResponse<FoundryJsonEntry>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
+        .insert({
+          character_id: characterId,
+          owner_id: ownerId,
+          name,
+          json_data: json,
+          sort_order: sortOrder
+        })
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+
+      return {
+        success: true,
+        data: this.transformFoundryFileFromDb(data)
+      };
+    } catch (error) {
+      console.error('Error adding Foundry file:', error);
+      return { success: false, error: 'Failed to add Foundry file' };
+    }
+  }
+
+  async updateFoundryFile(fileId: string, updates: { name?: string; sortOrder?: number }): Promise<ApiResponse<FoundryJsonEntry>> {
+    try {
+      const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
+
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
+        .update(updateData)
+        .eq('id', fileId)
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+
+      return {
+        success: true,
+        data: this.transformFoundryFileFromDb(data)
+      };
+    } catch (error) {
+      console.error('Error updating Foundry file:', error);
+      return { success: false, error: 'Failed to update Foundry file' };
+    }
+  }
+
+  async deleteFoundryFile(fileId: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
+        .delete()
+        .eq('id', fileId);
+
+      if (error) return { success: false, error: error.message };
+
+      return { success: true, data: true };
+    } catch (error) {
+      console.error('Error deleting Foundry file:', error);
+      return { success: false, error: 'Failed to delete Foundry file' };
+    }
+  }
+
+  async getJournalEntries(characterId: string, currentUserId: string): Promise<ApiResponse<CharacterJournalEntry[]>> {
+    try {
+      const supabase = this.dbService.getClient();
+      const { data: entries, error: entryError } = await supabase
+        .from(DATABASE_TABLES.CHARACTER_JOURNAL_ENTRIES)
+        .select('*')
+        .eq('character_id', characterId)
+        .order('created_at', { ascending: false });
+
+      if (entryError) return { success: false, error: entryError.message };
+
+      const entryIds = (entries || []).map(entry => entry.id);
+      const { data: comments, error: commentError } = entryIds.length > 0
+        ? await supabase
+            .from(DATABASE_TABLES.CHARACTER_JOURNAL_COMMENTS)
+            .select('*')
+            .in('entry_id', entryIds)
+            .order('created_at', { ascending: true })
+        : { data: [], error: null };
+
+      if (commentError) return { success: false, error: commentError.message };
+
+      const { data: likes, error: likeError } = entryIds.length > 0
+        ? await supabase
+            .from(DATABASE_TABLES.CHARACTER_JOURNAL_LIKES)
+            .select('*')
+            .in('entry_id', entryIds)
+        : { data: [], error: null };
+
+      if (likeError) return { success: false, error: likeError.message };
+
+      return {
+        success: true,
+        data: (entries || []).map(entry => this.transformJournalEntryFromDb(entry, comments || [], likes || [], currentUserId))
+      };
+    } catch (error) {
+      console.error('Error fetching journal entries:', error);
+      return { success: false, error: 'Failed to fetch journal entries' };
+    }
+  }
+
+  async createJournalEntry(characterId: string, authorId: string, title: string, body: string): Promise<ApiResponse<CharacterJournalEntry>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_JOURNAL_ENTRIES)
+        .insert({ character_id: characterId, author_id: authorId, title, body })
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+
+      return {
+        success: true,
+        data: this.transformJournalEntryFromDb(data, [], [], authorId)
+      };
+    } catch (error) {
+      console.error('Error creating journal entry:', error);
+      return { success: false, error: 'Failed to create journal entry' };
+    }
+  }
+
+  async deleteJournalEntry(entryId: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_JOURNAL_ENTRIES)
+        .delete()
+        .eq('id', entryId);
+
+      if (error) return { success: false, error: error.message };
+
+      return { success: true, data: true };
+    } catch (error) {
+      console.error('Error deleting journal entry:', error);
+      return { success: false, error: 'Failed to delete journal entry' };
+    }
+  }
+
+  async addJournalComment(entryId: string, authorId: string, body: string): Promise<ApiResponse<CharacterJournalComment>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_JOURNAL_COMMENTS)
+        .insert({ entry_id: entryId, author_id: authorId, body })
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+
+      return {
+        success: true,
+        data: this.transformJournalCommentFromDb(data)
+      };
+    } catch (error) {
+      console.error('Error adding journal comment:', error);
+      return { success: false, error: 'Failed to add comment' };
+    }
+  }
+
+  async toggleJournalLike(entryId: string, userId: string, isLiked: boolean): Promise<ApiResponse<boolean>> {
+    try {
+      if (isLiked) {
+        const { error } = await this.dbService.getClient()
+          .from(DATABASE_TABLES.CHARACTER_JOURNAL_LIKES)
+          .delete()
+          .eq('entry_id', entryId)
+          .eq('user_id', userId);
+
+        if (error) return { success: false, error: error.message };
+      } else {
+        const { error } = await this.dbService.getClient()
+          .from(DATABASE_TABLES.CHARACTER_JOURNAL_LIKES)
+          .insert({ entry_id: entryId, user_id: userId });
+
+        if (error) return { success: false, error: error.message };
+      }
+
+      return { success: true, data: true };
+    } catch (error) {
+      console.error('Error toggling journal like:', error);
+      return { success: false, error: 'Failed to update like' };
+    }
+  }
+
+  async getRelationshipsForCharacters(characterIds: string[]): Promise<ApiResponse<CharacterRelationship[]>> {
+    try {
+      if (characterIds.length === 0) return { success: true, data: [] };
+
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_RELATIONSHIPS)
+        .select('*')
+        .in('source_character_id', characterIds)
+        .order('created_at', { ascending: true });
+
+      if (error) return { success: false, error: error.message };
+
+      return {
+        success: true,
+        data: (data || []).map(relationship => this.transformRelationshipFromDb(relationship))
+      };
+    } catch (error) {
+      console.error('Error fetching relationships:', error);
+      return { success: false, error: 'Failed to fetch relationships' };
+    }
+  }
+
+  async createRelationship(sourceCharacterId: string, ownerId: string, targetCharacterId: string, label: string): Promise<ApiResponse<CharacterRelationship>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_RELATIONSHIPS)
+        .insert({
+          source_character_id: sourceCharacterId,
+          target_character_id: targetCharacterId,
+          owner_id: ownerId,
+          label
+        })
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+
+      return {
+        success: true,
+        data: this.transformRelationshipFromDb(data)
+      };
+    } catch (error) {
+      console.error('Error creating relationship:', error);
+      return { success: false, error: 'Failed to create relationship' };
+    }
+  }
+
+  async deleteRelationship(relationshipId: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_RELATIONSHIPS)
+        .delete()
+        .eq('id', relationshipId);
+
+      if (error) return { success: false, error: error.message };
+
+      return { success: true, data: true };
+    } catch (error) {
+      console.error('Error deleting relationship:', error);
+      return { success: false, error: 'Failed to delete relationship' };
+    }
+  }
+
   parseFoundryData(jsonData: FoundryCharacterData): Partial<Character> {
     const system = jsonData.system || {};
     const details = system.details || {};
@@ -376,6 +683,59 @@ export class CharacterService {
       guildId: dbCharacter.guild_id,
       createdAt: new Date(dbCharacter.created_at),
       updatedAt: new Date(dbCharacter.updated_at)
+    };
+  }
+
+  private transformFoundryFileFromDb(dbFile: any): FoundryJsonEntry {
+    return {
+      id: dbFile.id,
+      characterId: dbFile.character_id,
+      name: dbFile.name,
+      json: dbFile.json_data,
+      sortOrder: dbFile.sort_order,
+      createdAt: new Date(dbFile.created_at),
+      updatedAt: new Date(dbFile.updated_at)
+    };
+  }
+
+  private transformJournalEntryFromDb(dbEntry: any, dbComments: any[], dbLikes: any[], currentUserId: string): CharacterJournalEntry {
+    const entryLikes = dbLikes.filter(like => like.entry_id === dbEntry.id);
+
+    return {
+      id: dbEntry.id,
+      characterId: dbEntry.character_id,
+      authorId: dbEntry.author_id,
+      title: dbEntry.title,
+      body: dbEntry.body,
+      likeCount: entryLikes.length,
+      likedByCurrentUser: entryLikes.some(like => like.user_id === currentUserId),
+      comments: dbComments
+        .filter(comment => comment.entry_id === dbEntry.id)
+        .map(comment => this.transformJournalCommentFromDb(comment)),
+      createdAt: new Date(dbEntry.created_at),
+      updatedAt: new Date(dbEntry.updated_at)
+    };
+  }
+
+  private transformJournalCommentFromDb(dbComment: any): CharacterJournalComment {
+    return {
+      id: dbComment.id,
+      entryId: dbComment.entry_id,
+      authorId: dbComment.author_id,
+      body: dbComment.body,
+      createdAt: new Date(dbComment.created_at),
+      updatedAt: new Date(dbComment.updated_at)
+    };
+  }
+
+  private transformRelationshipFromDb(dbRelationship: any): CharacterRelationship {
+    return {
+      id: dbRelationship.id,
+      sourceCharacterId: dbRelationship.source_character_id,
+      targetCharacterId: dbRelationship.target_character_id,
+      label: dbRelationship.label,
+      createdAt: new Date(dbRelationship.created_at),
+      updatedAt: new Date(dbRelationship.updated_at)
     };
   }
 }

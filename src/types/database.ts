@@ -111,22 +111,43 @@ export interface Guild {
 
 export interface FoundryJsonEntry {
   id: string;
+  characterId?: string;
   name: string;
   json: unknown;
-  createdAt: string;
+  sortOrder?: number;
+  createdAt: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface CharacterJournalEntry {
   id: string;
+  characterId: string;
+  authorId: string;
   title: string;
   body: string;
-  createdAt: string;
+  likeCount: number;
+  likedByCurrentUser: boolean;
+  comments: CharacterJournalComment[];
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface CharacterJournalComment {
+  id: string;
+  entryId: string;
+  authorId: string;
+  body: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
 }
 
 export interface CharacterRelationship {
   id: string;
+  sourceCharacterId: string;
   targetCharacterId: string;
   label: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
 }
 
 export interface GuildMembership {
