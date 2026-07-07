@@ -607,24 +607,30 @@ const SchedulePage: React.FC = () => {
 const buildPollSlots = (poll: SchedulePoll): PollSlot[] => {
   const slots: PollSlot[] = [];
   const dates = getDateRange(poll.dateStart, poll.dateEnd);
-  const windowEndMinutes = poll.endMinutes > poll.startMinutes
-    ? poll.endMinutes
-    : poll.endMinutes + 1440;
+  const isOvernight = poll.endMinutes <= poll.startMinutes;
 
   dates.forEach(date => {
-    for (let minutes = poll.startMinutes; minutes < windowEndMinutes; minutes += poll.slotMinutes) {
-      const displayMinutes = minutes % 1440;
-      const hour = Math.floor(displayMinutes / 60);
-      const minute = displayMinutes % 60;
-      const key = `${date}T${pad(hour)}:${pad(minute)}`;
-      slots.push({
-        key,
-        startsAt: zonedTimeToUtc(date, minutes, poll.timezone),
-        pollDate: date,
-        pollMinutes: displayMinutes,
-        windowMinutes: minutes
-      });
-    }
+    const ranges = isOvernight
+      ? [
+        { start: poll.startMinutes, end: 1440, windowOffset: 0 },
+        { start: 0, end: poll.endMinutes, windowOffset: 1440 }
+      ]
+      : [{ start: poll.startMinutes, end: poll.endMinutes, windowOffset: 0 }];
+
+    ranges.forEach(range => {
+      for (let minutes = range.start; minutes < range.end; minutes += poll.slotMinutes) {
+        const hour = Math.floor(minutes / 60);
+        const minute = minutes % 60;
+        const key = `${date}T${pad(hour)}:${pad(minute)}`;
+        slots.push({
+          key,
+          startsAt: zonedTimeToUtc(date, minutes, poll.timezone),
+          pollDate: date,
+          pollMinutes: minutes,
+          windowMinutes: minutes + range.windowOffset
+        });
+      }
+    });
   });
 
   return slots;
