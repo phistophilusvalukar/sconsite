@@ -27,4 +27,7 @@ export const DATABASE_TABLES = {
   SCHEDULE_POLLS: 'schedule_polls',
   SCHEDULE_PARTICIPANTS: 'schedule_participants',
   SCHEDULE_AVAILABILITY: 'schedule_availability',
+  GAMES: 'games',
+  GAME_INVITES: 'game_invites',
+  GAME_APPLICATIONS: 'game_applications',
 };

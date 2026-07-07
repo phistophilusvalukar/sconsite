@@ -181,6 +181,54 @@ export interface ScheduleAvailability {
   createdAt: Date;
 }
 
+export type GameStatus = 'Open' | 'Closed' | 'Completed' | 'Cancelled';
+export type GameApplicationStatus = 'Applied' | 'Roster' | 'On Deck' | 'Declined' | 'Withdrawn';
+
+export interface GameListing {
+  _id?: string;
+  title: string;
+  description: string;
+  gmId: string;
+  gmName: string;
+  rewardCharacterId: string;
+  rewardCharacter?: Character;
+  schedulePollId?: string;
+  startTime: Date;
+  durationMinutes: number;
+  characterLevel: number;
+  tier: string;
+  partySize: number;
+  tags: string[];
+  status: GameStatus;
+  invites: GameInvite[];
+  applications: GameApplication[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GameInvite {
+  _id?: string;
+  gameId: string;
+  userId: string;
+  displayName: string;
+  source: 'Manual' | 'Poll';
+  createdAt: Date;
+}
+
+export interface GameApplication {
+  _id?: string;
+  gameId: string;
+  userId: string;
+  displayName: string;
+  characterIds: string[];
+  lockedCharacterId?: string;
+  status: GameApplicationStatus;
+  note: string;
+  characters: Character[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;

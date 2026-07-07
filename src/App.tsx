@@ -11,6 +11,7 @@ import NewsPage from './pages/NewsPage';
 import ProfilePage from './pages/ProfilePage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import SchedulePage from './pages/SchedulePage';
+import GamesPage from './pages/GamesPage';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
               <Route path="/guilds" element={<GuildsPage />} />
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/schedule/:pollId" element={<SchedulePage />} />
+              <Route path="/games" element={<GamesPage />} />
               <Route path="/news" element={<NewsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
