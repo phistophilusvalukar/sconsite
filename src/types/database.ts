@@ -109,6 +109,26 @@ export interface Guild {
   updatedAt: Date;
 }
 
+export interface FoundryJsonEntry {
+  id: string;
+  name: string;
+  json: unknown;
+  createdAt: string;
+}
+
+export interface CharacterJournalEntry {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface CharacterRelationship {
+  id: string;
+  targetCharacterId: string;
+  label: string;
+}
+
 export interface GuildMembership {
   _id?: string;
   guildId: string;

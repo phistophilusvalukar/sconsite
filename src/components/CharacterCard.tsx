@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Download, Edit, Shield, Trash2, Users } from 'lucide-react';
+import { Calendar, Edit, Shield, Trash2, Users } from 'lucide-react';
 import { Character } from '../types/database';
 
 interface CharacterCardProps {
@@ -23,96 +23,42 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const characterAvatar = parsedData?.avatar || character.stats?.avatar || 
     `https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=128&h=128&fit=crop`;
 
-  const handleDownloadJson = () => {
-    if (!character.foundryJson) return;
-
-    const dataBlob = new Blob([JSON.stringify(character.foundryJson, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = character.foundryFileName || `${character.name}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div
-      className={`bg-fantasy-900/30 border border-fantasy-700/30 rounded-xl p-6 hover:bg-fantasy-800/30 transition-all cursor-pointer ${
+      className={`group overflow-hidden rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 hover:border-yellow-400/50 hover:bg-fantasy-800/30 transition-all cursor-pointer ${
         isSelected ? 'ring-2 ring-yellow-400' : ''
       }`}
       onClick={() => onSelect(character)}
     >
-      <div className="flex items-center justify-between mb-4">
-        <img
-          src={characterAvatar}
-          alt={character.name}
-          className="w-16 h-16 rounded-full border-2 border-yellow-400 object-cover"
-        />
-        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-          character.isActive 
-            ? 'bg-emerald-500/20 text-emerald-400' 
-            : 'bg-gray-500/20 text-gray-400'
-        }`}>
-          {character.isActive ? 'Active' : 'Inactive'}
+      <div className="relative min-h-[260px]">
+        <img src={characterAvatar} alt={character.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        <div className="absolute inset-0 bg-gradient-to-t from-midnight-950 via-midnight-950/45 to-midnight-950/10" />
+        <div className="absolute left-4 right-4 top-4 flex items-center justify-between">
+          <div className={`px-3 py-1 rounded-full text-xs font-semibold backdrop-blur ${
+            character.isActive
+              ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/30'
+              : 'bg-gray-500/25 text-gray-200 ring-1 ring-gray-300/20'
+          }`}>
+            {character.isActive ? 'Active' : 'Inactive'}
+          </div>
+          {character.guildId && (
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20 text-blue-200 ring-1 ring-blue-300/30 backdrop-blur" title="Guild Member">
+              <Users className="w-4 h-4" />
+            </div>
+          )}
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 p-5">
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300">
+            Level {parsedData?.level || character.level} {character.class}
+          </p>
+          <h3 className="font-fantasy text-3xl font-bold text-white drop-shadow">{character.name}</h3>
+          <p className="mt-2 text-sm text-gray-200">
+            {[character.heritage, character.ancestry || character.race].filter(Boolean).join(' ') || 'Adventurer'}
+          </p>
         </div>
       </div>
 
-      <h3 className="text-xl font-bold text-white mb-2">{character.name}</h3>
-      <p className="text-fantasy-300 mb-2">
-        Level {parsedData?.level || character.level} {character.class}
-      </p>
-      
-      {(character.ancestry || character.race) && (
-        <p className="text-gray-400 text-sm mb-1">{character.ancestry || character.race}</p>
-      )}
-
-      {character.heritage && (
-        <p className="text-gray-500 text-xs mb-3">{character.heritage}</p>
-      )}
-
-      {/* Character Details from JSON */}
-      {parsedData && (
-        <div className="mb-4 p-3 bg-fantasy-800/30 rounded-lg">
-          <h4 className="text-sm font-semibold text-yellow-400 mb-2">Character Details</h4>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {parsedData.age && (
-              <div>
-                <span className="text-gray-400">Age:</span>
-                <span className="text-white ml-1">{parsedData.age}</span>
-              </div>
-            )}
-            {parsedData.height && (
-              <div>
-                <span className="text-gray-400">Height:</span>
-                <span className="text-white ml-1">{parsedData.height}</span>
-              </div>
-            )}
-            {parsedData.weight && (
-              <div>
-                <span className="text-gray-400">Weight:</span>
-                <span className="text-white ml-1">{parsedData.weight}</span>
-              </div>
-            )}
-            {parsedData.wealth !== undefined && (
-              <div>
-                <span className="text-gray-400">Wealth:</span>
-                <span className="text-white ml-1">{parsedData.wealth} gp</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {character.guildId && (
-        <div className="flex items-center space-x-2 mb-3">
-          <Users className="w-4 h-4 text-blue-400" />
-          <span className="text-blue-400 text-sm">Guild Member</span>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+      <div className="grid grid-cols-2 gap-4 p-4 text-sm">
         <div className="flex items-center space-x-2">
           <Shield className="w-4 h-4 text-yellow-400" />
           <span className="text-gray-300">{character.foundryJson ? 'JSON saved' : 'No JSON'}</span>
@@ -125,30 +71,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         </div>
       </div>
 
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-semibold text-white">Foundry JSON</h4>
-        </div>
-        {character.foundryJson ? (
-          <div className="flex items-center justify-between p-2 bg-fantasy-700/30 rounded text-xs">
-            <span className="text-white truncate">{character.foundryFileName || `${character.name}.json`}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDownloadJson();
-              }}
-              className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
-              title="Download"
-            >
-              <Download className="w-3 h-3" />
-            </button>
-          </div>
-        ) : (
-          <p className="text-gray-400 text-xs">No JSON saved</p>
-        )}
-      </div>
-
-      <div className="flex space-x-2">
+      <div className="flex space-x-2 px-4 pb-4">
         <button 
           onClick={(e) => {
             e.stopPropagation();
@@ -174,15 +97,33 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 };
 
 // Helper function to parse character data from FoundryVTT JSON
-function getCharacterDataFromJson(jsonData: any) {
+function getCharacterDataFromJson(jsonData: unknown) {
   try {
-    const system = jsonData.system || {};
+    const data = jsonData as {
+      img?: string;
+      system?: {
+        details?: {
+          biography?: {
+            appearance?: string;
+            backstory?: string;
+          };
+          age?: { value?: number };
+          height?: { value?: string };
+          weight?: { value?: string };
+          level?: { value?: number };
+        };
+        attributes?: {
+          wealth?: { value?: number };
+        };
+      };
+    };
+    const system = data.system || {};
     const details = system.details || {};
     const biography = details.biography || {};
     const attributes = system.attributes || {};
 
     return {
-      name: jsonData.name || '',
+      name: '',
       appearance: biography.appearance || '',
       backstory: biography.backstory || '',
       age: details.age?.value || null,
@@ -190,7 +131,7 @@ function getCharacterDataFromJson(jsonData: any) {
       weight: details.weight?.value || '',
       level: details.level?.value || 1,
       wealth: attributes.wealth?.value || 0,
-      avatar: jsonData.img || ''
+      avatar: data.img || ''
     };
   } catch (error) {
     console.error('Error parsing character JSON:', error);

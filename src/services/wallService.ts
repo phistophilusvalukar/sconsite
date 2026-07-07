@@ -85,7 +85,7 @@ export class WallService {
       }
 
       // Get total count
-      const { count, error: countError } = await supabase
+      const { count } = await supabase
         .from(DATABASE_TABLES.WALL_POSTS)
         .select('*', { count: 'exact', head: true })
         .eq('target_user_id', targetUserId);

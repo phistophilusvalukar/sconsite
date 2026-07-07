@@ -117,7 +117,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         stats: parsedData.stats || character?.stats || {},
         equipment: character?.equipment || [],
         foundryJson: importedJson || character?.foundryJson || null,
-        foundryFileName: importFileName || character?.foundryFileName || null
+        foundryFileName: importFileName || character?.foundryFileName || undefined
       };
 
       const result = character?._id

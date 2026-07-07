@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Shield, Loader2 } from 'lucide-react';
+import { Loader2, Network, Plus, Shield, Users } from 'lucide-react';
 import { Character } from '../types/database';
 import { CharacterService } from '../services/characterService';
 import CharacterCard from '../components/CharacterCard';
+import CharacterDetailsModal from '../components/CharacterDetailsModal';
 import CharacterForm from '../components/CharacterForm';
+
+type CharacterView = 'characters' | 'relationships';
 
 const CharacterPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+  const [activeView, setActiveView] = useState<CharacterView>('characters');
   const [showForm, setShowForm] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState<Character | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +79,25 @@ const CharacterPage: React.FC = () => {
     setShowForm(false);
     setEditingCharacter(undefined);
     await loadCharacters();
+    setSelectedCharacter(character);
+  };
+
+  const handleSaveCharacterMetadata = async (updatedCharacter: Character) => {
+    if (!user?.id || !updatedCharacter._id) return;
+
+    const response = await characterService.updateCharacter(updatedCharacter._id, user.id, {
+      stats: updatedCharacter.stats,
+      foundryJson: updatedCharacter.foundryJson,
+      foundryFileName: updatedCharacter.foundryFileName
+    });
+
+    if (response.success && response.data) {
+      const savedCharacter = response.data;
+      setCharacters(prev => prev.map(character => character._id === savedCharacter._id ? savedCharacter : character));
+      setSelectedCharacter(savedCharacter);
+    } else {
+      alert(response.error || 'Failed to save character details');
+    }
   };
 
   const handleCancelForm = () => {
@@ -105,7 +128,7 @@ const CharacterPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
           <div>
             <h1 className="font-fantasy text-4xl font-bold text-white mb-2">
-              My Characters
+              Characters
             </h1>
             <p className="text-gray-300">
               Manage your Pathfinder 2e characters and FoundryVTT files
@@ -120,6 +143,31 @@ const CharacterPage: React.FC = () => {
           </button>
         </div>
 
+        <div className="mb-8 grid grid-cols-2 rounded-xl border border-fantasy-700/30 bg-fantasy-900/20 p-1 sm:flex sm:w-fit">
+          <button
+            onClick={() => setActiveView('characters')}
+            className={`flex items-center justify-center space-x-2 rounded-lg px-5 py-3 text-sm font-semibold transition-colors ${
+              activeView === 'characters'
+                ? 'bg-yellow-500 text-midnight-900'
+                : 'text-gray-300 hover:bg-fantasy-800/40 hover:text-white'
+            }`}
+          >
+            <Shield className="h-4 w-4" />
+            <span>My Characters</span>
+          </button>
+          <button
+            onClick={() => setActiveView('relationships')}
+            className={`flex items-center justify-center space-x-2 rounded-lg px-5 py-3 text-sm font-semibold transition-colors ${
+              activeView === 'relationships'
+                ? 'bg-yellow-500 text-midnight-900'
+                : 'text-gray-300 hover:bg-fantasy-800/40 hover:text-white'
+            }`}
+          >
+            <Network className="h-4 w-4" />
+            <span>Relationships</span>
+          </button>
+        </div>
+
         {/* Loading State */}
         {isLoading && (
           <div className="text-center py-12">
@@ -129,7 +177,7 @@ const CharacterPage: React.FC = () => {
         )}
 
         {/* Character Grid */}
-        {!isLoading && (
+        {!isLoading && activeView === 'characters' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {characters.map((character) => (
               <CharacterCard
@@ -156,8 +204,12 @@ const CharacterPage: React.FC = () => {
           </div>
         )}
 
+        {!isLoading && activeView === 'relationships' && (
+          <RelationshipOverview characters={characters} onSelectCharacter={setSelectedCharacter} />
+        )}
+
         {/* Empty State */}
-        {!isLoading && characters.length === 0 && (
+        {!isLoading && activeView === 'characters' && characters.length === 0 && (
           <div className="text-center py-16">
             <Shield className="w-16 h-16 text-gray-400 mx-auto mb-6" />
             <h2 className="text-2xl font-bold text-white mb-4">No Characters Yet</h2>
@@ -173,105 +225,14 @@ const CharacterPage: React.FC = () => {
           </div>
         )}
 
-        {/* Character Details Panel */}
         {selectedCharacter && (
-          <div className="bg-fantasy-900/30 border border-fantasy-700/30 rounded-xl p-6">
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Character Info */}
-              <div className="lg:w-1/2">
-                <h2 className="font-fantasy text-2xl font-bold text-white mb-4">
-                  {selectedCharacter.name}
-                </h2>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-400">Class & Level</label>
-                      <p className="text-white">
-                        Level {selectedCharacter.level} {selectedCharacter.class}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-400">Ancestry</label>
-                      <p className="text-white">{selectedCharacter.ancestry || selectedCharacter.race}</p>
-                    </div>
-                    {selectedCharacter.heritage && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Heritage</label>
-                        <p className="text-white">{selectedCharacter.heritage}</p>
-                      </div>
-                    )}
-                    {selectedCharacter.classSecondary && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Dual Class</label>
-                        <p className="text-white">
-                          {selectedCharacter.classPrimary} / {selectedCharacter.classSecondary}
-                        </p>
-                      </div>
-                    )}
-                    {selectedCharacter.foundryJson && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Foundry File</label>
-                        <p className="text-white">{selectedCharacter.foundryFileName || 'Saved JSON'}</p>
-                      </div>
-                    )}
-                    {selectedCharacter.background && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Background</label>
-                        <p className="text-white">{selectedCharacter.background}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {selectedCharacter.backstory && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-400">Backstory</label>
-                      <p className="text-white leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedCharacter.backstory}} ></p>
-                    </div>
-                  )}
-                  
-                  {selectedCharacter.notes && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-400">Notes</label>
-                      <p className="text-white leading-relaxed">{selectedCharacter.notes}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Character Stats */}
-              <div className="lg:w-1/2">
-                <h3 className="text-xl font-bold text-white mb-4">Character Statistics</h3>
-                <div className="bg-fantasy-800/30 rounded-lg p-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-yellow-400 mb-1">
-                        {selectedCharacter.level}
-                      </div>
-                      <div className="text-gray-300">Level</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-400 mb-1">
-                        {selectedCharacter.isActive ? 'Active' : 'Inactive'}
-                      </div>
-                      <div className="text-gray-300">Status</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-400 mb-1">
-                        {selectedCharacter.createdAt ? new Date(selectedCharacter.createdAt).toLocaleDateString() : 'Unknown'}
-                      </div>
-                      <div className="text-gray-300">Created</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-400 mb-1">
-                        {selectedCharacter.guildId ? 'Yes' : 'No'}
-                      </div>
-                      <div className="text-gray-300">Guild Member</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <CharacterDetailsModal
+            character={selectedCharacter}
+            characters={characters}
+            onClose={() => setSelectedCharacter(null)}
+            onEdit={handleEditCharacter}
+            onSaveMetadata={handleSaveCharacterMetadata}
+          />
         )}
 
         {/* Character Form Modal */}
@@ -287,5 +248,59 @@ const CharacterPage: React.FC = () => {
     </div>
   );
 };
+
+function RelationshipOverview({ characters, onSelectCharacter }: { characters: Character[]; onSelectCharacter: (character: Character) => void }) {
+  const links = characters.flatMap(character => {
+    const relationships = Array.isArray(character.stats?.relationships) ? character.stats.relationships : [];
+    return relationships.map((relationship: { targetCharacterId: string; label: string; id: string }) => ({
+      id: relationship.id,
+      source: character,
+      target: characters.find(item => item._id === relationship.targetCharacterId),
+      label: relationship.label
+    }));
+  });
+
+  if (characters.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <Users className="w-16 h-16 text-gray-400 mx-auto mb-6" />
+        <h2 className="text-2xl font-bold text-white mb-4">No Relationship Map Yet</h2>
+        <p className="text-gray-300">Create characters first, then connect them from a character details window.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/20 p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="font-fantasy text-2xl font-bold text-white">Relationship Map</h2>
+          <p className="text-sm text-gray-400">Open a character to add direct relationships and explore deeper connections.</p>
+        </div>
+        <Network className="h-8 w-8 text-yellow-300" />
+      </div>
+
+      {links.length === 0 ? (
+        <div className="rounded-lg bg-midnight-900/60 p-8 text-center text-gray-300">
+          No relationships have been added yet.
+        </div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {links.map(link => (
+            <button
+              key={`${link.source._id}-${link.id}`}
+              onClick={() => onSelectCharacter(link.source)}
+              className="rounded-lg border border-fantasy-700/30 bg-midnight-900/60 p-4 text-left transition-colors hover:border-yellow-400/60"
+            >
+              <p className="font-semibold text-white">{link.source.name}</p>
+              <p className="my-2 text-sm text-yellow-200">{link.label}</p>
+              <p className="text-sm text-gray-300">{link.target?.name || 'Unknown character'}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default CharacterPage;
