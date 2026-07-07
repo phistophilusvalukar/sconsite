@@ -141,6 +141,46 @@ export interface GuildApplication {
   character?: Character;
 }
 
+export interface SchedulePoll {
+  _id?: string;
+  title: string;
+  description: string;
+  creatorId: string;
+  timezone: string;
+  dateStart: string;
+  dateEnd: string;
+  startMinutes: number;
+  endMinutes: number;
+  slotMinutes: 15 | 30 | 60;
+  status: 'Open' | 'Closed';
+  selectedSlotKey?: string;
+  selectedSlotStart?: Date;
+  participants: ScheduleParticipant[];
+  availability: ScheduleAvailability[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ScheduleParticipant {
+  _id?: string;
+  pollId: string;
+  userId: string;
+  displayName: string;
+  timezone: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ScheduleAvailability {
+  _id?: string;
+  pollId: string;
+  participantId: string;
+  userId: string;
+  slotKey: string;
+  slotStart: Date;
+  createdAt: Date;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;

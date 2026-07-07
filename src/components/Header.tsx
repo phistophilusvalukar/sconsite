@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, Menu, X, Users, Scroll, Newspaper, User, ClipboardList } from 'lucide-react';
+import { Shield, Menu, X, Users, Scroll, Newspaper, User, ClipboardList, CalendarDays } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import GoogleLogin from './GoogleLogin';
 
@@ -15,6 +15,7 @@ const Header: React.FC = () => {
     { name: 'Characters', href: '/characters', icon: User },
     { name: 'Registry', href: '/citizens', icon: ClipboardList },
     { name: 'Guilds', href: '/guilds', icon: Users },
+    { name: 'Schedule', href: '/schedule', icon: CalendarDays },
     { name: 'News', href: '/news', icon: Newspaper },
   ];
 
@@ -35,12 +36,15 @@ const Header: React.FC = () => {
           <div className="hidden md:flex items-center space-x-8">
             {navigation.map((item) => {
               const Icon = item.icon;
+              const isActive = item.href === '/schedule'
+                ? location.pathname.startsWith('/schedule')
+                : location.pathname === item.href;
               return (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    location.pathname === item.href
+                    isActive
                       ? 'text-yellow-400 bg-fantasy-800/30'
                       : 'text-gray-300 hover:text-yellow-400 hover:bg-fantasy-800/20'
                   }`}
@@ -85,12 +89,15 @@ const Header: React.FC = () => {
             <div className="px-2 pt-2 pb-3 space-y-1 border-t border-fantasy-800/50">
               {navigation.map((item) => {
                 const Icon = item.icon;
+                const isActive = item.href === '/schedule'
+                  ? location.pathname.startsWith('/schedule')
+                  : location.pathname === item.href;
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                      location.pathname === item.href
+                      isActive
                         ? 'text-yellow-400 bg-fantasy-800/30'
                         : 'text-gray-300 hover:text-yellow-400 hover:bg-fantasy-800/20'
                     }`}

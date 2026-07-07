@@ -1,4 +1,3 @@
-import React from 'react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
@@ -11,6 +10,7 @@ import GuildsPage from './pages/GuildsPage';
 import NewsPage from './pages/NewsPage';
 import ProfilePage from './pages/ProfilePage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
+import SchedulePage from './pages/SchedulePage';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -26,6 +26,8 @@ function App() {
               <Route path="/characters" element={<CharacterPage />} />
               <Route path="/citizens" element={<CitizenRegistryPage />} />
               <Route path="/guilds" element={<GuildsPage />} />
+              <Route path="/schedule" element={<SchedulePage />} />
+              <Route path="/schedule/:pollId" element={<SchedulePage />} />
               <Route path="/news" element={<NewsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />

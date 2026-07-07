@@ -24,4 +24,7 @@ export const DATABASE_TABLES = {
   CHARACTERS: 'characters',
   GUILDS: 'guilds',
   GUILD_MEMBERSHIPS: 'guild_memberships',
+  SCHEDULE_POLLS: 'schedule_polls',
+  SCHEDULE_PARTICIPANTS: 'schedule_participants',
+  SCHEDULE_AVAILABILITY: 'schedule_availability',
 };
