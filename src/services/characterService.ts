@@ -88,6 +88,7 @@ export class CharacterService {
         equipment: characterData.equipment || [],
         foundry_json: characterData.foundryJson || null,
         foundry_file_name: characterData.foundryFileName || null,
+        role_badges: characterData.roleBadges || [],
         backstory: characterData.backstory || '',
         notes: characterData.notes || '',
         is_active: characterData.isActive !== false,
@@ -236,6 +237,7 @@ export class CharacterService {
       if (updates.equipment !== undefined) updateData.equipment = updates.equipment;
       if (updates.foundryJson !== undefined) updateData.foundry_json = updates.foundryJson;
       if (updates.foundryFileName !== undefined) updateData.foundry_file_name = updates.foundryFileName || null;
+      if (updates.roleBadges !== undefined) updateData.role_badges = updates.roleBadges || [];
       if (updates.backstory !== undefined) updateData.backstory = updates.backstory;
       if (updates.notes !== undefined) updateData.notes = updates.notes;
       if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
@@ -323,6 +325,12 @@ export class CharacterService {
 
   async addFoundryFile(characterId: string, ownerId: string, name: string, json: unknown, sortOrder: number): Promise<ApiResponse<FoundryJsonEntry>> {
     try {
+      const { data: existingFiles } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
+        .select('id')
+        .eq('character_id', characterId)
+        .limit(1);
+
       const { data, error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
         .insert({
@@ -330,6 +338,7 @@ export class CharacterService {
           owner_id: ownerId,
           name,
           json_data: json,
+          is_active: !existingFiles || existingFiles.length === 0,
           sort_order: sortOrder
         })
         .select()
@@ -347,11 +356,29 @@ export class CharacterService {
     }
   }
 
-  async updateFoundryFile(fileId: string, updates: { name?: string; sortOrder?: number }): Promise<ApiResponse<FoundryJsonEntry>> {
+  async updateFoundryFile(fileId: string, updates: { name?: string; sortOrder?: number; isActive?: boolean }): Promise<ApiResponse<FoundryJsonEntry>> {
     try {
       const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
+      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+
+      if (updates.isActive === true) {
+        const { data: file, error: fileError } = await this.dbService.getClient()
+          .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
+          .select('character_id')
+          .eq('id', fileId)
+          .single();
+
+        if (fileError || !file) return { success: false, error: fileError?.message || 'Foundry file not found' };
+
+        const { error: clearError } = await this.dbService.getClient()
+          .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq('character_id', file.character_id);
+
+        if (clearError) return { success: false, error: clearError.message };
+      }
 
       const { data, error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
@@ -794,6 +821,7 @@ export class CharacterService {
       equipment: dbCharacter.equipment,
       foundryJson: dbCharacter.foundry_json,
       foundryFileName: dbCharacter.foundry_file_name,
+      roleBadges: Array.isArray(dbCharacter.role_badges) ? dbCharacter.role_badges : [],
       backstory: dbCharacter.backstory,
       notes: dbCharacter.notes,
       isActive: dbCharacter.is_active,
@@ -809,6 +837,7 @@ export class CharacterService {
       characterId: dbFile.character_id,
       name: dbFile.name,
       json: dbFile.json_data,
+      isActive: dbFile.is_active,
       sortOrder: dbFile.sort_order,
       createdAt: new Date(dbFile.created_at),
       updatedAt: new Date(dbFile.updated_at)

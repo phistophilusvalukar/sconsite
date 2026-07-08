@@ -73,6 +73,7 @@ export interface Character {
   equipment?: any[]; // JSON array for equipment
   foundryJson?: any;
   foundryFileName?: string;
+  roleBadges?: CharacterRoleBadge[];
   backstory?: string;
   notes?: string;
   isActive: boolean;
@@ -109,11 +110,27 @@ export interface Guild {
   updatedAt: Date;
 }
 
+export type CharacterRoleCategory = 'Healer' | 'Tank' | 'DPS' | 'Support';
+export type CharacterRoleBadge =
+  | 'healer_magical'
+  | 'healer_medicine'
+  | 'healer_alchemical'
+  | 'tank_mitigation'
+  | 'tank_hp'
+  | 'dps_physical'
+  | 'dps_magical'
+  | 'dps_duelist'
+  | 'dps_blaster'
+  | 'support_defensive'
+  | 'support_offensive'
+  | 'support_control';
+
 export interface FoundryJsonEntry {
   id: string;
   characterId?: string;
   name: string;
   json: unknown;
+  isActive?: boolean;
   sortOrder?: number;
   createdAt: string | Date;
   updatedAt?: string | Date;

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Save, Upload, X } from 'lucide-react';
-import { Character } from '../types/database';
+import { Character, CharacterRoleBadge } from '../types/database';
 import { CharacterService, FoundryCharacterData } from '../services/characterService';
+import { roleBadgeMap, roleBadgeTone, roleCategories } from '../utils/characterRoles';
 
 interface CharacterFormProps {
   character?: Character;
@@ -26,7 +27,8 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
     background: '',
     backstory: '',
     notes: '',
-    isActive: true
+    isActive: true,
+    roleBadges: [] as CharacterRoleBadge[]
   });
   const [isLoading, setIsLoading] = useState(false);
   const [importFileName, setImportFileName] = useState('');
@@ -46,7 +48,8 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         background: character.background || '',
         backstory: character.backstory || '',
         notes: character.notes || '',
-        isActive: character.isActive
+        isActive: character.isActive,
+        roleBadges: character.roleBadges || []
       });
       setImportedJson(character.foundryJson || null);
       setImportFileName(character.foundryFileName || '');
@@ -62,6 +65,15 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         : type === 'number'
           ? parseInt(value, 10) || 1
           : value
+    }));
+  };
+
+  const handleToggleRoleBadge = (badge: CharacterRoleBadge) => {
+    setFormData(prev => ({
+      ...prev,
+      roleBadges: prev.roleBadges.includes(badge)
+        ? prev.roleBadges.filter(item => item !== badge)
+        : [...prev.roleBadges, badge]
     }));
   };
 
@@ -113,6 +125,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         backstory: formData.backstory,
         notes: formData.notes,
         isActive: formData.isActive,
+        roleBadges: formData.roleBadges,
         userId,
         stats: parsedData.stats || character?.stats || {},
         equipment: character?.equipment || [],
@@ -306,6 +319,37 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
               />
               <span className="text-gray-300">Active Character</span>
             </label>
+          </div>
+
+          <div>
+            <h3 className="mb-3 text-lg font-semibold text-white">Role Badges</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              {roleCategories.map(group => (
+                <div key={group.category} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/30 p-4">
+                  <p className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300">{group.category}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {group.badges.map(badge => {
+                      const selected = formData.roleBadges.includes(badge.id);
+                      return (
+                        <button
+                          key={badge.id}
+                          type="button"
+                          onClick={() => handleToggleRoleBadge(badge.id)}
+                          className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ring-1 transition-colors ${
+                            selected
+                              ? roleBadgeTone(roleBadgeMap.get(badge.id)?.category)
+                              : 'bg-midnight-900/60 text-gray-300 ring-fantasy-600/40 hover:text-white'
+                          }`}
+                        >
+                          {badge.icon}
+                          <span>{badge.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>

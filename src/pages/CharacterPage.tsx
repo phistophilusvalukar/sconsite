@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Loader2, Network, Plus, Shield, Users } from 'lucide-react';
-import { Character, CharacterRelationship } from '../types/database';
+import { Character, CharacterRelationship, CharacterRoleCategory } from '../types/database';
 import { CharacterService } from '../services/characterService';
 import CharacterCard from '../components/CharacterCard';
 import CharacterDetailsModal from '../components/CharacterDetailsModal';
 import CharacterForm from '../components/CharacterForm';
 import CharacterRelationshipGraph from '../components/CharacterRelationshipGraph';
+import CharacterRoleBadges from '../components/CharacterRoleBadges';
+import { getRoleCategoryForBadge } from '../utils/characterRoles';
+import { getAvatarFromFoundryJson } from '../utils/foundryCharacter';
 
 type CharacterView = 'characters' | 'all' | 'relationships';
 
@@ -281,6 +284,12 @@ const CharacterPage: React.FC = () => {
 };
 
 function AllCharactersView({ characters, currentUserId, onSelectCharacter }: { characters: Character[]; currentUserId: string; onSelectCharacter: (character: Character) => void }) {
+  const [activeFilter, setActiveFilter] = useState<CharacterRoleCategory | 'All'>('All');
+  const roleFilters: Array<CharacterRoleCategory | 'All'> = ['All', 'Healer', 'Tank', 'DPS', 'Support'];
+  const filteredCharacters = activeFilter === 'All'
+    ? characters
+    : characters.filter(character => (character.roleBadges || []).some(badge => getRoleCategoryForBadge(badge) === activeFilter));
+
   if (characters.length === 0) {
     return (
       <div className="text-center py-16">
@@ -301,20 +310,65 @@ function AllCharactersView({ characters, currentUserId, onSelectCharacter }: { c
         <Users className="h-8 w-8 text-yellow-300" />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {characters.map(character => (
+      <div className="mb-5 flex flex-wrap gap-2">
+        {roleFilters.map(filter => (
           <button
-            key={character._id}
-            onClick={() => onSelectCharacter(character)}
-            className="rounded-lg border border-fantasy-700/30 bg-midnight-900/60 p-4 text-left transition-colors hover:border-yellow-400/60"
+            key={filter}
+            onClick={() => setActiveFilter(filter)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+              activeFilter === filter
+                ? 'bg-yellow-500 text-midnight-900'
+                : 'bg-midnight-900/60 text-gray-300 ring-1 ring-fantasy-700/40 hover:text-white'
+            }`}
           >
-            <p className="font-semibold text-white">{character.name}</p>
-            <p className="mt-1 text-sm text-yellow-200">Level {character.level} {character.class}</p>
-            <p className="mt-2 text-sm text-gray-300">{character.ancestry || character.race}{character.userId === currentUserId ? ' - Yours' : ''}</p>
+            {filter}
           </button>
         ))}
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {filteredCharacters.map(character => (
+          <PublicCharacterCard
+            key={character._id}
+            character={character}
+            isOwnCharacter={character.userId === currentUserId}
+            onSelect={() => onSelectCharacter(character)}
+          />
+        ))}
+      </div>
+      {filteredCharacters.length === 0 && (
+        <p className="rounded-lg bg-midnight-900/60 p-4 text-sm text-gray-400">No active characters match that role yet.</p>
+      )}
     </div>
+  );
+}
+
+function PublicCharacterCard({ character, isOwnCharacter, onSelect }: { character: Character; isOwnCharacter: boolean; onSelect: () => void }) {
+  const avatar = getAvatarFromFoundryJson(character.foundryJson) || character.stats?.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=600&h=600&fit=crop';
+
+  return (
+    <button
+      onClick={onSelect}
+      className="group relative min-h-[210px] overflow-hidden rounded-lg border border-fantasy-700/30 bg-midnight-900/70 p-5 text-left transition-colors hover:border-yellow-400/60"
+    >
+      <img
+        src={avatar}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-y-0 right-0 h-full w-[58%] object-cover opacity-65 transition-transform duration-300 group-hover:scale-105"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-midnight-950 via-midnight-950/90 via-[55%] to-midnight-950/10" />
+      <div className="relative z-10 flex min-h-[170px] max-w-[68%] flex-col">
+        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300">Level {character.level} {character.class}</p>
+        <h3 className="mt-2 font-fantasy text-3xl font-bold text-white">{character.name}</h3>
+        <p className="mt-2 text-sm text-gray-300">
+          {[character.heritage, character.ancestry || character.race].filter(Boolean).join(' ') || 'Adventurer'}
+          {isOwnCharacter ? ' - Yours' : ''}
+        </p>
+        {character.background && <p className="mt-3 line-clamp-2 text-sm text-gray-400">{character.background}</p>}
+      </div>
+      <CharacterRoleBadges badges={character.roleBadges} limit={6} className="absolute bottom-4 right-4 z-10 max-w-[54%]" />
+    </button>
   );
 }
 

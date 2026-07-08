@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, Edit, Shield, Trash2, Users } from 'lucide-react';
 import { Character } from '../types/database';
+import CharacterRoleBadges from './CharacterRoleBadges';
 
 interface CharacterCardProps {
   character: Character;
@@ -56,6 +57,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
             {[character.heritage, character.ancestry || character.race].filter(Boolean).join(' ') || 'Adventurer'}
           </p>
         </div>
+        <CharacterRoleBadges badges={character.roleBadges} limit={5} className="absolute bottom-4 right-4 max-w-[46%]" />
       </div>
 
       <div className="grid grid-cols-2 gap-4 p-4 text-sm">

@@ -24,6 +24,7 @@ import {
   FoundryJsonEntry
 } from '../types/database';
 import { CharacterService } from '../services/characterService';
+import { abilityLabels, getAbilityScoresFromFoundryJson } from '../utils/foundryCharacter';
 
 type DetailsTab = 'foundry' | 'journal' | 'relationships';
 
@@ -62,8 +63,11 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  const parsedData = character.foundryJson ? getCharacterDataFromJson(character.foundryJson) : null;
+  const activeFoundryEntry = foundryFiles.find(file => file.isActive) || foundryFiles[0];
+  const activeFoundryJson = activeFoundryEntry?.json || character.foundryJson;
+  const parsedData = activeFoundryJson ? getCharacterDataFromJson(activeFoundryJson) : null;
   const characterPortrait = parsedData?.avatar || character.stats?.avatar || defaultPortrait;
+  const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : null;
   const visibleTabs: DetailsTab[] = canEdit ? ['foundry', 'journal', 'relationships'] : ['journal', 'relationships'];
   const allCharacterIds = characters.map(item => item._id).filter(Boolean) as string[];
   const graphRootId = graphStack[graphStack.length - 1] || character._id || '';
@@ -150,6 +154,20 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
       setFoundryFiles(prev => prev.filter(file => file.id !== entryId));
     } else {
       alert(response.error || 'Failed to delete Foundry file');
+    }
+  };
+
+  const handleSetActiveFoundry = async (entry: FoundryJsonEntry) => {
+    if (entry.isActive) return;
+
+    const response = await characterService.updateFoundryFile(entry.id, { isActive: true });
+    if (response.success && response.data) {
+      setFoundryFiles(prev => prev.map(file => ({
+        ...file,
+        isActive: file.id === entry.id
+      })));
+    } else {
+      alert(response.error || 'Failed to set active Foundry JSON');
     }
   };
 
@@ -315,7 +333,10 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-2">
           <section className="border-b border-fantasy-700/30 lg:border-b-0 lg:border-r">
             <div className="grid gap-6 p-6 md:grid-cols-[minmax(220px,0.85fr)_1fr] lg:grid-cols-1 xl:grid-cols-[minmax(260px,0.85fr)_1fr]">
-              <img src={characterPortrait} alt={character.name} className="h-[420px] w-full rounded-lg object-cover" />
+              <div className="space-y-4">
+                <img src={characterPortrait} alt={character.name} className="h-[420px] w-full rounded-lg object-cover" />
+                <AbilityRadarChart scores={abilityScores} />
+              </div>
               <div className="space-y-5">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300">Level {character.level} {character.class}</p>
@@ -372,7 +393,20 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                         {foundryFiles.map((entry, index) => (
                           <div key={entry.id} className="flex w-full items-center gap-2 rounded-lg border border-fantasy-700/40 bg-fantasy-900/30 p-3">
                             <FileJson className="h-5 w-5 shrink-0 text-yellow-300" />
-                            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{entry.name}</span>
+                            <div className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold text-white">{entry.name}</span>
+                              {entry.isActive && <span className="text-xs font-semibold text-emerald-300">Active power</span>}
+                            </div>
+                            <button
+                              onClick={() => handleSetActiveFoundry(entry)}
+                              className={`rounded-md px-3 py-2 text-xs font-bold transition-colors ${
+                                entry.isActive
+                                  ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/30'
+                                  : 'bg-fantasy-800/60 text-gray-300 hover:text-white'
+                              }`}
+                            >
+                              {entry.isActive ? 'Active' : 'Set Active'}
+                            </button>
                             <IconButton title="Move up" disabled={index === 0} onClick={() => handleMoveFoundry(entry.id, -1)} icon={<ArrowUp className="h-4 w-4" />} />
                             <IconButton title="Move down" disabled={index === foundryFiles.length - 1} onClick={() => handleMoveFoundry(entry.id, 1)} icon={<ArrowDown className="h-4 w-4" />} />
                             <IconButton title="Rename" onClick={() => handleRenameFoundry(entry)} icon={<span className="text-xs font-bold">Aa</span>} />
@@ -526,6 +560,76 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     </div>
   );
 };
+
+function AbilityRadarChart({ scores }: { scores: ReturnType<typeof getAbilityScoresFromFoundryJson> | null }) {
+  const size = 260;
+  const center = size / 2;
+  const radius = 82;
+  const values = abilityLabels.map(ability => scores?.[ability.key] ?? null);
+  const hasScores = values.some(value => value !== null);
+  const maxScore = Math.max(20, ...values.map(value => value || 0));
+  const gridLevels = [0.25, 0.5, 0.75, 1];
+
+  const pointFor = (index: number, ratio: number) => {
+    const angle = -Math.PI / 2 + (index * 2 * Math.PI) / abilityLabels.length;
+    return {
+      x: center + Math.cos(angle) * radius * ratio,
+      y: center + Math.sin(angle) * radius * ratio
+    };
+  };
+
+  const polygonPoints = values.map((value, index) => {
+    const point = pointFor(index, Math.max(0, Math.min(1, (value || 0) / maxScore)));
+    return `${point.x},${point.y}`;
+  }).join(' ');
+
+  return (
+    <div className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/30 p-4">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">True Power</h4>
+        <span className="text-xs text-yellow-200">Active Foundry JSON</span>
+      </div>
+      {hasScores ? (
+        <svg viewBox={`0 0 ${size} ${size}`} className="mx-auto h-64 w-full max-w-[280px]" role="img" aria-label="Character ability radar chart">
+          {gridLevels.map(level => (
+            <polygon
+              key={level}
+              points={abilityLabels.map((_, index) => {
+                const point = pointFor(index, level);
+                return `${point.x},${point.y}`;
+              }).join(' ')}
+              fill="none"
+              stroke="rgba(250, 204, 21, 0.18)"
+              strokeWidth="1"
+            />
+          ))}
+          {abilityLabels.map((ability, index) => {
+            const axisEnd = pointFor(index, 1);
+            const labelPoint = pointFor(index, 1.25);
+            return (
+              <g key={ability.key}>
+                <line x1={center} y1={center} x2={axisEnd.x} y2={axisEnd.y} stroke="rgba(148, 163, 184, 0.28)" strokeWidth="1" />
+                <text x={labelPoint.x} y={labelPoint.y} textAnchor="middle" dominantBaseline="middle" className="fill-gray-200 text-[11px] font-bold">
+                  {ability.label}
+                </text>
+                <text x={labelPoint.x} y={labelPoint.y + 13} textAnchor="middle" dominantBaseline="middle" className="fill-yellow-200 text-[10px] font-semibold">
+                  {scores?.[ability.key] ?? '-'}
+                </text>
+              </g>
+            );
+          })}
+          <polygon points={polygonPoints} fill="rgba(250, 204, 21, 0.24)" stroke="rgb(250, 204, 21)" strokeWidth="2" />
+          {values.map((value, index) => {
+            const point = pointFor(index, Math.max(0, Math.min(1, (value || 0) / maxScore)));
+            return <circle key={abilityLabels[index].key} cx={point.x} cy={point.y} r="3.5" fill="rgb(253, 224, 71)" />;
+          })}
+        </svg>
+      ) : (
+        <p className="rounded-lg bg-midnight-900/60 p-4 text-sm text-gray-400">No STR, DEX, CON, INT, WIS, or CHA values were found in the active Foundry JSON.</p>
+      )}
+    </div>
+  );
+}
 
 function Detail({ label, value }: { label: string; value: React.ReactNode }) {
   return (
