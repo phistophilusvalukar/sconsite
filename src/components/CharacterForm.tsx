@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Save, Upload, X } from 'lucide-react';
-import { Character, CharacterRoleBadge } from '../types/database';
+import { Character, CharacterRoleBadge, CharacterRoleCategory } from '../types/database';
 import { CharacterService, FoundryCharacterData } from '../services/characterService';
-import { roleBadgeMap, roleBadgeTone, roleCategories } from '../utils/characterRoles';
+import { mainRoleOptions, roleBadgeMap, roleBadgeTone, roleCategories, rolePillTone } from '../utils/characterRoles';
 
 interface CharacterFormProps {
   character?: Character;
@@ -28,6 +28,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
     backstory: '',
     notes: '',
     isActive: true,
+    mainRole: '' as CharacterRoleCategory | '',
     roleBadges: [] as CharacterRoleBadge[]
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -49,6 +50,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         backstory: character.backstory || '',
         notes: character.notes || '',
         isActive: character.isActive,
+        mainRole: character.mainRole || '',
         roleBadges: character.roleBadges || []
       });
       setImportedJson(character.foundryJson || null);
@@ -56,7 +58,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
     }
   }, [character]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -125,6 +127,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         backstory: formData.backstory,
         notes: formData.notes,
         isActive: formData.isActive,
+        mainRole: formData.mainRole || undefined,
         roleBadges: formData.roleBadges,
         userId,
         stats: parsedData.stats || character?.stats || {},
@@ -319,6 +322,26 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
               />
               <span className="text-gray-300">Active Character</span>
             </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">
+              Main Role
+            </label>
+            <select
+              name="mainRole"
+              value={formData.mainRole}
+              onChange={handleInputChange}
+              className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            >
+              <option value="">Choose main role</option>
+              {mainRoleOptions.map(role => <option key={role} value={role}>{role}</option>)}
+            </select>
+            {formData.mainRole && (
+              <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-bold ring-1 ${rolePillTone(formData.mainRole)}`}>
+                {formData.mainRole}
+              </span>
+            )}
           </div>
 
           <div>

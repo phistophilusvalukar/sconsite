@@ -24,11 +24,13 @@ const CharacterRoleBadges: React.FC<CharacterRoleBadgesProps> = ({ badges = [], 
         return (
           <span
             key={badgeId}
-            title={`${badge.category}: ${badge.label}`}
-            className={`flex h-8 min-w-8 items-center justify-center gap-1 rounded-md border border-yellow-100/20 px-2 text-xs font-bold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.45)] ring-1 ${roleBadgeTone(badge.category)}`}
+            className={`group/badge relative flex h-8 min-w-8 items-center justify-center gap-1 rounded-md border border-yellow-100/20 px-2 text-xs font-bold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.45)] ring-1 ${roleBadgeTone(badge.category)}`}
           >
             {badge.icon}
             {showLabels && <span>{badge.label}</span>}
+            <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-fantasy-700/50 bg-midnight-950 px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-xl transition-opacity group-hover/badge:opacity-100">
+              {badge.category}: {badge.label}
+            </span>
           </span>
         );
       })}

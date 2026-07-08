@@ -89,6 +89,7 @@ export class CharacterService {
         equipment: characterData.equipment || [],
         foundry_json: characterData.foundryJson || null,
         foundry_file_name: characterData.foundryFileName || null,
+        main_role: characterData.mainRole || null,
         role_badges: characterData.roleBadges || [],
         backstory: characterData.backstory || '',
         notes: characterData.notes || '',
@@ -238,6 +239,7 @@ export class CharacterService {
       if (updates.equipment !== undefined) updateData.equipment = updates.equipment;
       if (updates.foundryJson !== undefined) updateData.foundry_json = updates.foundryJson;
       if (updates.foundryFileName !== undefined) updateData.foundry_file_name = updates.foundryFileName || null;
+      if (updates.mainRole !== undefined) updateData.main_role = updates.mainRole || null;
       if (updates.roleBadges !== undefined) updateData.role_badges = updates.roleBadges || [];
       if (updates.backstory !== undefined) updateData.backstory = updates.backstory;
       if (updates.notes !== undefined) updateData.notes = updates.notes;
@@ -877,6 +879,7 @@ export class CharacterService {
       equipment: dbCharacter.equipment,
       foundryJson: dbCharacter.foundry_json,
       foundryFileName: dbCharacter.foundry_file_name,
+      mainRole: dbCharacter.main_role || undefined,
       roleBadges: Array.isArray(dbCharacter.role_badges) ? dbCharacter.role_badges : [],
       backstory: dbCharacter.backstory,
       notes: dbCharacter.notes,

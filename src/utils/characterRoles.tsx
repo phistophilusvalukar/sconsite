@@ -55,3 +55,29 @@ export function roleBadgeTone(category?: CharacterRoleCategory) {
   if (category === 'Support') return 'bg-violet-900/80 text-violet-100 ring-violet-300/40';
   return 'bg-fantasy-900/80 text-gray-100 ring-yellow-300/30';
 }
+
+export const mainRoleOptions: CharacterRoleCategory[] = ['Healer', 'Tank', 'DPS', 'Support'];
+
+export function roleBorderTone(category?: CharacterRoleCategory) {
+  if (category === 'Healer') return 'border-emerald-400/70 hover:border-emerald-300 ring-1 ring-emerald-400/20';
+  if (category === 'Tank') return 'border-blue-400/70 hover:border-blue-300 ring-1 ring-blue-400/20';
+  if (category === 'DPS') return 'border-red-400/70 hover:border-red-300 ring-1 ring-red-400/20';
+  if (category === 'Support') return 'border-violet-400/70 hover:border-violet-300 ring-1 ring-violet-400/20';
+  return 'border-fantasy-700/30 hover:border-yellow-400/50';
+}
+
+export function roleNameTone(category?: CharacterRoleCategory) {
+  if (category === 'Healer') return 'text-emerald-100 decoration-emerald-300/60';
+  if (category === 'Tank') return 'text-blue-100 decoration-blue-300/60';
+  if (category === 'DPS') return 'text-red-100 decoration-red-300/60';
+  if (category === 'Support') return 'text-violet-100 decoration-violet-300/60';
+  return 'text-white decoration-yellow-300/50';
+}
+
+export function rolePillTone(category?: CharacterRoleCategory) {
+  if (category === 'Healer') return 'bg-emerald-500/20 text-emerald-100 ring-emerald-300/40';
+  if (category === 'Tank') return 'bg-blue-500/20 text-blue-100 ring-blue-300/40';
+  if (category === 'DPS') return 'bg-red-500/20 text-red-100 ring-red-300/40';
+  if (category === 'Support') return 'bg-violet-500/20 text-violet-100 ring-violet-300/40';
+  return 'bg-yellow-500/15 text-yellow-100 ring-yellow-300/30';
+}

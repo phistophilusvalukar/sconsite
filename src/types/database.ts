@@ -73,6 +73,7 @@ export interface Character {
   equipment?: any[]; // JSON array for equipment
   foundryJson?: any;
   foundryFileName?: string;
+  mainRole?: CharacterRoleCategory;
   roleBadges?: CharacterRoleBadge[];
   backstory?: string;
   notes?: string;

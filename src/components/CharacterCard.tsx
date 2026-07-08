@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, Edit, Shield, Trash2, Users } from 'lucide-react';
 import { Character } from '../types/database';
 import CharacterRoleBadges from './CharacterRoleBadges';
+import { roleBorderTone, rolePillTone } from '../utils/characterRoles';
 
 interface CharacterCardProps {
   character: Character;
@@ -26,7 +27,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 
   return (
     <div
-      className={`group overflow-hidden rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 hover:border-yellow-400/50 hover:bg-fantasy-800/30 transition-all cursor-pointer ${
+      className={`group overflow-hidden rounded-xl border bg-fantasy-900/30 hover:bg-fantasy-800/30 transition-all cursor-pointer ${roleBorderTone(character.mainRole)} ${
         isSelected ? 'ring-2 ring-yellow-400' : ''
       }`}
       onClick={() => onSelect(character)}
@@ -49,6 +50,11 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
           )}
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-5">
+          {character.mainRole && (
+            <span className={`mb-2 inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 backdrop-blur ${rolePillTone(character.mainRole)}`}>
+              {character.mainRole}
+            </span>
+          )}
           <p className="text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300">
             Level {parsedData?.level || character.level} {character.class}
           </p>

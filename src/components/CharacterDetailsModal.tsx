@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Network,
   Plus,
+  Search,
   Trash2,
   Upload,
   Users,
@@ -61,6 +62,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     relationshipTypes: ['family'],
     subtype: ''
   });
+  const [relationshipSearch, setRelationshipSearch] = useState('');
+  const [isRelationshipSearchFocused, setIsRelationshipSearchFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const activeFoundryEntry = foundryFiles.find(file => file.isActive) || foundryFiles[0];
@@ -76,10 +79,23 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const graphRelationships = relationships.filter(link => link.sourceCharacterId === graphRootId);
   const graphDepth = Math.max(0, graphStack.length - 1);
   const otherCharacters = characters.filter(item => item._id && item._id !== character._id);
+  const selectedRelationshipTarget = otherCharacters.find(item => item._id === relationshipDraft.targetCharacterId);
+  const relationshipSuggestions = otherCharacters
+    .filter(item => {
+      const term = relationshipSearch.trim().toLowerCase();
+      const alreadyLinked = relationships.some(link => link.sourceCharacterId === character._id && link.targetCharacterId === item._id);
+      if (alreadyLinked) return false;
+      if (!term) return true;
+      return [item.name, item.class, item.ancestry, item.race]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(term));
+    })
+    .slice(0, 8);
 
   useEffect(() => {
     setActiveTab(canEdit ? 'foundry' : 'journal');
     setGraphStack([character._id || '']);
+    setRelationshipSearch('');
   }, [character._id, canEdit]);
 
   useEffect(() => {
@@ -297,6 +313,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     if (response.success && response.data) {
       setRelationships(prev => [...prev, response.data as CharacterRelationship]);
       setRelationshipDraft({ targetCharacterId: '', relationshipTypes: ['family'], subtype: '' });
+      setRelationshipSearch('');
     } else {
       alert(response.error || 'Failed to add relationship');
     }
@@ -496,10 +513,48 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                       {canEdit && (
                         <div className="rounded-lg bg-fantasy-900/30 p-4">
                           <div className="grid gap-3">
-                            <select value={relationshipDraft.targetCharacterId} onChange={event => setRelationshipDraft(prev => ({ ...prev, targetCharacterId: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                              <option value="">Select character</option>
-                              {otherCharacters.map(item => <option key={item._id} value={item._id}>{item.name}</option>)}
-                            </select>
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                              <input
+                                type="search"
+                                value={selectedRelationshipTarget && !isRelationshipSearchFocused ? selectedRelationshipTarget.name : relationshipSearch}
+                                onChange={event => {
+                                  setRelationshipSearch(event.target.value);
+                                  setRelationshipDraft(prev => ({ ...prev, targetCharacterId: '' }));
+                                }}
+                                onFocus={() => {
+                                  setIsRelationshipSearchFocused(true);
+                                  if (selectedRelationshipTarget) setRelationshipSearch(selectedRelationshipTarget.name);
+                                }}
+                                onBlur={() => window.setTimeout(() => setIsRelationshipSearchFocused(false), 150)}
+                                className="w-full rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 py-3 pl-10 pr-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                placeholder="Search character name"
+                              />
+                              {isRelationshipSearchFocused && (
+                                <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-lg border border-fantasy-700/30 bg-fantasy-900/95 shadow-xl">
+                                  {relationshipSuggestions.length > 0 ? (
+                                    relationshipSuggestions.map(item => (
+                                      <button
+                                        key={item._id}
+                                        type="button"
+                                        onMouseDown={event => event.preventDefault()}
+                                        onClick={() => {
+                                          setRelationshipDraft(prev => ({ ...prev, targetCharacterId: item._id || '' }));
+                                          setRelationshipSearch(item.name);
+                                          setIsRelationshipSearchFocused(false);
+                                        }}
+                                        className="w-full px-4 py-3 text-left transition-colors hover:bg-fantasy-800/50"
+                                      >
+                                        <span className="block font-semibold text-white">{item.name}</span>
+                                        <span className="block text-xs text-gray-400">Level {item.level} {item.class}</span>
+                                      </button>
+                                    ))
+                                  ) : (
+                                    <div className="p-3 text-sm text-gray-400">No available characters found</div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                             <div className="grid gap-2 sm:grid-cols-2">
                               {(['family', 'rival', 'romantic', 'patron', 'owes_debt'] as CharacterRelationshipType[]).map(type => (
                                 <label key={type} className="flex items-center gap-2 rounded-lg bg-fantasy-800/40 p-3 text-sm text-gray-200">

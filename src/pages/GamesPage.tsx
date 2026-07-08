@@ -17,6 +17,7 @@ import { Character, GameApplication, GameApplicationStatus, GameListing, Schedul
 import GameService, { getTierForLevel } from '../services/gameService';
 import ScheduleService from '../services/scheduleService';
 import CharacterService from '../services/characterService';
+import { roleNameTone, rolePillTone } from '../utils/characterRoles';
 
 const defaultTags = ['Exploration', 'Combat', 'Roleplay', 'Downtime', 'Dungeon', 'Hexcrawl', 'One-shot'];
 const tierTags = ['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5'];
@@ -822,8 +823,8 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
                 <div key={application._id} className="border border-fantasy-700/30 rounded-lg p-3">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-white">{application.displayName}</p>
-                      <p className="text-sm text-gray-300">{formatCharacters(application)}</p>
+                      <p className={`font-semibold ${roleNameTone(getApplicationPrimaryRole(application))}`}>{application.displayName}</p>
+                      <p className="text-sm text-gray-300">{renderCharacters(application)}</p>
                       {application.note && <p className="text-sm text-gray-400 mt-1">{application.note}</p>}
                     </div>
                     <span className="text-xs font-bold text-yellow-300">{application.status}</span>
@@ -851,7 +852,7 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
             {ownApplication ? (
               <div className="space-y-3">
                 <p className="text-sm text-gray-300">Status: <span className="font-bold text-yellow-300">{ownApplication.status}</span></p>
-                <p className="text-sm text-gray-300">Offered: {formatCharacters(ownApplication)}</p>
+                <p className="text-sm text-gray-300">Offered: {renderCharacters(ownApplication)}</p>
                 <label className="block text-sm text-gray-300">
                   Lock in character
                   <select
@@ -912,8 +913,8 @@ const ApplicantList: React.FC<{ label: string; applications: GameApplication[] }
       {applications.map(application => (
         <div key={application._id} className="flex items-center gap-2 text-sm text-gray-200">
           <Check className="w-4 h-4 text-emerald-300" />
-          <span>{application.displayName}</span>
-          <span className="text-gray-400">{application.lockedCharacterId ? formatLockedCharacter(application) : formatCharacters(application)}</span>
+          <span className={`font-semibold ${roleNameTone(getApplicationPrimaryRole(application))}`}>{application.displayName}</span>
+          <span className="text-gray-400">{application.lockedCharacterId ? renderLockedCharacter(application) : renderCharacters(application)}</span>
         </div>
       ))}
       {applications.length === 0 && <p className="text-sm text-gray-500">Empty</p>}
@@ -940,8 +941,8 @@ const GameTicket: React.FC<{ game: GameListing }> = ({ game }) => {
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {roster.map(application => (
-          <span key={application._id} className="rounded bg-emerald-500/20 px-3 py-1 text-sm text-emerald-100">
-            {application.displayName}: {application.lockedCharacterId ? formatLockedCharacter(application) : formatCharacters(application)}
+          <span key={application._id} className={`rounded px-3 py-1 text-sm ring-1 ${rolePillTone(getApplicationPrimaryRole(application))}`}>
+            <span className="font-semibold">{application.displayName}</span>: {application.lockedCharacterId ? renderLockedCharacter(application) : renderCharacters(application)}
           </span>
         ))}
         {roster.length === 0 && <span className="text-sm text-gray-400">Roster pending</span>}
@@ -1004,14 +1005,24 @@ const formatDuration = (minutes: number) => {
   return Number.isInteger(hours) ? `${hours} hours` : `${minutes} minutes`;
 };
 
-const formatCharacters = (application: GameApplication) =>
+const renderCharacters = (application: GameApplication) =>
   application.characters.length > 0
-    ? application.characters.map(character => `${character.name} L${character.level}`).join(', ')
+    ? application.characters.map((character, index) => (
+        <React.Fragment key={character._id || character.name}>
+          {index > 0 && ', '}
+          <span className={roleNameTone(character.mainRole)}>{character.name} L{character.level}</span>
+        </React.Fragment>
+      ))
     : `${application.characterIds.length} character${application.characterIds.length === 1 ? '' : 's'}`;
 
-const formatLockedCharacter = (application: GameApplication) => {
+const renderLockedCharacter = (application: GameApplication) => {
   const character = application.characters.find(item => item._id === application.lockedCharacterId);
-  return character ? `${character.name} L${character.level}` : 'Locked character';
+  return character ? <span className={roleNameTone(character.mainRole)}>{character.name} L{character.level}</span> : 'Locked character';
+};
+
+const getApplicationPrimaryRole = (application: GameApplication) => {
+  const lockedCharacter = application.characters.find(item => item._id === application.lockedCharacterId);
+  return (lockedCharacter || application.characters[0])?.mainRole;
 };
 
 export default GamesPage;

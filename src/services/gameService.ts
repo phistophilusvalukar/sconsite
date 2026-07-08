@@ -368,6 +368,8 @@ class GameService {
       equipment: Array.isArray(dbCharacter.equipment) ? dbCharacter.equipment : [],
       foundryJson: dbCharacter.foundry_json,
       foundryFileName: dbCharacter.foundry_file_name ? String(dbCharacter.foundry_file_name) : undefined,
+      mainRole: dbCharacter.main_role ? String(dbCharacter.main_role) as Character['mainRole'] : undefined,
+      roleBadges: Array.isArray(dbCharacter.role_badges) ? dbCharacter.role_badges.map(String) as Character['roleBadges'] : [],
       backstory: String(dbCharacter.backstory || ''),
       notes: String(dbCharacter.notes || ''),
       isActive: Boolean(dbCharacter.is_active),
