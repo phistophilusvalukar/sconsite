@@ -1380,7 +1380,9 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
               <RosterManager applications={applied} isGm={isGm && !isArchived} onApplicationStatus={onApplicationStatus} />
             </section>
 
-            {isArchived && (
+            
+          </div>
+{isArchived && (
               <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
                 <div className="mb-3 flex items-center gap-3">
                   <button type="button" onClick={onToggleLike} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold ${game.likedByCurrentUser ? 'bg-red-500/20 text-red-100' : 'bg-fantasy-800/60 text-gray-200 hover:text-white'}`}>
@@ -1420,8 +1422,6 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 </div>
               </section>
             )}
-          </div>
-
           <aside className="space-y-5">
             {ownApplication && !isArchived && (
               <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
