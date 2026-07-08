@@ -30,6 +30,8 @@ export const DATABASE_TABLES = {
   GAMES: 'games',
   GAME_INVITES: 'game_invites',
   GAME_APPLICATIONS: 'game_applications',
+  GAME_ARCHIVE_COMMENTS: 'game_archive_comments',
+  GAME_ARCHIVE_LIKES: 'game_archive_likes',
   CHARACTER_FOUNDRY_FILES: 'character_foundry_files',
   CHARACTER_JOURNAL_ENTRIES: 'character_journal_entries',
   CHARACTER_JOURNAL_COMMENTS: 'character_journal_comments',

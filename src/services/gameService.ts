@@ -3,10 +3,12 @@ import { DATABASE_TABLES } from '../config/database';
 import {
   ApiResponse,
   Character,
+  GameArchiveComment,
   GameApplication,
   GameApplicationStatus,
   GameInvite,
   GameListing,
+  GameRewardsBonus,
   GameStatus
 } from '../types/database';
 
@@ -33,6 +35,16 @@ export interface ApplyToGameInput {
   note: string;
 }
 
+export interface UpdateGameInput {
+  title: string;
+  description: string;
+  startTime: Date;
+  durationMinutes: number;
+  characterLevel: number;
+  partySize: number;
+  tags: string[];
+}
+
 class GameService {
   private static instance: GameService;
   private dbService: DatabaseService;
@@ -49,7 +61,7 @@ class GameService {
     return GameService.instance;
   }
 
-  async getGames(): Promise<ApiResponse<GameListing[]>> {
+  async getGames(currentUserId?: string): Promise<ApiResponse<GameListing[]>> {
     try {
       const { data, error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.GAMES)
@@ -57,7 +69,9 @@ class GameService {
           *,
           reward_character:characters(*),
           invites:game_invites(*),
-          applications:game_applications(*)
+          applications:game_applications(*),
+          comments:game_archive_comments(*),
+          likes:game_archive_likes(*)
         `)
         .order('start_time', { ascending: true });
 
@@ -65,7 +79,7 @@ class GameService {
         return { success: false, error: error.message };
       }
 
-      const games = (data || []).map(game => this.transformGameFromDb(game));
+      const games = (data || []).map(game => this.transformGameFromDb(game, currentUserId));
       await this.attachApplicationCharacters(games);
 
       return { success: true, data: games };
@@ -104,7 +118,9 @@ class GameService {
           *,
           reward_character:characters(*),
           invites:game_invites(*),
-          applications:game_applications(*)
+          applications:game_applications(*),
+          comments:game_archive_comments(*),
+          likes:game_archive_likes(*)
         `)
         .single();
 
@@ -138,7 +154,7 @@ class GameService {
     }
   }
 
-  async getGameById(gameId: string): Promise<ApiResponse<GameListing>> {
+  async getGameById(gameId: string, currentUserId?: string): Promise<ApiResponse<GameListing>> {
     try {
       const { data, error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.GAMES)
@@ -146,7 +162,9 @@ class GameService {
           *,
           reward_character:characters(*),
           invites:game_invites(*),
-          applications:game_applications(*)
+          applications:game_applications(*),
+          comments:game_archive_comments(*),
+          likes:game_archive_likes(*)
         `)
         .eq('id', gameId)
         .single();
@@ -155,7 +173,7 @@ class GameService {
         return { success: false, error: error.message };
       }
 
-      const game = this.transformGameFromDb(data);
+      const game = this.transformGameFromDb(data, currentUserId);
       await this.attachApplicationCharacters([game]);
 
       return { success: true, data: game };
@@ -194,6 +212,47 @@ class GameService {
     } catch (error) {
       console.error('Error applying to game:', error);
       return { success: false, error: 'Failed to apply to game' };
+    }
+  }
+
+  async updateApplication(
+    applicationId: string,
+    characterIds: string[],
+    note: string,
+    lockedCharacterId?: string
+  ): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GAME_APPLICATIONS)
+        .update({
+          character_ids: characterIds,
+          locked_character_id: lockedCharacterId || null,
+          note,
+          status: 'Applied',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', applicationId);
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: true, message: 'Application updated.' };
+    } catch (error) {
+      console.error('Error updating application:', error);
+      return { success: false, error: 'Failed to update application' };
+    }
+  }
+
+  async withdrawApplication(applicationId: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GAME_APPLICATIONS)
+        .update({ status: 'Withdrawn', updated_at: new Date().toISOString() })
+        .eq('id', applicationId);
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: true, message: 'Application withdrawn.' };
+    } catch (error) {
+      console.error('Error withdrawing application:', error);
+      return { success: false, error: 'Failed to withdraw application' };
     }
   }
 
@@ -241,9 +300,12 @@ class GameService {
 
   async updateGameStatus(gameId: string, gmId: string, status: GameStatus): Promise<ApiResponse<boolean>> {
     try {
+      const statusDates: Record<string, string | null> = {};
+      if (status === 'Completed') statusDates.completed_at = new Date().toISOString();
+      if (status === 'Cancelled') statusDates.cancelled_at = new Date().toISOString();
       const { error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.GAMES)
-        .update({ status, updated_at: new Date().toISOString() })
+        .update({ status, ...statusDates, updated_at: new Date().toISOString() })
         .eq('id', gameId)
         .eq('gm_id', gmId);
 
@@ -258,9 +320,139 @@ class GameService {
     }
   }
 
+  async updateGame(gameId: string, gmId: string, input: UpdateGameInput): Promise<ApiResponse<boolean>> {
+    try {
+      const tier = getTierForLevel(input.characterLevel);
+      const tags = Array.from(new Set([...input.tags.filter(Boolean), tier]));
+      const { data: existing, error: loadError } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GAMES)
+        .select('start_time,original_start_time')
+        .eq('id', gameId)
+        .eq('gm_id', gmId)
+        .single();
+
+      if (loadError || !existing) return { success: false, error: loadError?.message || 'Game not found' };
+
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GAMES)
+        .update({
+          title: input.title,
+          description: input.description,
+          start_time: input.startTime.toISOString(),
+          original_start_time: existing.original_start_time || existing.start_time,
+          duration_minutes: input.durationMinutes,
+          character_level: input.characterLevel,
+          tier,
+          party_size: input.partySize,
+          tags,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', gameId)
+        .eq('gm_id', gmId);
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: true, message: 'Game updated.' };
+    } catch (error) {
+      console.error('Error updating game:', error);
+      return { success: false, error: 'Failed to update game' };
+    }
+  }
+
+  async completeGame(gameId: string, gmId: string, rewardsBonus: GameRewardsBonus): Promise<ApiResponse<boolean>> {
+    if (![0, 5, 10, 15, 20].includes(rewardsBonus)) {
+      return { success: false, error: 'Invalid rewards bonus' };
+    }
+
+    try {
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GAMES)
+        .update({
+          status: 'Completed',
+          rewards_bonus: rewardsBonus,
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', gameId)
+        .eq('gm_id', gmId);
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: true, message: 'Game completed.' };
+    } catch (error) {
+      console.error('Error completing game:', error);
+      return { success: false, error: 'Failed to complete game' };
+    }
+  }
+
+  async addArchiveComment(gameId: string, authorId: string, authorName: string, body: string): Promise<ApiResponse<GameArchiveComment>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GAME_ARCHIVE_COMMENTS)
+        .insert({ game_id: gameId, author_id: authorId, author_name: authorName, body })
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: this.transformArchiveCommentFromDb(data) };
+    } catch (error) {
+      console.error('Error adding archive comment:', error);
+      return { success: false, error: 'Failed to add comment' };
+    }
+  }
+
+  async updateArchiveComment(commentId: string, body: string): Promise<ApiResponse<GameArchiveComment>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GAME_ARCHIVE_COMMENTS)
+        .update({ body, updated_at: new Date().toISOString() })
+        .eq('id', commentId)
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: this.transformArchiveCommentFromDb(data) };
+    } catch (error) {
+      console.error('Error updating archive comment:', error);
+      return { success: false, error: 'Failed to update comment' };
+    }
+  }
+
+  async deleteArchiveComment(commentId: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GAME_ARCHIVE_COMMENTS)
+        .delete()
+        .eq('id', commentId);
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: true };
+    } catch (error) {
+      console.error('Error deleting archive comment:', error);
+      return { success: false, error: 'Failed to delete comment' };
+    }
+  }
+
+  async toggleArchiveLike(gameId: string, userId: string, isLiked: boolean): Promise<ApiResponse<boolean>> {
+    try {
+      const query = this.dbService.getClient().from(DATABASE_TABLES.GAME_ARCHIVE_LIKES);
+      const { error } = isLiked
+        ? await query.delete().eq('game_id', gameId).eq('user_id', userId)
+        : await query.insert({ game_id: gameId, user_id: userId });
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: true };
+    } catch (error) {
+      console.error('Error toggling archive like:', error);
+      return { success: false, error: 'Failed to update like' };
+    }
+  }
+
   private async attachApplicationCharacters(games: GameListing[]) {
     const characterIds = Array.from(new Set(
-      games.flatMap(game => game.applications.flatMap(application => application.characterIds))
+      games.flatMap(game => game.applications.flatMap(application => [
+        ...application.characterIds,
+        application.lockedCharacterId || ''
+      ]))
+        .filter(Boolean)
     ));
 
     if (characterIds.length === 0) return;
@@ -286,13 +478,17 @@ class GameService {
     });
   }
 
-  private transformGameFromDb(dbGame: Record<string, unknown>): GameListing {
+  private transformGameFromDb(dbGame: Record<string, unknown>, currentUserId?: string): GameListing {
     const invites = Array.isArray(dbGame.invites)
       ? dbGame.invites.map(invite => this.transformInviteFromDb(invite as Record<string, unknown>))
       : [];
     const applications = Array.isArray(dbGame.applications)
       ? dbGame.applications.map(application => this.transformApplicationFromDb(application as Record<string, unknown>))
       : [];
+    const comments = Array.isArray(dbGame.comments)
+      ? dbGame.comments.map(comment => this.transformArchiveCommentFromDb(comment as Record<string, unknown>))
+      : [];
+    const likes = Array.isArray(dbGame.likes) ? dbGame.likes as Array<Record<string, unknown>> : [];
     const rewardCharacter = dbGame.reward_character && typeof dbGame.reward_character === 'object'
       ? this.transformCharacterFromDb(dbGame.reward_character as Record<string, unknown>)
       : undefined;
@@ -313,8 +509,15 @@ class GameService {
       partySize: Number(dbGame.party_size || 4),
       tags: Array.isArray(dbGame.tags) ? dbGame.tags.map(String) : [],
       status: String(dbGame.status || 'Open') as GameStatus,
+      originalStartTime: dbGame.original_start_time ? new Date(String(dbGame.original_start_time)) : undefined,
+      rewardsBonus: Number(dbGame.rewards_bonus || 0) as GameRewardsBonus,
+      completedAt: dbGame.completed_at ? new Date(String(dbGame.completed_at)) : undefined,
+      cancelledAt: dbGame.cancelled_at ? new Date(String(dbGame.cancelled_at)) : undefined,
+      likeCount: likes.length,
+      likedByCurrentUser: currentUserId ? likes.some(like => String(like.user_id) === currentUserId) : false,
       invites,
       applications,
+      comments: comments.sort((first, second) => first.createdAt.getTime() - second.createdAt.getTime()),
       createdAt: new Date(String(dbGame.created_at)),
       updatedAt: new Date(String(dbGame.updated_at))
     };
@@ -348,6 +551,21 @@ class GameService {
       characters: [],
       createdAt: new Date(String(dbApplication.created_at)),
       updatedAt: new Date(String(dbApplication.updated_at))
+    };
+  }
+
+  private transformArchiveCommentFromDb(dbComment: Record<string, unknown>): GameArchiveComment {
+    const createdAt = new Date(String(dbComment.created_at));
+    const updatedAt = new Date(String(dbComment.updated_at));
+    return {
+      _id: String(dbComment.id),
+      gameId: String(dbComment.game_id),
+      authorId: String(dbComment.author_id),
+      authorName: String(dbComment.author_name || 'Player'),
+      body: String(dbComment.body || ''),
+      isEdited: updatedAt.getTime() > createdAt.getTime() + 1000,
+      createdAt,
+      updatedAt
     };
   }
 

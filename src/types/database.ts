@@ -255,6 +255,7 @@ export interface ScheduleAvailability {
 
 export type GameStatus = 'Open' | 'Closed' | 'Completed' | 'Cancelled';
 export type GameApplicationStatus = 'Applied' | 'Roster' | 'On Deck' | 'Declined' | 'Withdrawn';
+export type GameRewardsBonus = 0 | 5 | 10 | 15 | 20;
 
 export interface GameListing {
   _id?: string;
@@ -272,8 +273,15 @@ export interface GameListing {
   partySize: number;
   tags: string[];
   status: GameStatus;
+  originalStartTime?: Date;
+  rewardsBonus: GameRewardsBonus;
+  completedAt?: Date;
+  cancelledAt?: Date;
+  likeCount: number;
+  likedByCurrentUser: boolean;
   invites: GameInvite[];
   applications: GameApplication[];
+  comments: GameArchiveComment[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -297,6 +305,17 @@ export interface GameApplication {
   status: GameApplicationStatus;
   note: string;
   characters: Character[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GameArchiveComment {
+  _id?: string;
+  gameId: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  isEdited: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

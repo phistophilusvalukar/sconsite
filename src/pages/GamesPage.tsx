@@ -1,10 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Ban,
   CalendarDays,
   Check,
   Clock,
+  Heart,
   Loader2,
+  MessageCircle,
   Plus,
+  Save,
   Search,
   Sparkles,
   Ticket,
@@ -13,14 +17,40 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Character, GameApplication, GameApplicationStatus, GameListing, SchedulePoll } from '../types/database';
+import { Character, GameApplication, GameApplicationStatus, GameArchiveComment, GameListing, GameRewardsBonus, GameStatus, SchedulePoll } from '../types/database';
 import GameService, { getTierForLevel } from '../services/gameService';
 import ScheduleService from '../services/scheduleService';
 import CharacterService from '../services/characterService';
 import { roleNameTone, rolePillTone } from '../utils/characterRoles';
+import CharacterRoleBadges from '../components/CharacterRoleBadges';
 
 const defaultTags = ['Exploration', 'Combat', 'Roleplay', 'Downtime', 'Dungeon', 'Hexcrawl', 'One-shot'];
 const tierTags = ['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5'];
+const rewardBonusOptions: GameRewardsBonus[] = [0, 5, 10, 15, 20];
+const rewardTable: Record<number, Record<GameRewardsBonus, number>> = {
+  1: { 0: 22, 5: 23.1, 10: 24.2, 15: 25.3, 20: 26.4 },
+  2: { 0: 38, 5: 39.9, 10: 41.8, 15: 43.7, 20: 45.6 },
+  3: { 0: 63, 5: 66.15, 10: 69.3, 15: 72.45, 20: 75.6 },
+  4: { 0: 71, 5: 74.55, 10: 78.1, 15: 81.65, 20: 85.2 },
+  5: { 0: 115, 5: 120.75, 10: 126.5, 15: 132.25, 20: 138 },
+  6: { 0: 165, 5: 173.25, 10: 181.5, 15: 189.75, 20: 198 },
+  7: { 0: 240, 5: 252, 10: 264, 15: 276, 20: 288 },
+  8: { 0: 335, 5: 351.75, 10: 368.5, 15: 385.25, 20: 402 },
+  9: { 0: 475, 5: 498.75, 10: 522.5, 15: 546.25, 20: 570 },
+  10: { 0: 500, 5: 525, 10: 550, 15: 575, 20: 600 },
+  11: { 0: 720, 5: 756, 10: 792, 15: 828, 20: 864 },
+  12: { 0: 1030, 5: 1081.5, 10: 1133, 15: 1184.5, 20: 1236 },
+  13: { 0: 1560, 5: 1638, 10: 1716, 15: 1794, 20: 1872 },
+  14: { 0: 2280, 5: 2394, 10: 2508, 15: 2622, 20: 2736 },
+  15: { 0: 3410, 5: 3580.5, 10: 3751, 15: 3921.5, 20: 4092 },
+  16: { 0: 4130, 5: 4336.5, 10: 4543, 15: 4749.5, 20: 4956 },
+  17: { 0: 6400, 5: 6720, 10: 7040, 15: 7360, 20: 7680 },
+  18: { 0: 10400, 5: 10920, 10: 11440, 15: 11960, 20: 12480 },
+  19: { 0: 17750, 5: 18637.5, 10: 19525, 15: 20412.5, 20: 21300 },
+  20: { 0: 24500, 5: 25725, 10: 26950, 15: 28175, 20: 29400 }
+};
+
+type GamesTab = 'open' | 'upcoming' | 'archive';
 
 interface ManualInvite {
   userId: string;
@@ -67,18 +97,37 @@ const GamesPage: React.FC = () => {
   const [inviteSearch, setInviteSearch] = useState('');
   const [inviteResults, setInviteResults] = useState<Character[]>([]);
   const [isInviteSearching, setIsInviteSearching] = useState(false);
+  const [activeTab, setActiveTab] = useState<GamesTab>('open');
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [ticketBonus, setTicketBonus] = useState<Record<string, GameRewardsBonus>>({});
+  const [archiveCommentDrafts, setArchiveCommentDrafts] = useState<Record<string, string>>({});
+  const [editingArchiveComments, setEditingArchiveComments] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [gameResponse, pollResponse, characterResponse] = await Promise.all([
-        gameService.getGames(),
+        gameService.getGames(user?.id),
         scheduleService.getPolls(),
         user?.id ? characterService.getUserCharacters(user.id) : Promise.resolve({ success: true, data: [] as Character[] })
       ]);
 
       if (gameResponse.success && gameResponse.data) {
         setGames(gameResponse.data);
+        const nextApplicationCharacters: Record<string, string[]> = {};
+        const nextApplicationNotes: Record<string, string> = {};
+        const nextTicketBonus: Record<string, GameRewardsBonus> = {};
+        gameResponse.data.forEach(game => {
+          if (game._id) nextTicketBonus[game._id] = game.rewardsBonus;
+          const ownApplication = game.applications.find(application => application.userId === user?.id);
+          if (game._id && ownApplication) {
+            nextApplicationCharacters[game._id] = ownApplication.characterIds;
+            nextApplicationNotes[game._id] = ownApplication.note;
+          }
+        });
+        setApplicationCharacters(nextApplicationCharacters);
+        setApplicationNotes(nextApplicationNotes);
+        setTicketBonus(nextTicketBonus);
       } else {
         console.error('Failed to load games:', gameResponse.error);
       }
@@ -157,9 +206,21 @@ const GamesPage: React.FC = () => {
   const confirmedGames = useMemo(() => {
     const now = Date.now();
     return games
-      .filter(game => game.status === 'Closed' && game.startTime.getTime() >= now)
+      .filter(game => (game.status === 'Closed' || game.status === 'Cancelled') && game.startTime.getTime() >= now)
       .sort((first, second) => first.startTime.getTime() - second.startTime.getTime());
   }, [games]);
+
+  const archivedGames = useMemo(() => {
+    const now = Date.now();
+    return games
+      .filter(game => game.status === 'Completed' || (game.status === 'Cancelled' && game.startTime.getTime() < now))
+      .sort((first, second) => second.startTime.getTime() - first.startTime.getTime());
+  }, [games]);
+
+  const selectedGame = useMemo(
+    () => games.find(game => game._id === selectedGameId) || null,
+    [games, selectedGameId]
+  );
 
   const allTags = useMemo(() => {
     return Array.from(new Set([...defaultTags, ...tierTags, ...games.flatMap(game => game.tags), ...games.map(game => game.tier)])).sort();
@@ -302,6 +363,35 @@ const GamesPage: React.FC = () => {
     }
   };
 
+  const handleUpdateApplication = async (application: GameApplication, game: GameListing) => {
+    if (!application._id || !game._id) return;
+    const characterIds = applicationCharacters[game._id] || [];
+    if (characterIds.length === 0) {
+      alert('Pick at least one character.');
+      return;
+    }
+
+    const lockedCharacterId = application.lockedCharacterId && characterIds.includes(application.lockedCharacterId)
+      ? application.lockedCharacterId
+      : undefined;
+    const result = await gameService.updateApplication(application._id, characterIds, applicationNotes[game._id] || '', lockedCharacterId);
+    if (result.success) {
+      await loadData();
+    } else {
+      alert(result.error || 'Failed to update application');
+    }
+  };
+
+  const handleWithdrawApplication = async (application: GameApplication) => {
+    if (!application._id) return;
+    const result = await gameService.withdrawApplication(application._id);
+    if (result.success) {
+      await loadData();
+    } else {
+      alert(result.error || 'Failed to withdraw application');
+    }
+  };
+
   const handleApplicationStatus = async (application: GameApplication, status: GameApplicationStatus) => {
     if (!application._id) return;
     const result = await gameService.updateApplicationStatus(application._id, status);
@@ -329,6 +419,94 @@ const GamesPage: React.FC = () => {
       await loadData();
     } else {
       alert(result.error || 'Failed to confirm game');
+    }
+  };
+
+  const handleUpdateGame = async (game: GameListing, updates: GameEditState) => {
+    if (!game._id || !user?.id) return;
+    const result = await gameService.updateGame(game._id, user.id, {
+      title: updates.title,
+      description: updates.description,
+      startTime: new Date(updates.startLocal),
+      durationMinutes: updates.durationMinutes,
+      characterLevel: updates.characterLevel,
+      partySize: updates.partySize,
+      tags: updates.tags
+    });
+    if (result.success) {
+      await loadData();
+    } else {
+      alert(result.error || 'Failed to update game');
+    }
+  };
+
+  const handleUpdateGameStatus = async (game: GameListing, status: GameStatus) => {
+    if (!game._id || !user?.id) return;
+    const result = await gameService.updateGameStatus(game._id, user.id, status);
+    if (result.success) {
+      await loadData();
+    } else {
+      alert(result.error || 'Failed to update game');
+    }
+  };
+
+  const handleCompleteGame = async (game: GameListing) => {
+    if (!game._id || !user?.id) return;
+    const result = await gameService.completeGame(game._id, user.id, ticketBonus[game._id] ?? 0);
+    if (result.success) {
+      await loadData();
+    } else {
+      alert(result.error || 'Failed to complete game');
+    }
+  };
+
+  const handleAddArchiveComment = async (game: GameListing) => {
+    if (!game._id || !user?.id) return;
+    const body = archiveCommentDrafts[game._id]?.trim();
+    if (!body) return;
+    const result = await gameService.addArchiveComment(game._id, user.id, user.username, body);
+    if (result.success) {
+      setArchiveCommentDrafts(prev => ({ ...prev, [game._id || '']: '' }));
+      await loadData();
+    } else {
+      alert(result.error || 'Failed to add comment');
+    }
+  };
+
+  const handleUpdateArchiveComment = async (comment: GameArchiveComment) => {
+    if (!comment._id) return;
+    const body = editingArchiveComments[comment._id]?.trim();
+    if (!body) return;
+    const result = await gameService.updateArchiveComment(comment._id, body);
+    if (result.success) {
+      setEditingArchiveComments(prev => {
+        const next = { ...prev };
+        delete next[comment._id || ''];
+        return next;
+      });
+      await loadData();
+    } else {
+      alert(result.error || 'Failed to update comment');
+    }
+  };
+
+  const handleDeleteArchiveComment = async (comment: GameArchiveComment) => {
+    if (!comment._id) return;
+    const result = await gameService.deleteArchiveComment(comment._id);
+    if (result.success) {
+      await loadData();
+    } else {
+      alert(result.error || 'Failed to delete comment');
+    }
+  };
+
+  const handleToggleArchiveLike = async (game: GameListing) => {
+    if (!game._id || !user?.id) return;
+    const result = await gameService.toggleArchiveLike(game._id, user.id, game.likedByCurrentUser);
+    if (result.success) {
+      await loadData();
+    } else {
+      alert(result.error || 'Failed to update like');
     }
   };
 
@@ -369,129 +547,157 @@ const GamesPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-yellow-400" />
-                <h2 className="font-fantasy text-2xl font-bold text-white">Upcoming Tickets</h2>
-              </div>
-              {confirmedGames.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {confirmedGames.map(game => <GameTicket key={game._id} game={game} />)}
-                </div>
-              ) : (
-                <div className="border border-fantasy-700/30 bg-fantasy-900/25 rounded-lg p-6 text-gray-300">
-                  No confirmed games are on the timeline yet.
-                </div>
-              )}
-            </section>
+            <div className="flex flex-wrap gap-2 border-b border-fantasy-700/30 pb-3">
+              <TabPill active={activeTab === 'open'} onClick={() => setActiveTab('open')} label={`Open Games (${visibleGames.length})`} />
+              <TabPill active={activeTab === 'upcoming'} onClick={() => setActiveTab('upcoming')} label={`Upcoming Tickets (${confirmedGames.length})`} />
+              <TabPill active={activeTab === 'archive'} onClick={() => setActiveTab('archive')} label={`Archive (${archivedGames.length})`} />
+            </div>
 
-            <section className="grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-6">
-              <aside className="border border-fantasy-700/30 bg-fantasy-900/25 rounded-lg p-4 h-fit">
+            {activeTab === 'upcoming' && (
+              <section>
                 <div className="flex items-center gap-2 mb-4">
-                  <Search className="w-5 h-5 text-yellow-400" />
-                  <h2 className="text-lg font-bold text-white">Find a Table</h2>
+                  <Sparkles className="w-5 h-5 text-yellow-400" />
+                  <h2 className="font-fantasy text-2xl font-bold text-white">Upcoming Tickets</h2>
                 </div>
-                <div className="space-y-4">
-                  <input
-                    type="search"
-                    value={filters.query}
-                    onChange={(event) => setFilters(prev => ({ ...prev, query: event.target.value }))}
-                    placeholder="Title, GM, tag"
-                    className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
-                  />
-                  <div className="relative">
-                    <input
-                      type="search"
-                      value={tagSearch}
-                      onChange={(event) => {
-                        setTagSearch(event.target.value);
-                        setFilters(prev => ({ ...prev, tag: event.target.value }));
-                      }}
-                      onFocus={() => setIsTagSearchFocused(true)}
-                      onBlur={() => window.setTimeout(() => setIsTagSearchFocused(false), 150)}
-                      placeholder="Tag or tier"
-                      className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
-                    />
-                    {filters.tag && (
-                      <button
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          setFilters(prev => ({ ...prev, tag: '', tier: tierTags.includes(filters.tag) ? '' : prev.tier }));
-                          setTagSearch('');
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white"
-                        aria-label="Clear tag filter"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                    {isTagSearchFocused && tagSuggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-fantasy-900/95 border border-fantasy-700/30 rounded-lg shadow-xl z-40 overflow-hidden">
-                        {tagSuggestions.map(tag => (
-                          <button
-                            key={tag}
-                            type="button"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => handleTagSelect(tag)}
-                            className="w-full text-left px-4 py-3 hover:bg-fantasy-800/50 transition-colors"
-                          >
-                            <span className="text-white font-semibold">{tag}</span>
-                            {tierTags.includes(tag) && <span className="ml-2 text-xs text-yellow-300">Tier</span>}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                {confirmedGames.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {confirmedGames.map(game => (
+                      <GameTicket
+                        key={game._id}
+                        game={game}
+                        onOpen={() => setSelectedGameId(game._id || null)}
+                      />
+                    ))}
                   </div>
-                  <select
-                    value={filters.tier}
-                    onChange={(event) => setFilters(prev => ({ ...prev, tier: event.target.value }))}
-                    className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white"
-                  >
-                    <option value="">Any tier</option>
-                    {['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5'].map(tier => <option key={tier} value={tier}>{tier}</option>)}
-                  </select>
-                  <input
-                    type="date"
-                    value={filters.date}
-                    onChange={(event) => setFilters(prev => ({ ...prev, date: event.target.value }))}
-                    className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white"
-                  />
-                </div>
-              </aside>
-
-              <div className="space-y-4">
-                {visibleGames.map(game => (
-                  <GameListingCard
-                    key={game._id}
-                    game={game}
-                    userId={user?.id || ''}
-                    characters={characters}
-                    selectedCharacterIds={applicationCharacters[game._id || ''] || []}
-                    applicationNote={applicationNotes[game._id || ''] || ''}
-                    onToggleCharacter={(characterId) => {
-                      const gameId = game._id || '';
-                      setApplicationCharacters(prev => ({
-                        ...prev,
-                        [gameId]: toggleInArray(prev[gameId] || [], characterId)
-                      }));
-                    }}
-                    onNoteChange={(note) => setApplicationNotes(prev => ({ ...prev, [game._id || '']: note }))}
-                    onApply={() => handleApply(game)}
-                    onApplicationStatus={handleApplicationStatus}
-                    onLockCharacter={handleLockCharacter}
-                    onCloseGame={() => handleCloseGame(game)}
-                  />
-                ))}
-                {visibleGames.length === 0 && (
-                  <div className="border border-fantasy-700/30 bg-fantasy-900/25 rounded-lg p-10 text-center">
-                    <CalendarDays className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <h2 className="text-xl font-bold text-white mb-2">No open games match those filters</h2>
-                    <p className="text-gray-300">Clear a filter or create the next table.</p>
+                ) : (
+                  <div className="border border-fantasy-700/30 bg-fantasy-900/25 rounded-lg p-6 text-gray-300">
+                    No confirmed games are on the timeline yet.
                   </div>
                 )}
-              </div>
-            </section>
+              </section>
+            )}
+
+            {activeTab === 'archive' && (
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <Ticket className="w-5 h-5 text-yellow-400" />
+                  <h2 className="font-fantasy text-2xl font-bold text-white">Archived Games</h2>
+                </div>
+                <ArchiveTable games={archivedGames} onOpen={(game) => setSelectedGameId(game._id || null)} />
+              </section>
+            )}
+
+            {activeTab === 'open' && (
+              <section className="grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-6">
+                <aside className="border border-fantasy-700/30 bg-fantasy-900/25 rounded-lg p-4 h-fit">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Search className="w-5 h-5 text-yellow-400" />
+                    <h2 className="text-lg font-bold text-white">Find a Table</h2>
+                  </div>
+                  <div className="space-y-4">
+                    <input
+                      type="search"
+                      value={filters.query}
+                      onChange={(event) => setFilters(prev => ({ ...prev, query: event.target.value }))}
+                      placeholder="Title, GM, tag"
+                      className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
+                    />
+                    <div className="relative">
+                      <input
+                        type="search"
+                        value={tagSearch}
+                        onChange={(event) => {
+                          setTagSearch(event.target.value);
+                          setFilters(prev => ({ ...prev, tag: event.target.value }));
+                        }}
+                        onFocus={() => setIsTagSearchFocused(true)}
+                        onBlur={() => window.setTimeout(() => setIsTagSearchFocused(false), 150)}
+                        placeholder="Tag or tier"
+                        className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400"
+                      />
+                      {filters.tag && (
+                        <button
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            setFilters(prev => ({ ...prev, tag: '', tier: tierTags.includes(filters.tag) ? '' : prev.tier }));
+                            setTagSearch('');
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white"
+                          aria-label="Clear tag filter"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                      {isTagSearchFocused && tagSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-fantasy-900/95 border border-fantasy-700/30 rounded-lg shadow-xl z-40 overflow-hidden">
+                          {tagSuggestions.map(tag => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => handleTagSelect(tag)}
+                              className="w-full text-left px-4 py-3 hover:bg-fantasy-800/50 transition-colors"
+                            >
+                              <span className="text-white font-semibold">{tag}</span>
+                              {tierTags.includes(tag) && <span className="ml-2 text-xs text-yellow-300">Tier</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <select
+                      value={filters.tier}
+                      onChange={(event) => setFilters(prev => ({ ...prev, tier: event.target.value }))}
+                      className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white"
+                    >
+                      <option value="">Any tier</option>
+                      {tierTags.map(tier => <option key={tier} value={tier}>{tier}</option>)}
+                    </select>
+                    <input
+                      type="date"
+                      value={filters.date}
+                      onChange={(event) => setFilters(prev => ({ ...prev, date: event.target.value }))}
+                      className="w-full p-3 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white"
+                    />
+                  </div>
+                </aside>
+
+                <div className="space-y-4">
+                  {visibleGames.map(game => (
+                    <GameListingCard
+                      key={game._id}
+                      game={game}
+                      userId={user?.id || ''}
+                      characters={characters}
+                      selectedCharacterIds={applicationCharacters[game._id || ''] || []}
+                      applicationNote={applicationNotes[game._id || ''] || ''}
+                      onToggleCharacter={(characterId) => {
+                        const gameId = game._id || '';
+                        setApplicationCharacters(prev => ({
+                          ...prev,
+                          [gameId]: toggleInArray(prev[gameId] || [], characterId)
+                        }));
+                      }}
+                      onNoteChange={(note) => setApplicationNotes(prev => ({ ...prev, [game._id || '']: note }))}
+                      onApply={() => handleApply(game)}
+                      onUpdateApplication={(application) => handleUpdateApplication(application, game)}
+                      onWithdrawApplication={handleWithdrawApplication}
+                      onApplicationStatus={handleApplicationStatus}
+                      onCloseGame={() => handleCloseGame(game)}
+                    />
+                  ))}
+                  {visibleGames.length === 0 && (
+                    <div className="border border-fantasy-700/30 bg-fantasy-900/25 rounded-lg p-10 text-center">
+                      <CalendarDays className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <h2 className="text-xl font-bold text-white mb-2">No open games match those filters</h2>
+                      <p className="text-gray-300">Clear a filter or create the next table.</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
           </div>
         )}
 
@@ -730,6 +936,43 @@ const GamesPage: React.FC = () => {
             </form>
           </div>
         )}
+        {selectedGame && (
+          <GameDetailsModal
+            game={selectedGame}
+            userId={user?.id || ''}
+            characters={characters}
+            selectedCharacterIds={applicationCharacters[selectedGame._id || ''] || []}
+            applicationNote={applicationNotes[selectedGame._id || ''] || ''}
+            rewardsBonus={ticketBonus[selectedGame._id || ''] ?? selectedGame.rewardsBonus}
+            commentDraft={archiveCommentDrafts[selectedGame._id || ''] || ''}
+            editingComments={editingArchiveComments}
+            onClose={() => setSelectedGameId(null)}
+            onToggleCharacter={(characterId) => {
+              const gameId = selectedGame._id || '';
+              setApplicationCharacters(prev => ({ ...prev, [gameId]: toggleInArray(prev[gameId] || [], characterId) }));
+            }}
+            onNoteChange={(note) => setApplicationNotes(prev => ({ ...prev, [selectedGame._id || '']: note }))}
+            onUpdateApplication={(application) => handleUpdateApplication(application, selectedGame)}
+            onWithdrawApplication={handleWithdrawApplication}
+            onApplicationStatus={handleApplicationStatus}
+            onLockCharacter={handleLockCharacter}
+            onUpdateGame={(updates) => handleUpdateGame(selectedGame, updates)}
+            onStatusChange={(status) => handleUpdateGameStatus(selectedGame, status)}
+            onRewardsBonusChange={(bonus) => setTicketBonus(prev => ({ ...prev, [selectedGame._id || '']: bonus }))}
+            onComplete={() => handleCompleteGame(selectedGame)}
+            onCommentDraftChange={(body) => setArchiveCommentDrafts(prev => ({ ...prev, [selectedGame._id || '']: body }))}
+            onAddComment={() => handleAddArchiveComment(selectedGame)}
+            onEditComment={(comment, body) => setEditingArchiveComments(prev => ({ ...prev, [comment._id || '']: body }))}
+            onCancelEditComment={(comment) => setEditingArchiveComments(prev => {
+              const next = { ...prev };
+              delete next[comment._id || ''];
+              return next;
+            })}
+            onUpdateComment={handleUpdateArchiveComment}
+            onDeleteComment={handleDeleteArchiveComment}
+            onToggleLike={() => handleToggleArchiveLike(selectedGame)}
+          />
+        )}
       </div>
     </div>
   );
@@ -744,8 +987,9 @@ interface GameListingCardProps {
   onToggleCharacter: (characterId: string) => void;
   onNoteChange: (note: string) => void;
   onApply: () => void;
+  onUpdateApplication: (application: GameApplication) => void;
+  onWithdrawApplication: (application: GameApplication) => void;
   onApplicationStatus: (application: GameApplication, status: GameApplicationStatus) => void;
-  onLockCharacter: (application: GameApplication, characterId: string) => void;
   onCloseGame: () => void;
 }
 
@@ -758,13 +1002,14 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
   onToggleCharacter,
   onNoteChange,
   onApply,
+  onUpdateApplication,
+  onWithdrawApplication,
   onApplicationStatus,
-  onLockCharacter,
   onCloseGame
 }) => {
   const isGm = game.gmId === userId;
   const ownApplication = game.applications.find(application => application.userId === userId);
-  const roster = game.applications.filter(application => application.status === 'Roster');
+  const roster = game.applications.filter(application => application.status === 'Roster' || application.status === 'Withdrawn');
   const onDeck = game.applications.filter(application => application.status === 'On Deck');
   const invited = game.invites.some(invite => invite.userId === userId);
 
@@ -824,7 +1069,7 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div>
                       <p className={`font-semibold ${roleNameTone(getApplicationPrimaryRole(application))}`}>{application.displayName}</p>
-                      <p className="text-sm text-gray-300">{renderCharacters(application)}</p>
+                      <div className="mt-1 flex flex-wrap gap-2">{renderCharacterChips(application)}</div>
                       {application.note && <p className="text-sm text-gray-400 mt-1">{application.note}</p>}
                     </div>
                     <span className="text-xs font-bold text-yellow-300">{application.status}</span>
@@ -852,20 +1097,42 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
             {ownApplication ? (
               <div className="space-y-3">
                 <p className="text-sm text-gray-300">Status: <span className="font-bold text-yellow-300">{ownApplication.status}</span></p>
-                <p className="text-sm text-gray-300">Offered: {renderCharacters(ownApplication)}</p>
-                <label className="block text-sm text-gray-300">
-                  Lock in character
-                  <select
-                    value={ownApplication.lockedCharacterId || ''}
-                    onChange={(event) => event.target.value && onLockCharacter(ownApplication, event.target.value)}
-                    className="block mt-1 w-full p-2 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {characters.map(character => (
+                    <label key={character._id} className="flex items-center gap-2 rounded border border-fantasy-700/30 p-2 text-sm text-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={selectedCharacterIds.includes(character._id || '')}
+                        onChange={() => character._id && onToggleCharacter(character._id)}
+                        className="h-4 w-4"
+                      />
+                      <span>{character.name} L{character.level}</span>
+                    </label>
+                  ))}
+                </div>
+                <textarea
+                  value={applicationNote}
+                  onChange={(event) => onNoteChange(event.target.value)}
+                  rows={2}
+                  placeholder="Application note"
+                  className="w-full p-2 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 resize-none"
+                />
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateApplication(ownApplication)}
+                    className="flex-1 px-3 py-2 rounded bg-yellow-500 hover:bg-yellow-400 text-midnight-900 text-sm font-bold"
                   >
-                    <option value="">Not locked</option>
-                    {ownApplication.characters.map(character => (
-                      <option key={character._id} value={character._id}>{character.name}</option>
-                    ))}
-                  </select>
-                </label>
+                    Save Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onWithdrawApplication(ownApplication)}
+                    className="flex-1 px-3 py-2 rounded bg-red-700 hover:bg-red-600 text-white text-sm font-bold"
+                  >
+                    Withdraw
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -878,7 +1145,7 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
                         onChange={() => character._id && onToggleCharacter(character._id)}
                         className="h-4 w-4"
                       />
-                      <span>{character.name} L{character.level}</span>
+                      <span className={roleNameTone(character.mainRole)}>{character.name} L{character.level}</span>
                     </label>
                   ))}
                 </div>
@@ -913,8 +1180,10 @@ const ApplicantList: React.FC<{ label: string; applications: GameApplication[] }
       {applications.map(application => (
         <div key={application._id} className="flex items-center gap-2 text-sm text-gray-200">
           <Check className="w-4 h-4 text-emerald-300" />
-          <span className={`font-semibold ${roleNameTone(getApplicationPrimaryRole(application))}`}>{application.displayName}</span>
-          <span className="text-gray-400">{application.lockedCharacterId ? renderLockedCharacter(application) : renderCharacters(application)}</span>
+          <span className={`${application.status === 'Withdrawn' ? 'line-through opacity-60' : ''} font-semibold ${roleNameTone(getApplicationPrimaryRole(application))}`}>
+            {application.displayName}
+          </span>
+          <span className="flex flex-wrap gap-1.5">{application.lockedCharacterId ? renderLockedCharacterChip(application) : renderCharacterChips(application)}</span>
         </div>
       ))}
       {applications.length === 0 && <p className="text-sm text-gray-500">Empty</p>}
@@ -922,34 +1191,399 @@ const ApplicantList: React.FC<{ label: string; applications: GameApplication[] }
   </div>
 );
 
-const GameTicket: React.FC<{ game: GameListing }> = ({ game }) => {
-  const roster = game.applications.filter(application => application.status === 'Roster');
+const GameTicket: React.FC<{ game: GameListing; onOpen: () => void }> = ({ game, onOpen }) => {
+  const roster = game.applications.filter(application => application.status === 'Roster' || application.status === 'Withdrawn');
+  const isCancelled = game.status === 'Cancelled';
+  const timeWasEdited = Boolean(game.originalStartTime && game.originalStartTime.getTime() !== game.startTime.getTime());
 
   return (
-    <article className="relative overflow-hidden border border-yellow-400/40 bg-gradient-to-br from-yellow-500/15 via-fantasy-900/45 to-midnight-900/70 rounded-lg p-5">
-      <div className="absolute left-0 top-0 h-full w-1 bg-yellow-400" />
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`relative overflow-hidden rounded-lg border p-5 text-left transition-colors ${
+        isCancelled
+          ? 'border-red-400/60 bg-gradient-to-br from-red-500/20 via-fantasy-900/45 to-midnight-900/70 hover:border-red-300'
+          : 'border-yellow-400/40 bg-gradient-to-br from-yellow-500/15 via-fantasy-900/45 to-midnight-900/70 hover:border-yellow-300'
+      }`}
+    >
+      <div className={`absolute left-0 top-0 h-full w-1 ${isCancelled ? 'bg-red-400' : 'bg-yellow-400'}`} />
+      {isCancelled && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="-rotate-12 rounded border-2 border-red-300/70 bg-red-950/60 px-6 py-2 text-3xl font-black uppercase tracking-widest text-red-200">
+            Canceled
+          </span>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-yellow-300 mb-2">
+          <div className={`flex items-center gap-2 mb-2 ${isCancelled ? 'text-red-200' : 'text-yellow-300'}`}>
             <Ticket className="w-5 h-5" />
             <span className="text-xs font-bold uppercase tracking-widest">Confirmed Table</span>
           </div>
           <h3 className="font-fantasy text-2xl font-bold text-white">{game.title}</h3>
-          <p className="text-gray-300 mt-1">{formatDateTime(game.startTime)} with GM {game.gmName}</p>
+          <p className={`mt-1 ${timeWasEdited ? 'font-bold text-yellow-200' : 'text-gray-300'}`}>
+            {formatDateTime(game.startTime)} with GM {game.gmName}
+          </p>
         </div>
         <span className="rounded bg-midnight-900/70 px-3 py-1 text-sm font-bold text-yellow-200">{game.tier}</span>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {roster.map(application => (
           <span key={application._id} className={`rounded px-3 py-1 text-sm ring-1 ${rolePillTone(getApplicationPrimaryRole(application))}`}>
-            <span className="font-semibold">{application.displayName}</span>: {application.lockedCharacterId ? renderLockedCharacter(application) : renderCharacters(application)}
+            <span className={`${application.status === 'Withdrawn' ? 'line-through opacity-60' : ''} font-semibold`}>{application.displayName}</span>: {application.lockedCharacterId ? renderLockedCharacter(application) : renderCharacters(application)}
           </span>
         ))}
         {roster.length === 0 && <span className="text-sm text-gray-400">Roster pending</span>}
       </div>
-    </article>
+    </button>
   );
 };
+
+interface GameEditState {
+  title: string;
+  description: string;
+  startLocal: string;
+  durationMinutes: number;
+  characterLevel: number;
+  partySize: number;
+  tags: string[];
+}
+
+interface GameDetailsModalProps {
+  game: GameListing;
+  userId: string;
+  characters: Character[];
+  selectedCharacterIds: string[];
+  applicationNote: string;
+  rewardsBonus: GameRewardsBonus;
+  commentDraft: string;
+  editingComments: Record<string, string>;
+  onClose: () => void;
+  onToggleCharacter: (characterId: string) => void;
+  onNoteChange: (note: string) => void;
+  onUpdateApplication: (application: GameApplication) => void;
+  onWithdrawApplication: (application: GameApplication) => void;
+  onApplicationStatus: (application: GameApplication, status: GameApplicationStatus) => void;
+  onLockCharacter: (application: GameApplication, characterId: string) => void;
+  onUpdateGame: (updates: GameEditState) => void;
+  onStatusChange: (status: GameStatus) => void;
+  onRewardsBonusChange: (bonus: GameRewardsBonus) => void;
+  onComplete: () => void;
+  onCommentDraftChange: (body: string) => void;
+  onAddComment: () => void;
+  onEditComment: (comment: GameArchiveComment, body: string) => void;
+  onCancelEditComment: (comment: GameArchiveComment) => void;
+  onUpdateComment: (comment: GameArchiveComment) => void;
+  onDeleteComment: (comment: GameArchiveComment) => void;
+  onToggleLike: () => void;
+}
+
+const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
+  game,
+  userId,
+  characters,
+  selectedCharacterIds,
+  applicationNote,
+  rewardsBonus,
+  commentDraft,
+  editingComments,
+  onClose,
+  onToggleCharacter,
+  onNoteChange,
+  onUpdateApplication,
+  onWithdrawApplication,
+  onApplicationStatus,
+  onLockCharacter,
+  onUpdateGame,
+  onStatusChange,
+  onRewardsBonusChange,
+  onComplete,
+  onCommentDraftChange,
+  onAddComment,
+  onEditComment,
+  onCancelEditComment,
+  onUpdateComment,
+  onDeleteComment,
+  onToggleLike
+}) => {
+  const isGm = game.gmId === userId;
+  const isArchived = isArchivedGame(game);
+  const ownApplication = game.applications.find(application => application.userId === userId);
+  const roster = game.applications.filter(application => application.status === 'Roster' || application.status === 'Withdrawn');
+  const onDeck = game.applications.filter(application => application.status === 'On Deck');
+  const [editState, setEditState] = useState<GameEditState>(() => gameToEditState(game));
+  const [tagDraft, setTagDraft] = useState(game.tags.join(', '));
+
+  useEffect(() => {
+    setEditState(gameToEditState(game));
+    setTagDraft(game.tags.join(', '));
+  }, [game]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-xl border border-fantasy-700/40 bg-midnight-950 shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-fantasy-700/30 p-5">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">{game.status} Game</p>
+            <h2 className="font-fantasy text-3xl font-bold text-white">{game.title}</h2>
+            <p className="text-sm text-gray-300">{formatDateTime(game.startTime)} with GM {game.gmName}</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 text-gray-400 hover:text-white" aria-label="Close game details">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="grid gap-5 p-5 lg:grid-cols-[1.25fr_0.9fr]">
+          <div className="space-y-5">
+            {game.status === 'Completed' && <RewardsSection game={game} />}
+
+            <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-yellow-300" />
+                <h3 className="text-lg font-bold text-white">Details</h3>
+              </div>
+              {isGm ? (
+                <div className="grid gap-3">
+                  <input value={editState.title} onChange={event => setEditState(prev => ({ ...prev, title: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white" />
+                  <textarea value={editState.description} onChange={event => setEditState(prev => ({ ...prev, description: event.target.value }))} rows={4} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white" />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input type="datetime-local" value={editState.startLocal} onChange={event => setEditState(prev => ({ ...prev, startLocal: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white" />
+                    <input type="number" min={30} step={30} value={editState.durationMinutes} onChange={event => setEditState(prev => ({ ...prev, durationMinutes: Number(event.target.value) || 30 }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white" />
+                    <input type="number" min={1} max={20} value={editState.characterLevel} onChange={event => setEditState(prev => ({ ...prev, characterLevel: Number(event.target.value) || 1 }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white" />
+                    <input type="number" min={1} value={editState.partySize} onChange={event => setEditState(prev => ({ ...prev, partySize: Number(event.target.value) || 1 }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white" />
+                  </div>
+                  <input value={tagDraft} onChange={event => {
+                    setTagDraft(event.target.value);
+                    setEditState(prev => ({ ...prev, tags: parseTags(event.target.value) }));
+                  }} placeholder="Tags, comma separated" className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white placeholder-gray-400" />
+                  <button type="button" onClick={() => onUpdateGame(editState)} className="flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-2 font-bold text-midnight-900 hover:bg-yellow-400">
+                    <Save className="h-4 w-4" />
+                    <span>Save Ticket</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3 text-sm text-gray-300">
+                  <p>{game.description}</p>
+                  <p>{formatDuration(game.durationMinutes)} - Level {game.characterLevel} - {game.tier}</p>
+                  <div className="flex flex-wrap gap-2">{game.tags.map(tag => <span key={tag} className="rounded bg-fantasy-800/60 px-2 py-1 text-xs font-semibold text-gray-200">{tag}</span>)}</div>
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
+              <h3 className="mb-3 text-lg font-bold text-white">Roster</h3>
+              <RosterManager applications={roster} isGm={isGm} onApplicationStatus={onApplicationStatus} />
+              <h4 className="mb-2 mt-4 text-sm font-bold uppercase tracking-widest text-yellow-300">On Deck</h4>
+              <RosterManager applications={onDeck} isGm={isGm} onApplicationStatus={onApplicationStatus} />
+            </section>
+
+            {isArchived && (
+              <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
+                <div className="mb-3 flex items-center gap-3">
+                  <button type="button" onClick={onToggleLike} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold ${game.likedByCurrentUser ? 'bg-red-500/20 text-red-100' : 'bg-fantasy-800/60 text-gray-200 hover:text-white'}`}>
+                    <Heart className="h-4 w-4" />
+                    <span>{game.likeCount}</span>
+                  </button>
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <MessageCircle className="h-4 w-4" />
+                    <span>{game.comments.length}</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {game.comments.map(comment => (
+                    <div key={comment._id} className="rounded-lg bg-midnight-900/60 p-3">
+                      <p className="text-xs text-gray-500">{comment.authorName} - {new Date(comment.createdAt).toLocaleString()}{comment.isEdited ? ' - edited' : ''}</p>
+                      {editingComments[comment._id || ''] !== undefined ? (
+                        <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                          <input value={editingComments[comment._id || '']} onChange={event => onEditComment(comment, event.target.value)} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-2 text-white" />
+                          <button type="button" onClick={() => onUpdateComment(comment)} className="rounded-lg bg-yellow-500 px-3 py-2 text-sm font-bold text-midnight-900">Save</button>
+                          <button type="button" onClick={() => onCancelEditComment(comment)} className="rounded-lg bg-fantasy-700 px-3 py-2 text-sm font-semibold text-white">Cancel</button>
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-sm text-gray-200">{comment.body}</p>
+                      )}
+                      {comment.authorId === userId && editingComments[comment._id || ''] === undefined && (
+                        <div className="mt-2 flex gap-3">
+                          <button type="button" onClick={() => onEditComment(comment, comment.body)} className="text-xs text-yellow-200 hover:text-yellow-100">Edit</button>
+                          <button type="button" onClick={() => onDeleteComment(comment)} className="text-xs text-red-200 hover:text-red-100">Delete</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <input value={commentDraft} onChange={event => onCommentDraftChange(event.target.value)} placeholder="Add a comment" className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white placeholder-gray-400" />
+                    <button type="button" onClick={onAddComment} className="rounded-lg bg-fantasy-700 px-4 py-2 text-sm font-semibold text-white hover:bg-fantasy-600">Comment</button>
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
+
+          <aside className="space-y-5">
+            {ownApplication && (
+              <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
+                <h3 className="mb-3 text-lg font-bold text-white">Your Character</h3>
+                <div className="grid gap-2">
+                  {characters.map(character => (
+                    <label key={character._id} className="flex items-center gap-2 rounded border border-fantasy-700/30 p-2 text-sm text-gray-200">
+                      <input type="checkbox" checked={selectedCharacterIds.includes(character._id || '')} onChange={() => character._id && onToggleCharacter(character._id)} className="h-4 w-4" />
+                      <span className={roleNameTone(character.mainRole)}>{character.name} L{character.level}</span>
+                    </label>
+                  ))}
+                </div>
+                <textarea value={applicationNote} onChange={event => onNoteChange(event.target.value)} rows={3} className="mt-3 w-full rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-2 text-white placeholder-gray-400" placeholder="Application note" />
+                <label className="mt-3 block text-sm text-gray-300">
+                  Locked character
+                  <select value={ownApplication.lockedCharacterId || ''} onChange={event => event.target.value && onLockCharacter(ownApplication, event.target.value)} className="mt-1 w-full rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-2 text-white">
+                    <option value="">Not locked</option>
+                    {ownApplication.characters.map(character => <option key={character._id} value={character._id}>{character.name}</option>)}
+                  </select>
+                </label>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <button type="button" onClick={() => onUpdateApplication(ownApplication)} className="rounded-lg bg-yellow-500 px-3 py-2 text-sm font-bold text-midnight-900">Save</button>
+                  <button type="button" onClick={() => onWithdrawApplication(ownApplication)} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-bold text-white">Withdraw</button>
+                </div>
+              </section>
+            )}
+
+            {isGm && (
+              <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
+                <h3 className="mb-3 text-lg font-bold text-white">GM Controls</h3>
+                <div className="space-y-3">
+                  <button type="button" onClick={() => onStatusChange('Cancelled')} className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2 font-bold text-white hover:bg-red-600">
+                    <Ban className="h-4 w-4" />
+                    <span>Cancel Game</span>
+                  </button>
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-gray-300">Rewards Bonus</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={20}
+                      step={5}
+                      value={rewardsBonus}
+                      onChange={event => onRewardsBonusChange(Number(event.target.value) as GameRewardsBonus)}
+                      className="w-full"
+                    />
+                    <div className="mt-1 flex justify-between text-xs text-gray-400">
+                      {rewardBonusOptions.map(value => <span key={value}>{value}%</span>)}
+                    </div>
+                  </div>
+                  <button type="button" onClick={onComplete} className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-500">
+                    <Check className="h-4 w-4" />
+                    <span>Completed</span>
+                  </button>
+                </div>
+              </section>
+            )}
+
+            <RewardsSection game={{ ...game, rewardsBonus }} preview />
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RosterManager: React.FC<{
+  applications: GameApplication[];
+  isGm: boolean;
+  onApplicationStatus: (application: GameApplication, status: GameApplicationStatus) => void;
+}> = ({ applications, isGm, onApplicationStatus }) => (
+  <div className="space-y-2">
+    {applications.map(application => (
+      <div key={application._id} className="rounded-lg border border-fantasy-700/30 bg-midnight-900/40 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className={`${application.status === 'Withdrawn' ? 'line-through opacity-60' : ''} font-semibold ${roleNameTone(getApplicationPrimaryRole(application))}`}>
+            {application.displayName}
+          </span>
+          <span className="text-xs font-bold text-yellow-300">{application.status}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">{application.lockedCharacterId ? renderLockedCharacterChip(application) : renderCharacterChips(application)}</div>
+        {application.note && <p className="mt-2 text-sm text-gray-400">{application.note}</p>}
+        {isGm && application.status !== 'Withdrawn' && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(['Roster', 'On Deck', 'Declined'] as GameApplicationStatus[]).map(status => (
+              <button key={status} type="button" onClick={() => onApplicationStatus(application, status)} className="rounded bg-fantasy-700 px-3 py-2 text-sm text-white hover:bg-fantasy-600">{status}</button>
+            ))}
+          </div>
+        )}
+      </div>
+    ))}
+    {applications.length === 0 && <p className="text-sm text-gray-500">Empty</p>}
+  </div>
+);
+
+const RewardsSection: React.FC<{ game: GameListing; preview?: boolean }> = ({ game, preview = false }) => {
+  const rewardRows = getRewardRows(game);
+  if (rewardRows.length === 0) return null;
+
+  return (
+    <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
+      <h3 className="mb-3 text-lg font-bold text-white">{preview ? 'Rewards Preview' : 'Rewards'}</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="text-xs uppercase tracking-widest text-yellow-300">
+            <tr>
+              <th className="pb-2">Player</th>
+              <th className="pb-2">Character</th>
+              <th className="pb-2">Level</th>
+              <th className="pb-2">Reward</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-fantasy-700/30 text-gray-200">
+            {rewardRows.map(row => (
+              <tr key={`${row.applicationId}-${row.characterName}`}>
+                <td className="py-2">{row.playerName}</td>
+                <td className="py-2">{row.characterName}</td>
+                <td className="py-2">{row.level}</td>
+                <td className="py-2 font-bold text-yellow-100">{formatReward(row.reward)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+};
+
+const ArchiveTable: React.FC<{ games: GameListing[]; onOpen: (game: GameListing) => void }> = ({ games, onOpen }) => (
+  <div className="overflow-hidden rounded-lg border border-fantasy-700/30 bg-fantasy-900/25">
+    <table className="w-full text-left text-sm">
+      <thead className="bg-midnight-900/70 text-xs uppercase tracking-widest text-yellow-300">
+        <tr>
+          <th className="p-3">Game</th>
+          <th className="p-3">Date</th>
+          <th className="p-3">Status</th>
+          <th className="p-3">Roster</th>
+          <th className="p-3">Social</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-fantasy-700/30 text-gray-200">
+        {games.map(game => (
+          <tr key={game._id} onClick={() => onOpen(game)} className="cursor-pointer hover:bg-fantasy-800/30">
+            <td className="p-3 font-semibold text-white">{game.title}</td>
+            <td className="p-3">{formatDateTime(game.startTime)}</td>
+            <td className={`p-3 font-bold ${game.status === 'Cancelled' ? 'text-red-200' : 'text-emerald-200'}`}>{game.status}</td>
+            <td className="p-3">{game.applications.filter(application => application.status === 'Roster').length}</td>
+            <td className="p-3">{game.likeCount} likes, {game.comments.length} comments</td>
+          </tr>
+        ))}
+        {games.length === 0 && (
+          <tr>
+            <td colSpan={5} className="p-6 text-center text-gray-400">No archived games yet.</td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+);
+
+const TabPill: React.FC<{ active: boolean; label: string; onClick: () => void }> = ({ active, label, onClick }) => (
+  <button type="button" onClick={onClick} className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${active ? 'bg-yellow-500 text-midnight-900' : 'bg-fantasy-800/60 text-gray-200 hover:text-white'}`}>
+    {label}
+  </button>
+);
 
 const createInitialForm = (rewardCharacterId = ''): GameFormState => ({
   title: '',
@@ -1004,6 +1638,58 @@ const formatDuration = (minutes: number) => {
   const hours = minutes / 60;
   return Number.isInteger(hours) ? `${hours} hours` : `${minutes} minutes`;
 };
+
+const parseTags = (value: string) =>
+  value.split(',').map(tag => tag.trim()).filter(Boolean);
+
+const gameToEditState = (game: GameListing): GameEditState => ({
+  title: game.title,
+  description: game.description,
+  startLocal: toDateTimeLocalValue(game.startTime),
+  durationMinutes: game.durationMinutes,
+  characterLevel: game.characterLevel,
+  partySize: game.partySize,
+  tags: game.tags
+});
+
+const isArchivedGame = (game: GameListing) =>
+  game.status === 'Completed' || (game.status === 'Cancelled' && game.startTime.getTime() < Date.now());
+
+const getRewardRows = (game: GameListing) =>
+  game.applications
+    .filter(application => application.status === 'Roster')
+    .flatMap(application => {
+      const character = application.characters.find(item => item._id === application.lockedCharacterId) || application.characters[0];
+      if (!character) return [];
+      const level = Math.max(1, Math.min(20, character.level));
+      return [{
+        applicationId: application._id || application.userId,
+        playerName: application.displayName,
+        characterName: character.name,
+        level,
+        reward: rewardTable[level]?.[game.rewardsBonus] || rewardTable[level]?.[0] || 0
+      }];
+    });
+
+const formatReward = (value: number) =>
+  Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, '');
+
+const renderCharacterChips = (application: GameApplication) =>
+  application.characters.length > 0
+    ? application.characters.map(character => <CharacterChip key={character._id || character.name} character={character} withdrawn={application.status === 'Withdrawn'} />)
+    : <span className="text-gray-400">{application.characterIds.length} character{application.characterIds.length === 1 ? '' : 's'}</span>;
+
+const renderLockedCharacterChip = (application: GameApplication) => {
+  const character = application.characters.find(item => item._id === application.lockedCharacterId);
+  return character ? <CharacterChip character={character} withdrawn={application.status === 'Withdrawn'} /> : <span className="text-gray-400">Locked character</span>;
+};
+
+const CharacterChip: React.FC<{ character: Character; withdrawn?: boolean }> = ({ character, withdrawn = false }) => (
+  <span className={`inline-flex items-center gap-2 rounded px-2.5 py-1 text-xs font-bold ring-1 ${rolePillTone(character.mainRole)} ${withdrawn ? 'line-through opacity-60' : ''}`}>
+    <span>{character.name} L{character.level}</span>
+    <CharacterRoleBadges badges={character.roleBadges} limit={3} />
+  </span>
+);
 
 const renderCharacters = (application: GameApplication) =>
   application.characters.length > 0
