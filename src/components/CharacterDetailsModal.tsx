@@ -67,7 +67,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const activeFoundryJson = activeFoundryEntry?.json || character.foundryJson;
   const parsedData = activeFoundryJson ? getCharacterDataFromJson(activeFoundryJson) : null;
   const characterPortrait = parsedData?.avatar || character.stats?.avatar || defaultPortrait;
-  const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : null;
+  const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
+  const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
   const visibleTabs: DetailsTab[] = canEdit ? ['foundry', 'journal', 'relationships'] : ['journal', 'relationships'];
   const allCharacterIds = characters.map(item => item._id).filter(Boolean) as string[];
   const graphRootId = graphStack[graphStack.length - 1] || character._id || '';

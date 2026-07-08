@@ -9,6 +9,7 @@ import {
   CharacterRelationshipType,
   FoundryJsonEntry
 } from '../types/database';
+import { deriveAbilityBoostsFromFoundryJson } from '../utils/foundryCharacter';
 
 export interface FoundryCharacterData {
   name: string;
@@ -84,7 +85,7 @@ export class CharacterService {
         ancestry,
         heritage: characterData.heritage || null,
         background: characterData.background,
-        stats: characterData.stats || {},
+        stats: this.withDerivedAbilityBoosts(characterData.stats || {}, characterData.foundryJson),
         equipment: characterData.equipment || [],
         foundry_json: characterData.foundryJson || null,
         foundry_file_name: characterData.foundryFileName || null,
@@ -330,6 +331,7 @@ export class CharacterService {
         .select('id')
         .eq('character_id', characterId)
         .limit(1);
+      const willBeActive = !existingFiles || existingFiles.length === 0;
 
       const { data, error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
@@ -338,13 +340,17 @@ export class CharacterService {
           owner_id: ownerId,
           name,
           json_data: json,
-          is_active: !existingFiles || existingFiles.length === 0,
+          is_active: willBeActive,
           sort_order: sortOrder
         })
         .select()
         .single();
 
       if (error) return { success: false, error: error.message };
+
+      if (willBeActive) {
+        await this.updateCharacterAbilityBoostStats(characterId, json);
+      }
 
       return {
         success: true,
@@ -356,26 +362,32 @@ export class CharacterService {
     }
   }
 
-  async updateFoundryFile(fileId: string, updates: { name?: string; sortOrder?: number; isActive?: boolean }): Promise<ApiResponse<FoundryJsonEntry>> {
+  async updateFoundryFile(fileId: string, updates: { name?: string; sortOrder?: number; isActive?: boolean; json?: unknown }): Promise<ApiResponse<FoundryJsonEntry>> {
     try {
       const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
       if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+      if (updates.json !== undefined) updateData.json_data = updates.json;
 
-      if (updates.isActive === true) {
-        const { data: file, error: fileError } = await this.dbService.getClient()
+      const needsCurrentFile = updates.isActive === true || updates.json !== undefined;
+      const { data: currentFile, error: currentFileError } = needsCurrentFile
+        ? await this.dbService.getClient()
           .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
-          .select('character_id')
+          .select('character_id,json_data,is_active')
           .eq('id', fileId)
-          .single();
+          .single()
+        : { data: null, error: null };
 
-        if (fileError || !file) return { success: false, error: fileError?.message || 'Foundry file not found' };
+      if (currentFileError || (needsCurrentFile && !currentFile)) {
+        return { success: false, error: currentFileError?.message || 'Foundry file not found' };
+      }
 
+      if (updates.isActive === true && currentFile) {
         const { error: clearError } = await this.dbService.getClient()
           .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
           .update({ is_active: false, updated_at: new Date().toISOString() })
-          .eq('character_id', file.character_id);
+          .eq('character_id', currentFile.character_id);
 
         if (clearError) return { success: false, error: clearError.message };
       }
@@ -388,6 +400,10 @@ export class CharacterService {
         .single();
 
       if (error) return { success: false, error: error.message };
+
+      if (currentFile && (updates.isActive === true || (updates.json !== undefined && currentFile.is_active))) {
+        await this.updateCharacterAbilityBoostStats(currentFile.character_id, updates.json !== undefined ? updates.json : currentFile.json_data);
+      }
 
       return {
         success: true,
@@ -741,7 +757,7 @@ export class CharacterService {
       background: backgroundItem?.name || '',
       level: details.level?.value || 1,
       backstory: biography.backstory || '',
-      stats: {
+      stats: this.withDerivedAbilityBoosts({
         appearance: biography.appearance || '',
         age: details.age?.value || null,
         height: details.height?.value || '',
@@ -749,7 +765,7 @@ export class CharacterService {
         level: details.level?.value || 1,
         wealth: attributes.wealth?.value || 0,
         avatar: jsonData.img || ''
-      }
+      }, jsonData)
     };
   }
 
@@ -802,6 +818,46 @@ export class CharacterService {
 
   private formatCombinedClass(primaryClass: string, secondaryClass?: string): string {
     return [primaryClass, secondaryClass].filter(Boolean).join(' - ');
+  }
+
+  private withDerivedAbilityBoosts(stats: any, foundryJson: unknown) {
+    const abilityBoosts = deriveAbilityBoostsFromFoundryJson(foundryJson);
+    if (!abilityBoosts) return stats;
+    return {
+      ...(stats || {}),
+      abilityBoosts
+    };
+  }
+
+  private async updateCharacterAbilityBoostStats(characterId: string, foundryJson: unknown) {
+    const abilityBoosts = deriveAbilityBoostsFromFoundryJson(foundryJson);
+    if (!abilityBoosts) return;
+
+    const { data: character, error: loadError } = await this.dbService.getClient()
+      .from(DATABASE_TABLES.CHARACTERS)
+      .select('stats')
+      .eq('id', characterId)
+      .single();
+
+    if (loadError || !character) {
+      if (loadError) console.error('Error loading character stats for ability boost update:', loadError);
+      return;
+    }
+
+    const { error: updateError } = await this.dbService.getClient()
+      .from(DATABASE_TABLES.CHARACTERS)
+      .update({
+        stats: {
+          ...(character.stats || {}),
+          abilityBoosts
+        },
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', characterId);
+
+    if (updateError) {
+      console.error('Error saving derived ability boosts:', updateError);
+    }
   }
 
   private transformCharacterFromDb(dbCharacter: any): Character {
