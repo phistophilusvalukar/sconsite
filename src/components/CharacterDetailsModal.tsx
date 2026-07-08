@@ -566,9 +566,23 @@ function AbilityRadarChart({ scores }: { scores: ReturnType<typeof getAbilitySco
   const size = 260;
   const center = size / 2;
   const radius = 82;
+
+  const minScore = -1;
+  const maxScore = 7;
+
   const values = abilityLabels.map(ability => scores?.[ability.key] ?? null);
   const hasScores = values.some(value => value !== null);
-  const maxScore = Math.max(20, ...values.map(value => value || 0));
+
+  const scoreToRatio = (value: number | null) => {
+    if (value === null) return 0;
+
+    return Math.max(
+      0,
+      Math.min(1, (value - minScore) / (maxScore - minScore))
+    );
+  };
+
+
   const gridLevels = [0.25, 0.5, 0.75, 1];
 
   const pointFor = (index: number, ratio: number) => {
@@ -579,15 +593,16 @@ function AbilityRadarChart({ scores }: { scores: ReturnType<typeof getAbilitySco
     };
   };
 
-  const polygonPoints = values.map((value, index) => {
-    const point = pointFor(index, Math.max(0, Math.min(1, (value || 0) / maxScore)));
-    return `${point.x},${point.y}`;
-  }).join(' ');
+  const polygonPoints = values
+    .map((value, index) => {
+      const point = pointFor(index, scoreToRatio(value));
+      return `${point.x},${point.y}`;
+    }).join(' ');
 
   return (
     <div className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/30 p-4">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">True Power</h4>
+        <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">Ability Matrix</h4>
         <span className="text-xs text-yellow-200">Active Foundry JSON</span>
       </div>
       {hasScores ? (
@@ -621,7 +636,7 @@ function AbilityRadarChart({ scores }: { scores: ReturnType<typeof getAbilitySco
           })}
           <polygon points={polygonPoints} fill="rgba(250, 204, 21, 0.24)" stroke="rgb(250, 204, 21)" strokeWidth="2" />
           {values.map((value, index) => {
-            const point = pointFor(index, Math.max(0, Math.min(1, (value || 0) / maxScore)));
+            const point = pointFor(index, scoreToRatio(value));
             return <circle key={abilityLabels[index].key} cx={point.x} cy={point.y} r="3.5" fill="rgb(253, 224, 71)" />;
           })}
         </svg>
