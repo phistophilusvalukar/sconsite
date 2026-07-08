@@ -15,7 +15,7 @@ const NewsPage: React.FC = () => {
       category: "Announcements",
       author: "Magnus Ironforge",
       date: "2 hours ago",
-      image: "https://images.pexels.com/photos/1112048/pexels-photo-1112048.jpeg?auto=compress&cs=tinysrgb&w=400&h=250&fit=crop",
+      image: "/npc-placeholder.png",
       likes: 47,
       comments: 23,
       tags: ["Campaign", "Major Event", "All Guilds"]
@@ -28,7 +28,7 @@ const NewsPage: React.FC = () => {
       category: "Events",
       author: "Lyra Moonwhisper",
       date: "1 day ago",
-      image: "https://images.pexels.com/photos/163036/mario-luigi-yoschi-figures-163036.jpeg?auto=compress&cs=tinysrgb&w=400&h=250&fit=crop",
+      image: "/npc-placeholder.png",
       likes: 89,
       comments: 34,
       tags: ["Tournament", "Guilds", "Competition"]
@@ -41,7 +41,7 @@ const NewsPage: React.FC = () => {
       category: "Updates",
       author: "Thaldrin Stormcaller",
       date: "3 days ago",
-      image: "https://images.pexels.com/photos/1181359/pexels-photo-1181359.jpeg?auto=compress&cs=tinysrgb&w=400&h=250&fit=crop",
+      image: "/npc-placeholder.png",
       likes: 56,
       comments: 18,
       tags: ["Update", "Features", "Bug Fixes"]
@@ -54,7 +54,7 @@ const NewsPage: React.FC = () => {
       category: "Community",
       author: "Community Team",
       date: "5 days ago",
-      image: "https://images.pexels.com/photos/1005417/pexels-photo-1005417.jpeg?auto=compress&cs=tinysrgb&w=400&h=250&fit=crop",
+      image: "/npc-placeholder.png",
       likes: 73,
       comments: 29,
       tags: ["Spotlight", "Conservation", "The Wild Hunt"]
@@ -67,7 +67,7 @@ const NewsPage: React.FC = () => {
       category: "Events",
       author: "Event Coordination Team",
       date: "1 week ago",
-      image: "https://images.pexels.com/photos/1684187/pexels-photo-1684187.jpeg?auto=compress&cs=tinysrgb&w=400&h=250&fit=crop",
+      image: "/npc-placeholder.png",
       likes: 134,
       comments: 45,
       tags: ["Festival", "Event", "Celebration"]

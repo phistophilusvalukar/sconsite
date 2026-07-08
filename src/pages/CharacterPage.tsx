@@ -344,7 +344,7 @@ function AllCharactersView({ characters, currentUserId, onSelectCharacter }: { c
 }
 
 function PublicCharacterCard({ character, isOwnCharacter, onSelect }: { character: Character; isOwnCharacter: boolean; onSelect: () => void }) {
-  const avatar = getAvatarFromFoundryJson(character.foundryJson) || character.stats?.avatar || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=600&h=600&fit=crop';
+  const avatar = getAvatarFromFoundryJson(character.foundryJson) || character.stats?.avatar || '/npc-placeholder.png';
 
   return (
     <button

@@ -7,19 +7,19 @@ const AboutPage: React.FC = () => {
       name: "Magnus Ironforge",
       role: "Server Administrator",
       description: "Veteran GM with 15+ years of tabletop experience. Architect of our world's lore.",
-      avatar: "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=128&h=128&fit=crop"
+      avatar: "/npc-placeholder.png"
     },
     {
       name: "Lyra Moonwhisper",
       role: "Community Manager",
       description: "Ensures our community remains welcoming and engaging for all adventurers.",
-      avatar: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=128&h=128&fit=crop"
+      avatar: "/npc-placeholder.png"
     },
     {
       name: "Thaldrin Stormcaller",
       role: "Technical Lead",
       description: "Maintains our FoundryVTT integration and develops custom tools for our server.",
-      avatar: "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=128&h=128&fit=crop"
+      avatar: "/npc-placeholder.png"
     }
   ];
 

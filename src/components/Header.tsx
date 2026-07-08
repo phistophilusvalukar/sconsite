@@ -62,7 +62,7 @@ const Header: React.FC = () => {
                 className="flex items-center space-x-2 px-4 py-2 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-md transition-colors"
               >
                 <img
-                  src={user?.avatar || 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=32&h=32&fit=crop'}
+                  src={user?.avatar || '/npc-placeholder.png'}
                   alt="Profile"
                   className="w-6 h-6 rounded-full"
                 />
@@ -117,7 +117,7 @@ const Header: React.FC = () => {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <img
-                      src={user?.avatar || 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=32&h=32&fit=crop'}
+                      src={user?.avatar || '/npc-placeholder.png'}
                       alt="Profile"
                       className="w-6 h-6 rounded-full"
                     />
