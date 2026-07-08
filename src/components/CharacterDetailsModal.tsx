@@ -38,7 +38,7 @@ interface CharacterDetailsModalProps {
   onEdit: (character: Character) => void;
 }
 
-const defaultPortrait = 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=900&h=1200&fit=crop';
+const defaultPortrait = '/npc-placeholder.png';
 
 const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   character,

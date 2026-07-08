@@ -218,15 +218,13 @@ class GameService {
   async updateApplication(
     applicationId: string,
     characterIds: string[],
-    note: string,
-    lockedCharacterId?: string
+    note: string
   ): Promise<ApiResponse<boolean>> {
     try {
       const { error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.GAME_APPLICATIONS)
         .update({
           character_ids: characterIds,
-          locked_character_id: lockedCharacterId || null,
           note,
           status: 'Applied',
           updated_at: new Date().toISOString()
@@ -277,32 +275,13 @@ class GameService {
     }
   }
 
-  async lockCharacter(
-    applicationId: string,
-    lockedCharacterId: string
-  ): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await this.dbService.getClient()
-        .from(DATABASE_TABLES.GAME_APPLICATIONS)
-        .update({ locked_character_id: lockedCharacterId, updated_at: new Date().toISOString() })
-        .eq('id', applicationId);
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, data: true, message: 'Character locked in.' };
-    } catch (error) {
-      console.error('Error locking character:', error);
-      return { success: false, error: 'Failed to lock character' };
-    }
-  }
-
   async updateGameStatus(gameId: string, gmId: string, status: GameStatus): Promise<ApiResponse<boolean>> {
     try {
       const statusDates: Record<string, string | null> = {};
       if (status === 'Completed') statusDates.completed_at = new Date().toISOString();
       if (status === 'Cancelled') statusDates.cancelled_at = new Date().toISOString();
+      if (status !== 'Cancelled') statusDates.cancelled_at = null;
+      if (status !== 'Completed') statusDates.completed_at = null;
       const { error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.GAMES)
         .update({ status, ...statusDates, updated_at: new Date().toISOString() })
@@ -448,10 +427,7 @@ class GameService {
 
   private async attachApplicationCharacters(games: GameListing[]) {
     const characterIds = Array.from(new Set(
-      games.flatMap(game => game.applications.flatMap(application => [
-        ...application.characterIds,
-        application.lockedCharacterId || ''
-      ]))
+      games.flatMap(game => game.applications.flatMap(application => application.characterIds))
         .filter(Boolean)
     ));
 
@@ -545,7 +521,6 @@ class GameService {
       userId: String(dbApplication.user_id),
       displayName: String(dbApplication.display_name || 'Player'),
       characterIds,
-      lockedCharacterId: dbApplication.locked_character_id ? String(dbApplication.locked_character_id) : undefined,
       status: String(dbApplication.status || 'Applied') as GameApplicationStatus,
       note: String(dbApplication.note || ''),
       characters: [],

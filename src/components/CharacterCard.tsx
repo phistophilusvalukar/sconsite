@@ -4,6 +4,8 @@ import { Character } from '../types/database';
 import CharacterRoleBadges from './CharacterRoleBadges';
 import { roleBorderTone, rolePillTone } from '../utils/characterRoles';
 
+const DEFAULT_CHARACTER_AVATAR = '/npc-placeholder.png';
+
 interface CharacterCardProps {
   character: Character;
   onEdit: (character: Character) => void;
@@ -22,8 +24,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const parsedData = character.foundryJson ? getCharacterDataFromJson(character.foundryJson) : null;
 
   // Get character avatar from main file or use default
-  const characterAvatar = parsedData?.avatar || character.stats?.avatar || 
-    `https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=128&h=128&fit=crop`;
+  const characterAvatar = parsedData?.avatar || character.stats?.avatar || DEFAULT_CHARACTER_AVATAR;
 
   return (
     <div

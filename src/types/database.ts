@@ -301,7 +301,6 @@ export interface GameApplication {
   userId: string;
   displayName: string;
   characterIds: string[];
-  lockedCharacterId?: string;
   status: GameApplicationStatus;
   note: string;
   characters: Character[];
