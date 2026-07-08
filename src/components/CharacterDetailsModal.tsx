@@ -20,6 +20,7 @@ import {
   Character,
   CharacterJournalEntry,
   CharacterRelationship,
+  CharacterRelationshipType,
   FoundryJsonEntry
 } from '../types/database';
 import { CharacterService } from '../services/characterService';
@@ -53,7 +54,12 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const [graphStack, setGraphStack] = useState<string[]>([character._id || '']);
   const [journalDraft, setJournalDraft] = useState({ title: '', body: '' });
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
-  const [relationshipDraft, setRelationshipDraft] = useState({ targetCharacterId: '', label: '' });
+  const [editingComments, setEditingComments] = useState<Record<string, string>>({});
+  const [relationshipDraft, setRelationshipDraft] = useState<{ targetCharacterId: string; relationshipTypes: CharacterRelationshipType[]; subtype: string }>({
+    targetCharacterId: '',
+    relationshipTypes: ['family'],
+    subtype: ''
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   const parsedData = character.foundryJson ? getCharacterDataFromJson(character.foundryJson) : null;
@@ -213,14 +219,65 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     }
   };
 
+  const handleUpdateComment = async (entryId: string, commentId: string) => {
+    const body = editingComments[commentId]?.trim();
+    if (!body) return;
+
+    const response = await characterService.updateJournalComment(commentId, body);
+    if (response.success && response.data) {
+      setJournalEntries(prev => prev.map(entry => entry.id === entryId
+        ? {
+            ...entry,
+            comments: entry.comments.map(comment => comment.id === commentId ? response.data! : comment)
+          }
+        : entry
+      ));
+      setEditingComments(prev => {
+        const next = { ...prev };
+        delete next[commentId];
+        return next;
+      });
+    } else {
+      alert(response.error || 'Failed to update comment');
+    }
+  };
+
+  const handleDeleteComment = async (entryId: string, commentId: string) => {
+    const response = await characterService.deleteJournalComment(commentId);
+    if (response.success) {
+      setJournalEntries(prev => prev.map(entry => entry.id === entryId
+        ? { ...entry, comments: entry.comments.filter(comment => comment.id !== commentId) }
+        : entry
+      ));
+    } else {
+      alert(response.error || 'Failed to delete comment');
+    }
+  };
+
+  const handleToggleRelationshipType = (type: CharacterRelationshipType) => {
+    setRelationshipDraft(prev => {
+      const hasType = prev.relationshipTypes.includes(type);
+      const relationshipTypes = hasType
+        ? prev.relationshipTypes.filter(item => item !== type)
+        : [...prev.relationshipTypes, type];
+      return { ...prev, relationshipTypes };
+    });
+  };
+
   const handleAddRelationship = async () => {
-    if (!character._id || !relationshipDraft.targetCharacterId || !relationshipDraft.label.trim()) return;
+    if (!character._id || !relationshipDraft.targetCharacterId || relationshipDraft.relationshipTypes.length === 0) return;
     if (relationships.some(link => link.sourceCharacterId === character._id && link.targetCharacterId === relationshipDraft.targetCharacterId)) return;
 
-    const response = await characterService.createRelationship(character._id, currentUserId, relationshipDraft.targetCharacterId, relationshipDraft.label.trim());
+    const response = await characterService.createRelationship(
+      character._id,
+      currentUserId,
+      relationshipDraft.targetCharacterId,
+      relationshipDraft.relationshipTypes,
+      relationshipDraft.subtype.trim()
+    );
     if (response.success && response.data) {
       setRelationships(prev => [...prev, response.data as CharacterRelationship]);
-      setRelationshipDraft({ targetCharacterId: '', label: '' });
+      setRelationshipDraft({ targetCharacterId: '', relationshipTypes: ['family'], subtype: '' });
     } else {
       alert(response.error || 'Failed to add relationship');
     }
@@ -363,8 +420,29 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                           <div className="mt-4 space-y-3">
                             {entry.comments.map(comment => (
                               <div key={comment.id} className="rounded-lg bg-midnight-900/60 p-3">
-                                <p className="text-xs text-gray-500">{comment.authorId === currentUserId ? 'You' : 'Player'} · {new Date(comment.createdAt).toLocaleString()}</p>
-                                <p className="mt-1 text-sm text-gray-200">{comment.body}</p>
+                                <p className="text-xs text-gray-500">{comment.authorId === currentUserId ? 'You' : 'Player'} - {new Date(comment.createdAt).toLocaleString()}</p>
+                                {comment.isEdited && <p className="mt-1 text-xs text-gray-500">Edited</p>}
+                                {editingComments[comment.id] !== undefined ? (
+                                  <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto_auto]">
+                                    <input value={editingComments[comment.id]} onChange={event => setEditingComments(prev => ({ ...prev, [comment.id]: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                                    <button onClick={() => handleUpdateComment(entry.id, comment.id)} className="rounded-lg bg-yellow-500 px-3 py-2 text-sm font-bold text-midnight-900">Save</button>
+                                    <button onClick={() => setEditingComments(prev => {
+                                      const next = { ...prev };
+                                      delete next[comment.id];
+                                      return next;
+                                    })} className="rounded-lg bg-fantasy-700 px-3 py-2 text-sm font-semibold text-white">Cancel</button>
+                                  </div>
+                                ) : (
+                                  <p className="mt-1 text-sm text-gray-200">{comment.body}</p>
+                                )}
+                                {(comment.authorId === currentUserId || canEdit) && (
+                                  <div className="mt-2 flex items-center gap-3">
+                                    {comment.authorId === currentUserId && (
+                                      <button onClick={() => setEditingComments(prev => ({ ...prev, [comment.id]: comment.body }))} className="text-xs text-yellow-200 hover:text-yellow-100">Edit</button>
+                                    )}
+                                    <button onClick={() => handleDeleteComment(entry.id, comment.id)} className="text-xs text-red-200 hover:text-red-100">Delete</button>
+                                  </div>
+                                )}
                               </div>
                             ))}
                             <div className="grid gap-2 md:grid-cols-[1fr_auto]">
@@ -382,12 +460,20 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                     <div className="space-y-5">
                       {canEdit && (
                         <div className="rounded-lg bg-fantasy-900/30 p-4">
-                          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                          <div className="grid gap-3">
                             <select value={relationshipDraft.targetCharacterId} onChange={event => setRelationshipDraft(prev => ({ ...prev, targetCharacterId: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
                               <option value="">Select character</option>
                               {otherCharacters.map(item => <option key={item._id} value={item._id}>{item.name}</option>)}
                             </select>
-                            <input value={relationshipDraft.label} onChange={event => setRelationshipDraft(prev => ({ ...prev, label: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Mentor, rival, sibling..." />
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {(['family', 'rival', 'romantic', 'patron', 'owes_debt'] as CharacterRelationshipType[]).map(type => (
+                                <label key={type} className="flex items-center gap-2 rounded-lg bg-fantasy-800/40 p-3 text-sm text-gray-200">
+                                  <input type="checkbox" checked={relationshipDraft.relationshipTypes.includes(type)} onChange={() => handleToggleRelationshipType(type)} className="h-4 w-4 rounded border-fantasy-600 bg-fantasy-900 text-yellow-500 focus:ring-yellow-400" />
+                                  <span>{formatRelationshipType(type)}</span>
+                                </label>
+                              ))}
+                            </div>
+                            <input value={relationshipDraft.subtype} onChange={event => setRelationshipDraft(prev => ({ ...prev, subtype: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Optional subtype, e.g. sibling, mentor, former flame" />
                             <button onClick={handleAddRelationship} className="flex items-center justify-center space-x-2 rounded-lg bg-yellow-500 px-4 py-2 font-bold text-midnight-900 transition-colors hover:bg-yellow-400">
                               <Plus className="h-4 w-4" />
                               <span>Add</span>
@@ -420,7 +506,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                               <div key={link.id} className="flex items-center justify-between gap-3 rounded-lg border border-fantasy-700/30 bg-fantasy-900/30 p-3">
                                 <button disabled={!target} onClick={() => target && setGraphStack(prev => [...prev, target._id || ''])} className="min-w-0 flex-1 text-left">
                                   <p className="truncate font-semibold text-white">{target?.name || 'Unknown character'}</p>
-                                  <p className="truncate text-sm text-yellow-200">{link.label}</p>
+                                  <p className="truncate text-sm text-yellow-200">{describeRelationship(link, relationships)}</p>
                                 </button>
                                 {canEdit && link.sourceCharacterId === character._id && <IconButton title="Delete relationship" onClick={() => handleDeleteRelationship(link.id)} icon={<Trash2 className="h-4 w-4" />} danger />}
                               </div>
@@ -480,6 +566,36 @@ function IconButton({ title, icon, onClick, disabled, danger }: { title: string;
       {icon}
     </button>
   );
+}
+
+function formatRelationshipType(type: CharacterRelationshipType) {
+  return type
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function describeRelationship(relationship: CharacterRelationship, relationships: CharacterRelationship[]) {
+  const labels = relationship.relationshipTypes.map(type => {
+    const status = getRelationshipStatus(relationship, type, relationships);
+    return `${formatRelationshipType(type)}${status === 'unofficial' ? ' (unofficial)' : ''}`;
+  });
+  return [labels.join(', '), relationship.subtype].filter(Boolean).join(' - ');
+}
+
+function getRelationshipStatus(relationship: CharacterRelationship, type: CharacterRelationshipType, relationships: CharacterRelationship[]) {
+  if (relationship.isAutomatic || type === 'guildmate' || type === 'ally' || type === 'family') return 'official';
+
+  const reciprocal = relationships.find(candidate =>
+    candidate.sourceCharacterId === relationship.targetCharacterId &&
+    candidate.targetCharacterId === relationship.sourceCharacterId
+  );
+
+  if (!reciprocal) return 'unofficial';
+  if ((type === 'rival' || type === 'romantic') && reciprocal.relationshipTypes.includes(type)) return 'official';
+  if (type === 'patron' && reciprocal.relationshipTypes.includes('owes_debt')) return 'official';
+  if (type === 'owes_debt' && reciprocal.relationshipTypes.includes('patron')) return 'official';
+  return 'unofficial';
 }
 
 function getCharacterDataFromJson(jsonData: unknown) {

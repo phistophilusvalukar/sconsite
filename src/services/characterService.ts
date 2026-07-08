@@ -6,6 +6,7 @@ import {
   CharacterJournalComment,
   CharacterJournalEntry,
   CharacterRelationship,
+  CharacterRelationshipType,
   FoundryJsonEntry
 } from '../types/database';
 
@@ -484,6 +485,46 @@ export class CharacterService {
     }
   }
 
+  async updateJournalComment(commentId: string, body: string): Promise<ApiResponse<CharacterJournalComment>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_JOURNAL_COMMENTS)
+        .update({
+          body,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', commentId)
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+
+      return {
+        success: true,
+        data: this.transformJournalCommentFromDb(data)
+      };
+    } catch (error) {
+      console.error('Error updating journal comment:', error);
+      return { success: false, error: 'Failed to update comment' };
+    }
+  }
+
+  async deleteJournalComment(commentId: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_JOURNAL_COMMENTS)
+        .delete()
+        .eq('id', commentId);
+
+      if (error) return { success: false, error: error.message };
+
+      return { success: true, data: true };
+    } catch (error) {
+      console.error('Error deleting journal comment:', error);
+      return { success: false, error: 'Failed to delete comment' };
+    }
+  }
+
   async toggleJournalLike(entryId: string, userId: string, isLiked: boolean): Promise<ApiResponse<boolean>> {
     try {
       if (isLiked) {
@@ -513,7 +554,8 @@ export class CharacterService {
     try {
       if (characterIds.length === 0) return { success: true, data: [] };
 
-      const { data, error } = await this.dbService.getClient()
+      const supabase = this.dbService.getClient();
+      const { data, error } = await supabase
         .from(DATABASE_TABLES.CHARACTER_RELATIONSHIPS)
         .select('*')
         .in('source_character_id', characterIds)
@@ -521,9 +563,14 @@ export class CharacterService {
 
       if (error) return { success: false, error: error.message };
 
+      const automaticRelationships = await this.getAutomaticGuildRelationships(characterIds);
+
       return {
         success: true,
-        data: (data || []).map(relationship => this.transformRelationshipFromDb(relationship))
+        data: [
+          ...(data || []).map(relationship => this.transformRelationshipFromDb(relationship)),
+          ...automaticRelationships
+        ]
       };
     } catch (error) {
       console.error('Error fetching relationships:', error);
@@ -531,7 +578,13 @@ export class CharacterService {
     }
   }
 
-  async createRelationship(sourceCharacterId: string, ownerId: string, targetCharacterId: string, label: string): Promise<ApiResponse<CharacterRelationship>> {
+  async createRelationship(
+    sourceCharacterId: string,
+    ownerId: string,
+    targetCharacterId: string,
+    relationshipTypes: CharacterRelationshipType[],
+    subtype: string
+  ): Promise<ApiResponse<CharacterRelationship>> {
     try {
       const { data, error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.CHARACTER_RELATIONSHIPS)
@@ -539,7 +592,9 @@ export class CharacterService {
           source_character_id: sourceCharacterId,
           target_character_id: targetCharacterId,
           owner_id: ownerId,
-          label
+          relationship_types: relationshipTypes,
+          subtype: subtype || null,
+          label: subtype || null
         })
         .select()
         .single();
@@ -570,6 +625,68 @@ export class CharacterService {
       console.error('Error deleting relationship:', error);
       return { success: false, error: 'Failed to delete relationship' };
     }
+  }
+
+  private async getAutomaticGuildRelationships(characterIds: string[]): Promise<CharacterRelationship[]> {
+    const { data, error } = await this.dbService.getClient()
+      .from(DATABASE_TABLES.GUILD_MEMBERSHIPS)
+      .select('id,guild_id,character_id,role_category,membership_status')
+      .in('character_id', characterIds)
+      .eq('membership_status', 'Active');
+
+    if (error || !data) {
+      if (error) console.error('Error fetching automatic guild relationships:', error);
+      return [];
+    }
+
+    const membershipsByGuild = new Map<string, Array<{ character_id: string; role_category: string }>>();
+    data
+      .filter(membership => membership.character_id)
+      .forEach(membership => {
+        const guildMemberships = membershipsByGuild.get(membership.guild_id) || [];
+        guildMemberships.push({
+          character_id: membership.character_id,
+          role_category: membership.role_category
+        });
+        membershipsByGuild.set(membership.guild_id, guildMemberships);
+      });
+
+    const relationships: CharacterRelationship[] = [];
+    membershipsByGuild.forEach((memberships, guildId) => {
+      const coreMembers = memberships.filter(membership => ['Leader', 'Officer', 'Member'].includes(membership.role_category));
+      const allies = memberships.filter(membership => membership.role_category === 'Ally');
+
+      coreMembers.forEach(source => {
+        coreMembers.forEach(target => {
+          if (source.character_id === target.character_id) return;
+          relationships.push(this.createAutomaticRelationship(guildId, source.character_id, target.character_id, 'guildmate'));
+        });
+      });
+
+      allies.forEach(ally => {
+        coreMembers.forEach(member => {
+          relationships.push(this.createAutomaticRelationship(guildId, ally.character_id, member.character_id, 'ally'));
+          relationships.push(this.createAutomaticRelationship(guildId, member.character_id, ally.character_id, 'ally'));
+        });
+      });
+    });
+
+    return relationships;
+  }
+
+  private createAutomaticRelationship(guildId: string, sourceCharacterId: string, targetCharacterId: string, type: 'guildmate' | 'ally'): CharacterRelationship {
+    return {
+      id: `auto-${type}-${guildId}-${sourceCharacterId}-${targetCharacterId}`,
+      sourceCharacterId,
+      targetCharacterId,
+      relationshipTypes: [type],
+      subtype: '',
+      label: type === 'guildmate' ? 'Guildmate' : 'Ally',
+      status: 'automatic',
+      isAutomatic: true,
+      createdAt: new Date(0),
+      updatedAt: new Date(0)
+    };
   }
 
   parseFoundryData(jsonData: FoundryCharacterData): Partial<Character> {
@@ -723,6 +840,7 @@ export class CharacterService {
       entryId: dbComment.entry_id,
       authorId: dbComment.author_id,
       body: dbComment.body,
+      isEdited: new Date(dbComment.updated_at).getTime() > new Date(dbComment.created_at).getTime() + 1000,
       createdAt: new Date(dbComment.created_at),
       updatedAt: new Date(dbComment.updated_at)
     };
@@ -733,7 +851,11 @@ export class CharacterService {
       id: dbRelationship.id,
       sourceCharacterId: dbRelationship.source_character_id,
       targetCharacterId: dbRelationship.target_character_id,
-      label: dbRelationship.label,
+      relationshipTypes: Array.isArray(dbRelationship.relationship_types) && dbRelationship.relationship_types.length > 0
+        ? dbRelationship.relationship_types
+        : ['family'],
+      subtype: dbRelationship.subtype || dbRelationship.label || '',
+      label: dbRelationship.subtype || dbRelationship.label || '',
       createdAt: new Date(dbRelationship.created_at),
       updatedAt: new Date(dbRelationship.updated_at)
     };

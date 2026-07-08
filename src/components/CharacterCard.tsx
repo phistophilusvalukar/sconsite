@@ -30,7 +30,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       }`}
       onClick={() => onSelect(character)}
     >
-      <div className="relative min-h-[260px]">
+      <div className="relative min-h-[260px] overflow-hidden">
         <img src={characterAvatar} alt={character.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
         <div className="absolute inset-0 bg-gradient-to-t from-midnight-950 via-midnight-950/45 to-midnight-950/10" />
         <div className="absolute left-4 right-4 top-4 flex items-center justify-between">

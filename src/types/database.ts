@@ -137,17 +137,30 @@ export interface CharacterJournalComment {
   entryId: string;
   authorId: string;
   body: string;
+  isEdited: boolean;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
+
+export type CharacterRelationshipType = 'family' | 'rival' | 'romantic' | 'patron' | 'owes_debt' | 'guildmate' | 'ally';
+export type CharacterRelationshipStatus = 'official' | 'unofficial' | 'automatic';
 
 export interface CharacterRelationship {
   id: string;
   sourceCharacterId: string;
   targetCharacterId: string;
-  label: string;
+  relationshipTypes: CharacterRelationshipType[];
+  subtype?: string;
+  label?: string;
+  status?: CharacterRelationshipStatus;
+  isAutomatic?: boolean;
   createdAt: string | Date;
   updatedAt: string | Date;
+}
+
+export interface CharacterRelationshipGraph {
+  characters: Character[];
+  relationships: CharacterRelationship[];
 }
 
 export interface GuildMembership {

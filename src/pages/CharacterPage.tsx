@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, Plus, Shield, Users } from 'lucide-react';
-import { Character } from '../types/database';
+import { Loader2, Network, Plus, Shield, Users } from 'lucide-react';
+import { Character, CharacterRelationship } from '../types/database';
 import { CharacterService } from '../services/characterService';
 import CharacterCard from '../components/CharacterCard';
 import CharacterDetailsModal from '../components/CharacterDetailsModal';
 import CharacterForm from '../components/CharacterForm';
+import CharacterRelationshipGraph from '../components/CharacterRelationshipGraph';
 
-type CharacterView = 'characters' | 'all';
+type CharacterView = 'characters' | 'all' | 'relationships';
 
 const CharacterPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [publicCharacters, setPublicCharacters] = useState<Character[]>([]);
+  const [publicRelationships, setPublicRelationships] = useState<CharacterRelationship[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [selectedCanEdit, setSelectedCanEdit] = useState(false);
   const [activeView, setActiveView] = useState<CharacterView>('characters');
@@ -43,6 +45,13 @@ const CharacterPage: React.FC = () => {
       const publicResponse = await characterService.getPublicCharacters();
       if (publicResponse.success && publicResponse.data) {
         setPublicCharacters(publicResponse.data);
+        const publicCharacterIds = publicResponse.data.map(character => character._id).filter(Boolean) as string[];
+        const relationshipResponse = await characterService.getRelationshipsForCharacters(publicCharacterIds);
+        if (relationshipResponse.success && relationshipResponse.data) {
+          setPublicRelationships(relationshipResponse.data);
+        } else {
+          console.error('Failed to load public relationships:', relationshipResponse.error);
+        }
       } else {
         console.error('Failed to load public characters:', publicResponse.error);
       }
@@ -145,7 +154,7 @@ const CharacterPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="mb-8 grid grid-cols-2 rounded-xl border border-fantasy-700/30 bg-fantasy-900/20 p-1 sm:flex sm:w-fit">
+        <div className="mb-8 grid grid-cols-3 rounded-xl border border-fantasy-700/30 bg-fantasy-900/20 p-1 sm:flex sm:w-fit">
           <button
             onClick={() => setActiveView('characters')}
             className={`flex items-center justify-center space-x-2 rounded-lg px-5 py-3 text-sm font-semibold transition-colors ${
@@ -167,6 +176,17 @@ const CharacterPage: React.FC = () => {
           >
             <Users className="h-4 w-4" />
             <span>All Characters</span>
+          </button>
+          <button
+            onClick={() => setActiveView('relationships')}
+            className={`flex items-center justify-center space-x-2 rounded-lg px-5 py-3 text-sm font-semibold transition-colors ${
+              activeView === 'relationships'
+                ? 'bg-yellow-500 text-midnight-900'
+                : 'text-gray-300 hover:bg-fantasy-800/40 hover:text-white'
+            }`}
+          >
+            <Network className="h-4 w-4" />
+            <span>Relationships</span>
           </button>
         </div>
 
@@ -208,6 +228,14 @@ const CharacterPage: React.FC = () => {
 
         {!isLoading && activeView === 'all' && (
           <AllCharactersView characters={publicCharacters} currentUserId={user?.id || ''} onSelectCharacter={handleSelectPublicCharacter} />
+        )}
+
+        {!isLoading && activeView === 'relationships' && (
+          <CharacterRelationshipGraph
+            characters={publicCharacters}
+            relationships={publicRelationships}
+            onSelectCharacter={handleSelectPublicCharacter}
+          />
         )}
 
         {/* Empty State */}
