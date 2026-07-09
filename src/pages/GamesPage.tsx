@@ -74,6 +74,12 @@ interface GameFormState {
   invitedUserIds: string[];
 }
 
+interface ApplicationModalState {
+  gameId: string;
+  characterId: string;
+  note: string;
+}
+
 const GamesPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const gameService = useMemo(() => GameService.getInstance(), []);
@@ -101,6 +107,7 @@ const GamesPage: React.FC = () => {
   const [isInviteSearching, setIsInviteSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<GamesTab>('open');
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [applicationModal, setApplicationModal] = useState<ApplicationModalState | null>(null);
   const [ticketBonus, setTicketBonus] = useState<Record<string, GameRewardsBonus>>({});
   const [archiveCommentDrafts, setArchiveCommentDrafts] = useState<Record<string, string>>({});
   const [editingArchiveComments, setEditingArchiveComments] = useState<Record<string, string>>({});
@@ -239,6 +246,10 @@ const GamesPage: React.FC = () => {
     () => games.find(game => game._id === selectedGameId) || null,
     [games, selectedGameId]
   );
+  const applicationGame = useMemo(
+    () => games.find(game => game._id === applicationModal?.gameId) || null,
+    [games, applicationModal?.gameId]
+  );
 
   const allTags = useMemo(() => {
     return Array.from(new Set([...defaultTags, ...tierTags, ...games.flatMap(game => game.tags), ...games.map(game => game.tier)])).sort();
@@ -358,10 +369,23 @@ const GamesPage: React.FC = () => {
     }));
   };
 
-  const handleApply = async (game: GameListing) => {
+  const openApplicationModal = (game: GameListing) => {
+    if (!game._id) return;
+    const ownApplication = game.applications.find(application => application.userId === user?.id);
+    setApplicationModal({
+      gameId: game._id,
+      characterId: ownApplication?.characterIds[0] || applicationCharacters[game._id]?.[0] || characters[0]?._id || '',
+      note: ownApplication?.note || applicationNotes[game._id] || ''
+    });
+  };
+
+  const closeApplicationModal = () => {
+    setApplicationModal(null);
+  };
+
+  const handleApply = async (game: GameListing, characterId: string, note: string) => {
     if (!user?.id || !game._id) return;
-    const characterIds = applicationCharacters[game._id] || [];
-    if (characterIds.length !== 1) {
+    if (!characterId) {
       alert('Pick one character to apply.');
       return;
     }
@@ -370,40 +394,48 @@ const GamesPage: React.FC = () => {
       gameId: game._id,
       userId: user.id,
       displayName: user.username,
-      characterIds,
-      note: applicationNotes[game._id] || ''
+      characterIds: [characterId],
+      note
     });
 
     if (result.success) {
+      setApplicationCharacters(prev => ({ ...prev, [game._id]: [characterId] }));
+      setApplicationNotes(prev => ({ ...prev, [game._id]: note }));
+      closeApplicationModal();
       await loadData();
     } else {
       alert(result.error || 'Failed to apply');
     }
   };
 
-  const handleUpdateApplication = async (application: GameApplication, game: GameListing) => {
+  const handleUpdateApplication = async (application: GameApplication, game: GameListing, characterId: string, note: string) => {
     if (!application._id || !game._id) return;
-    const characterIds = applicationCharacters[game._id] || [];
-    if (characterIds.length !== 1) {
+    if (!characterId) {
       alert('Pick one character.');
       return;
     }
 
-    const result = await gameService.updateApplication(application._id, characterIds, applicationNotes[game._id] || '');
+    const result = await gameService.updateApplication(application._id, [characterId], note);
     if (result.success) {
+      setApplicationCharacters(prev => ({ ...prev, [game._id]: [characterId] }));
+      setApplicationNotes(prev => ({ ...prev, [game._id]: note }));
+      closeApplicationModal();
       await loadData();
     } else {
       alert(result.error || 'Failed to update application');
     }
   };
 
-  const handleWithdrawApplication = async (application: GameApplication) => {
+  const handleWithdrawApplication = async (application: GameApplication, options: { confirm?: boolean } = { confirm: true }) => {
     if (!application._id) return;
-    const confirmed = window.confirm('Withdraw your application for this game?');
-    if (!confirmed) return;
+    if (options.confirm !== false) {
+      const confirmed = window.confirm('Withdraw your application for this game?');
+      if (!confirmed) return;
+    }
 
     const result = await gameService.withdrawApplication(application._id);
     if (result.success) {
+      closeApplicationModal();
       await loadData();
     } else {
       alert(result.error || 'Failed to withdraw application');
@@ -927,21 +959,11 @@ const GamesPage: React.FC = () => {
           <GameDetailsModal
             game={selectedGame}
             userId={user?.id || ''}
-            characters={characters}
-            selectedCharacterIds={applicationCharacters[selectedGame._id || ''] || []}
-            applicationNote={applicationNotes[selectedGame._id || ''] || ''}
             rewardsBonus={ticketBonus[selectedGame._id || ''] ?? selectedGame.rewardsBonus}
             commentDraft={archiveCommentDrafts[selectedGame._id || ''] || ''}
             editingComments={editingArchiveComments}
             onClose={() => setSelectedGameId(null)}
-            onToggleCharacter={(characterId) => {
-              const gameId = selectedGame._id || '';
-              setApplicationCharacters(prev => ({ ...prev, [gameId]: toggleSingleSelection(prev[gameId] || [], characterId) }));
-            }}
-            onNoteChange={(note) => setApplicationNotes(prev => ({ ...prev, [selectedGame._id || '']: note }))}
-            onApply={() => handleApply(selectedGame)}
-            onUpdateApplication={(application) => handleUpdateApplication(application, selectedGame)}
-            onWithdrawApplication={handleWithdrawApplication}
+            onOpenApplicationModal={() => openApplicationModal(selectedGame)}
             onApplicationStatus={handleApplicationStatus}
             onUpdateGame={(updates) => handleUpdateGame(selectedGame, updates)}
             onStatusChange={(status) => handleUpdateGameStatus(selectedGame, status)}
@@ -958,6 +980,26 @@ const GamesPage: React.FC = () => {
             onUpdateComment={handleUpdateArchiveComment}
             onDeleteComment={handleDeleteArchiveComment}
             onToggleLike={() => handleToggleArchiveLike(selectedGame)}
+          />
+        )}
+        {applicationGame && applicationModal && (
+          <GameApplicationModal
+            game={applicationGame}
+            userId={user?.id || ''}
+            characters={characters}
+            characterId={applicationModal.characterId}
+            note={applicationModal.note}
+            onCharacterChange={(characterId) => setApplicationModal(prev => prev ? { ...prev, characterId } : prev)}
+            onNoteChange={(note) => setApplicationModal(prev => prev ? { ...prev, note } : prev)}
+            onCancel={closeApplicationModal}
+            onSave={(application) => {
+              if (application && application.status !== 'Withdrawn') {
+                return handleUpdateApplication(application, applicationGame, applicationModal.characterId, applicationModal.note);
+              }
+
+              return handleApply(applicationGame, applicationModal.characterId, applicationModal.note);
+            }}
+            onWithdraw={(application) => handleWithdrawApplication(application, { confirm: false })}
           />
         )}
       </div>
@@ -1076,18 +1118,11 @@ interface GameEditState {
 interface GameDetailsModalProps {
   game: GameListing;
   userId: string;
-  characters: Character[];
-  selectedCharacterIds: string[];
-  applicationNote: string;
   rewardsBonus: GameRewardsBonus;
   commentDraft: string;
   editingComments: Record<string, string>;
   onClose: () => void;
-  onToggleCharacter: (characterId: string) => void;
-  onNoteChange: (note: string) => void;
-  onApply: () => void;
-  onUpdateApplication: (application: GameApplication) => void;
-  onWithdrawApplication: (application: GameApplication) => void;
+  onOpenApplicationModal: () => void;
   onApplicationStatus: (application: GameApplication, status: GameApplicationStatus) => void;
   onUpdateGame: (updates: GameEditState) => void | Promise<void>;
   onStatusChange: (status: GameStatus) => void;
@@ -1105,18 +1140,11 @@ interface GameDetailsModalProps {
 const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
   game,
   userId,
-  characters,
-  selectedCharacterIds,
-  applicationNote,
   rewardsBonus,
   commentDraft,
   editingComments,
   onClose,
-  onToggleCharacter,
-  onNoteChange,
-  onApply,
-  onUpdateApplication,
-  onWithdrawApplication,
+  onOpenApplicationModal,
   onApplicationStatus,
   onUpdateGame,
   onStatusChange,
@@ -1270,42 +1298,16 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
               </section>
             )}
           <aside className="space-y-5">
-            {!isGm && !ownApplication && !isArchived && (
+            {!isGm && !isArchived && (
               <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
-                <h3 className="mb-3 text-lg font-bold text-white">Apply to Join</h3>
-                <div className="grid gap-2">
-                  {characters.map(character => (
-                    <label key={character._id} className="flex items-center gap-2 rounded border border-fantasy-700/30 p-2 text-sm text-gray-200">
-                      <input type="checkbox" checked={selectedCharacterIds.includes(character._id || '')} onChange={() => character._id && onToggleCharacter(character._id)} className="h-4 w-4" />
-                      <span className={roleNameTone(character.mainRole)}>{character.name} L{character.level}</span>
-                    </label>
-                  ))}
-                </div>
-                <textarea value={applicationNote} onChange={event => onNoteChange(event.target.value)} rows={3} className="mt-3 w-full rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-2 text-white placeholder-gray-400" placeholder="Application note" />
-                <button type="button" onClick={onApply} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-3 font-bold text-midnight-900 hover:bg-yellow-400">
+                <h3 className="mb-3 text-lg font-bold text-white">Application</h3>
+                {ownApplication && (
+                  <p className="mb-3 text-sm text-gray-300">Status: <span className="font-bold text-yellow-300">{ownApplication.status}</span></p>
+                )}
+                <button type="button" onClick={onOpenApplicationModal} className="flex w-full items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-3 font-bold text-midnight-900 hover:bg-yellow-400">
                   <UserCheck className="h-4 w-4" />
-                  <span>Apply</span>
+                  <span>{getApplicationActionLabel(ownApplication)}</span>
                 </button>
-              </section>
-            )}
-
-            {ownApplication && !isArchived && (
-              <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
-                <h3 className="mb-3 text-lg font-bold text-white">Your Application</h3>
-                <p className="mb-3 text-sm text-gray-300">Status: <span className="font-bold text-yellow-300">{ownApplication.status}</span></p>
-                <div className="grid gap-2">
-                  {characters.map(character => (
-                    <label key={character._id} className="flex items-center gap-2 rounded border border-fantasy-700/30 p-2 text-sm text-gray-200">
-                      <input type="checkbox" checked={selectedCharacterIds.includes(character._id || '')} onChange={() => character._id && onToggleCharacter(character._id)} className="h-4 w-4" />
-                      <span className={roleNameTone(character.mainRole)}>{character.name} L{character.level}</span>
-                    </label>
-                  ))}
-                </div>
-                <textarea value={applicationNote} onChange={event => onNoteChange(event.target.value)} rows={3} className="mt-3 w-full rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-2 text-white placeholder-gray-400" placeholder="Application note" />
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <button type="button" onClick={() => onUpdateApplication(ownApplication)} className="rounded-lg bg-yellow-500 px-3 py-2 text-sm font-bold text-midnight-900">Save</button>
-                  <button type="button" onClick={() => onWithdrawApplication(ownApplication)} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-bold text-white">Withdraw</button>
-                </div>
               </section>
             )}
 
@@ -1361,8 +1363,100 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
               </section>
             )}
 
-            {!isArchived && game.status !== 'Completed' && <RewardsSection game={{ ...game, rewardsBonus }} preview />}
           </aside>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface GameApplicationModalProps {
+  game: GameListing;
+  userId: string;
+  characters: Character[];
+  characterId: string;
+  note: string;
+  onCharacterChange: (characterId: string) => void;
+  onNoteChange: (note: string) => void;
+  onCancel: () => void;
+  onSave: (application?: GameApplication) => void | Promise<void>;
+  onWithdraw: (application: GameApplication) => void | Promise<void>;
+}
+
+const GameApplicationModal: React.FC<GameApplicationModalProps> = ({
+  game,
+  userId,
+  characters,
+  characterId,
+  note,
+  onCharacterChange,
+  onNoteChange,
+  onCancel,
+  onSave,
+  onWithdraw
+}) => {
+  const ownApplication = game.applications.find(application => application.userId === userId);
+  const canWithdraw = Boolean(ownApplication && ownApplication.status !== 'Withdrawn');
+  const actionLabel = getApplicationActionLabel(ownApplication);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4">
+      <div className="w-full max-w-lg rounded-xl border border-fantasy-700/40 bg-midnight-950 shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-fantasy-700/30 p-5">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">{actionLabel}</p>
+            <h2 className="font-fantasy text-2xl font-bold text-white">{game.title}</h2>
+          </div>
+          <button type="button" onClick={onCancel} className="p-2 text-gray-400 hover:text-white" aria-label="Close application">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4 p-5">
+          {ownApplication && (
+            <p className="text-sm text-gray-300">Current status: <span className="font-bold text-yellow-300">{ownApplication.status}</span></p>
+          )}
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-300">Character</span>
+            <select
+              value={characterId}
+              onChange={event => onCharacterChange(event.target.value)}
+              className="w-full rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white"
+            >
+              <option value="">Select a character</option>
+              {characters.map(character => (
+                <option key={character._id} value={character._id || ''}>
+                  {character.name} L{character.level}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-gray-300">Note</span>
+            <textarea
+              value={note}
+              onChange={event => onNoteChange(event.target.value)}
+              rows={5}
+              className="w-full rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white placeholder-gray-400"
+              placeholder="Anything the GM should know"
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-fantasy-700/30 p-5 sm:flex-row sm:justify-end">
+          <button type="button" onClick={onCancel} className="rounded-lg bg-fantasy-700 px-4 py-2 text-sm font-semibold text-white hover:bg-fantasy-600">
+            Cancel
+          </button>
+          {canWithdraw && (
+            <button type="button" onClick={() => ownApplication && onWithdraw(ownApplication)} className="rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white hover:bg-red-600">
+              Withdraw Application
+            </button>
+          )}
+          <button type="button" onClick={() => onSave(ownApplication)} disabled={!characterId} className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-bold text-midnight-900 hover:bg-yellow-400 disabled:bg-gray-600 disabled:text-gray-300">
+            {ownApplication?.status === 'Withdrawn' ? 'Re-apply' : ownApplication ? 'Save' : 'Apply'}
+          </button>
         </div>
       </div>
     </div>
@@ -1499,9 +1593,6 @@ const getDefaultStartTime = () => {
 const toggleInArray = (values: string[], value: string) =>
   values.includes(value) ? values.filter(item => item !== value) : [...values, value];
 
-const toggleSingleSelection = (values: string[], value: string) =>
-  values.includes(value) ? [] : [value];
-
 const toDateTimeLocalValue = (date: Date) => {
   const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return offsetDate.toISOString().slice(0, 16);
@@ -1585,6 +1676,12 @@ const renderCharacters = (application: GameApplication) =>
 
 const getApplicationPrimaryRole = (application: GameApplication) => {
   return application.characters[0]?.mainRole;
+};
+
+const getApplicationActionLabel = (application?: GameApplication) => {
+  if (!application) return 'Apply';
+  if (application.status === 'Withdrawn') return 'Re-apply';
+  return 'Edit Application';
 };
 
 export default GamesPage;
