@@ -17,6 +17,8 @@ import {
   Users,
   X
 } from 'lucide-react';
+import { DATABASE_TABLES } from '../config/database';
+import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import {
   Character,
   CharacterJournalEntry,
@@ -36,6 +38,7 @@ interface CharacterDetailsModalProps {
   canEdit: boolean;
   onClose: () => void;
   onEdit: (character: Character) => void;
+  onRelationshipsChanged?: () => void | Promise<void>;
 }
 
 const defaultPortrait = '/npc-placeholder.png';
@@ -46,7 +49,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   currentUserId,
   canEdit,
   onClose,
-  onEdit
+  onEdit,
+  onRelationshipsChanged
 }) => {
   const characterService = useMemo(() => CharacterService.getInstance(), []);
   const [activeTab, setActiveTab] = useState<DetailsTab>(canEdit ? 'foundry' : 'journal');
@@ -102,7 +106,18 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     loadModalData();
   }, [character._id, currentUserId, canEdit]);
 
-  const loadModalData = async () => {
+  useSupabaseRealtime({
+    channelName: `character-details-${character._id || 'unknown'}`,
+    tables: [
+      DATABASE_TABLES.CHARACTER_RELATIONSHIPS,
+      DATABASE_TABLES.GUILD_MEMBERSHIPS
+    ],
+    onChange: loadModalData,
+    enabled: Boolean(character._id),
+    debounceMs: 1500
+  });
+
+  async function loadModalData() {
     if (!character._id) return;
 
     setIsLoading(true);
@@ -119,7 +134,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const handleFoundryImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!character._id || !canEdit) return;
@@ -312,6 +327,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     );
     if (response.success && response.data) {
       setRelationships(prev => [...prev, response.data as CharacterRelationship]);
+      void onRelationshipsChanged?.();
       setRelationshipDraft({ targetCharacterId: '', relationshipTypes: ['family'], subtype: '' });
       setRelationshipSearch('');
     } else {
@@ -323,6 +339,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     const response = await characterService.deleteRelationship(relationshipId);
     if (response.success) {
       setRelationships(prev => prev.filter(link => link.id !== relationshipId));
+      void onRelationshipsChanged?.();
     } else {
       alert(response.error || 'Failed to delete relationship');
     }

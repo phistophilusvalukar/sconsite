@@ -40,6 +40,10 @@ const CharacterRelationshipGraph: React.FC<CharacterRelationshipGraphProps> = ({
   const [filter, setFilter] = useState<GraphFilter>('selected');
   const [selectedCharacterId, setSelectedCharacterId] = useState(characters[0]?._id || '');
   const characterById = useMemo(() => new Map(characters.filter(character => character._id).map(character => [character._id as string, character])), [characters]);
+  const graphVersion = useMemo(
+    () => relationships.map(relationship => `${relationship.id}:${relationship.updatedAt}`).join('|'),
+    [relationships]
+  );
   const graphData = useMemo(
     () => buildGraphData(characters, relationships, filter, selectedCharacterId),
     [characters, relationships, filter, selectedCharacterId]
@@ -104,6 +108,7 @@ const CharacterRelationshipGraph: React.FC<CharacterRelationshipGraphProps> = ({
 
         <div className="overflow-hidden rounded-lg border border-fantasy-700/30 bg-midnight-950">
           <ForceGraph2D<GraphNode, GraphLink>
+            key={graphVersion}
             graphData={graphData}
             width={920}
             height={560}

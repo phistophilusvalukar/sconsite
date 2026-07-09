@@ -79,7 +79,8 @@ const CharacterPage: React.FC = () => {
       DATABASE_TABLES.GUILD_MEMBERSHIPS
     ],
     onChange: loadCharacters,
-    enabled: Boolean(user?.id)
+    enabled: Boolean(user?.id),
+    debounceMs: 1500
   });
 
   useEffect(() => {
@@ -295,6 +296,7 @@ const CharacterPage: React.FC = () => {
             canEdit={selectedCanEdit}
             onClose={() => setSelectedCharacter(null)}
             onEdit={handleEditCharacter}
+            onRelationshipsChanged={loadCharacters}
           />
         )}
 
