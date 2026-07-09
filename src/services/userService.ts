@@ -48,7 +48,6 @@ export class UserService {
         auth_user_id: userData.authUserId, // Primary identifier
         username: userData.username,
         discriminator: userData.discriminator,
-        global_name: userData.globalName,
         email: userData.email,
         avatar: userData.avatar,
         bio: userData.bio || '',
@@ -165,7 +164,6 @@ export class UserService {
       if (updates.avatar !== undefined) updateData.avatar = updates.avatar;
       if (updates.email !== undefined) updateData.email = updates.email;
       if (updates.discriminator !== undefined) updateData.discriminator = updates.discriminator;
-      if (updates.globalName !== undefined) updateData.global_name = updates.globalName;
       if (updates.bio !== undefined) updateData.bio = updates.bio;
       if (updates.settings !== undefined) updateData.settings = updates.settings;
       if (updates.stats !== undefined) updateData.stats = updates.stats;
@@ -262,7 +260,7 @@ export class UserService {
       const { data, error } = await supabase
         .from(DATABASE_TABLES.USERS)
         .select('*')
-        .or(`username.ilike.%${query}%,global_name.ilike.%${query}%`)
+        .ilike('username', `%${query}%`)
         .not('settings->>profilePrivate', 'eq', 'true')
         .limit(limit);
 
@@ -389,7 +387,6 @@ export class UserService {
       authUserId: dbUser.auth_user_id, // This is the primary identifier
       username: dbUser.username,
       discriminator: dbUser.discriminator,
-      globalName: dbUser.global_name,
       email: dbUser.email,
       avatar: dbUser.avatar,
       bio: dbUser.bio,

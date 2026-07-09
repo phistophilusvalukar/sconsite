@@ -3,7 +3,6 @@ export interface UserProfile {
   authUserId: string;
   username: string;
   discriminator?: string;
-  globalName?: string | null;
   email: string;
   avatar: string;
   bio?: string;

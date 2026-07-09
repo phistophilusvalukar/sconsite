@@ -10,7 +10,6 @@ interface User {
   username: string;
   avatar: string;
   email: string;
-  globalName?: string | null;
   isAdmin?: boolean;
   profile?: UserProfile;
 }
@@ -73,7 +72,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       username: profile?.username?.trim() || authUser.username,
       avatar: profile?.avatar || authUser.avatar,
       email: profile?.email || authUser.email,
-      globalName: profile?.globalName ?? authUser.globalName,
       isAdmin: profile?.isAdmin,
       profile,
     };
@@ -153,7 +151,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const newUserResponse = await userService.createUser({
       authUserId: transformedUser.id,
       username: transformedUser.username,
-      globalName: transformedUser.globalName,
       email: transformedUser.email,
       avatar: transformedUser.avatar,
       bio: '',
@@ -246,6 +243,5 @@ const transformSupabaseUser = (supabaseUser: SupabaseUser): User => {
     username,
     avatar: metadata.avatar_url || metadata.picture || '',
     email: supabaseUser.email || '',
-    globalName: metadata.full_name || metadata.name || null,
   };
 };

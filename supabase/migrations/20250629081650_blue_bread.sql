@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS users (
   discord_id text UNIQUE NOT NULL,
   username text NOT NULL,
   discriminator text,
-  global_name text,
   email text UNIQUE NOT NULL,
   avatar text,
   bio text DEFAULT '',
