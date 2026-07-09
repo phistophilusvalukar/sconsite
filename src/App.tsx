@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 import { AuthProvider } from './context/AuthContext';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -12,7 +13,6 @@ const CitizenRegistryPage = lazy(() => import('./pages/CitizenRegistryPage'));
 const GuildsPage = lazy(() => import('./pages/GuildsPage'));
 const NewsPage = lazy(() => import('./pages/NewsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const SchedulePage = lazy(() => import('./pages/SchedulePage'));
 const GamesPage = lazy(() => import('./pages/GamesPage'));
 
@@ -24,6 +24,39 @@ function RouteFallback() {
   );
 }
 
+function AppRoutes() {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isAuthReturn = location.pathname !== '/auth/callback' && (
+    searchParams.has('code') ||
+    searchParams.has('error') ||
+    searchParams.has('error_description')
+  );
+
+  if (isAuthReturn) {
+    return <AuthCallbackPage />;
+  }
+
+  return (
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/characters" element={<CharacterPage />} />
+        <Route path="/citizens" element={<CitizenRegistryPage />} />
+        <Route path="/guilds" element={<GuildsPage />} />
+        <Route path="/schedule" element={<SchedulePage />} />
+        <Route path="/schedule/:pollId" element={<SchedulePage />} />
+        <Route path="/games" element={<GamesPage />} />
+        <Route path="/news" element={<NewsPage />} />
+        <Route path="/news/:slug" element={<NewsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      </Routes>
+    </Suspense>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -31,22 +64,7 @@ function App() {
         <div className="min-h-screen bg-fantasy-gradient">
           <Header />
           <main className="flex-1">
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/about" element={<AboutPage />} />
-                <Route path="/characters" element={<CharacterPage />} />
-                <Route path="/citizens" element={<CitizenRegistryPage />} />
-                <Route path="/guilds" element={<GuildsPage />} />
-                <Route path="/schedule" element={<SchedulePage />} />
-                <Route path="/schedule/:pollId" element={<SchedulePage />} />
-                <Route path="/games" element={<GamesPage />} />
-                <Route path="/news" element={<NewsPage />} />
-                <Route path="/news/:slug" element={<NewsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/auth/callback" element={<AuthCallbackPage />} />
-              </Routes>
-            </Suspense>
+            <AppRoutes />
           </main>
           <Footer />
         </div>
