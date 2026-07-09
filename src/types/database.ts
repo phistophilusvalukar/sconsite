@@ -1,3 +1,13 @@
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonObject = { [key: string]: JsonValue };
+
+export interface CharacterStats extends JsonObject {
+  avatar?: string;
+  abilityBoosts?: JsonObject & {
+    scores?: JsonValue;
+  };
+}
+
 export interface UserProfile {
   _id?: string;
   authUserId: string;
@@ -69,9 +79,9 @@ export interface Character {
   ancestry?: string;
   heritage?: string;
   background?: string;
-  stats?: any; // JSON data for character stats, appearance, etc.
-  equipment?: any[]; // JSON array for equipment
-  foundryJson?: any;
+  stats?: CharacterStats; // JSON data for character stats, appearance, etc.
+  equipment?: JsonValue[]; // JSON array for equipment
+  foundryJson?: unknown;
   foundryFileName?: string;
   mainRole?: CharacterRoleCategory;
   roleBadges?: CharacterRoleBadge[];

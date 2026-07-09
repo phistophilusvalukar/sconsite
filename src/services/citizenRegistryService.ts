@@ -1,5 +1,5 @@
 import { DATABASE_TABLES } from '../config/database';
-import { ApiResponse, Character, Guild } from '../types/database';
+import { ApiResponse, Character, CharacterStats, Guild, JsonValue } from '../types/database';
 import DatabaseService from './database';
 import GuildService from './guildService';
 
@@ -24,6 +24,30 @@ export interface CitizenRegistry {
   guilds: RegistryRow[];
   totalCharacters: number;
   guildedCharacters: number;
+}
+
+interface RegistryCharacterRow {
+  id: string;
+  user_id: string;
+  name: string;
+  class: string;
+  class_primary?: string | null;
+  class_secondary?: string | null;
+  level: number;
+  race: string;
+  ancestry?: string | null;
+  heritage?: string | null;
+  background?: string;
+  stats?: CharacterStats;
+  equipment?: JsonValue[];
+  foundry_json?: unknown;
+  foundry_file_name?: string;
+  backstory?: string;
+  notes?: string;
+  is_active: boolean;
+  guild_id?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export class CitizenRegistryService {
@@ -177,7 +201,7 @@ export class CitizenRegistryService {
     return 'tier7';
   }
 
-  private transformCharacterFromDb(dbCharacter: any): Character {
+  private transformCharacterFromDb(dbCharacter: RegistryCharacterRow): Character {
     return {
       _id: dbCharacter.id,
       userId: dbCharacter.user_id,

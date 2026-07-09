@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowDown,
   ArrowLeft,
@@ -77,7 +77,10 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
   const visibleTabs: DetailsTab[] = canEdit ? ['foundry', 'journal', 'relationships'] : ['journal', 'relationships'];
-  const allCharacterIds = characters.map(item => item._id).filter(Boolean) as string[];
+  const allCharacterIds = useMemo(
+    () => characters.map(item => item._id).filter(Boolean) as string[],
+    [characters]
+  );
   const graphRootId = graphStack[graphStack.length - 1] || character._id || '';
   const graphRoot = characters.find(item => item._id === graphRootId) || character;
   const graphRelationships = relationships.filter(link => link.sourceCharacterId === graphRootId);
@@ -102,22 +105,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     setRelationshipSearch('');
   }, [character._id, canEdit]);
 
-  useEffect(() => {
-    loadModalData();
-  }, [character._id, currentUserId, canEdit]);
-
-  useSupabaseRealtime({
-    channelName: `character-details-${character._id || 'unknown'}`,
-    tables: [
-      DATABASE_TABLES.CHARACTER_RELATIONSHIPS,
-      DATABASE_TABLES.GUILD_MEMBERSHIPS
-    ],
-    onChange: loadModalData,
-    enabled: Boolean(character._id),
-    debounceMs: 1500
-  });
-
-  async function loadModalData() {
+  const loadModalData = useCallback(async () => {
     if (!character._id) return;
 
     setIsLoading(true);
@@ -134,7 +122,22 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [allCharacterIds, canEdit, character._id, characterService, currentUserId]);
+
+  useEffect(() => {
+    loadModalData();
+  }, [loadModalData]);
+
+  useSupabaseRealtime({
+    channelName: `character-details-${character._id || 'unknown'}`,
+    tables: [
+      DATABASE_TABLES.CHARACTER_RELATIONSHIPS,
+      DATABASE_TABLES.GUILD_MEMBERSHIPS
+    ],
+    onChange: loadModalData,
+    enabled: Boolean(character._id),
+    debounceMs: 1500
+  });
 
   const handleFoundryImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!character._id || !canEdit) return;

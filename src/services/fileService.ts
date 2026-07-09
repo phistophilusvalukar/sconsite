@@ -5,7 +5,7 @@ export interface CharacterFile {
   fileSize: number;
   uploadDate: Date;
   isMain: boolean;
-  fileData: any; // JSON data
+  fileData: unknown; // JSON data
 }
 
 export class FileService {
@@ -43,7 +43,7 @@ export class FileService {
 
       try {
         jsonData = JSON.parse(fileContent);
-      } catch (error) {
+      } catch {
         return {
           success: false,
           error: 'Invalid JSON file format'

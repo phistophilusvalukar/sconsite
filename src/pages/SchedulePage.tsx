@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Check, Clock, Copy, Loader2, Plus, Save, Trash2, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DATABASE_TABLES } from '../config/database';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import ScheduleService from '../services/scheduleService';
 import { ScheduleAvailability, SchedulePoll } from '../types/database';

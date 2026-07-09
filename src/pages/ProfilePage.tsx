@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, Loader2, LogOut, Save, Settings, Upload, User, X } from 'lucide-react';
 import { DATABASE_TABLES } from '../config/database';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import GameService from '../services/gameService';
 import { UserService } from '../services/userService';

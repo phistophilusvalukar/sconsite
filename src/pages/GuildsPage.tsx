@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Crown, Loader2, LogOut, Plus, Search, Shield, UserPlus, Users } from 'lucide-react';
 import { DATABASE_TABLES } from '../config/database';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { Character, Guild } from '../types/database';
 import { CharacterService } from '../services/characterService';

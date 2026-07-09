@@ -3,11 +3,15 @@ import { DATABASE_TABLES } from '../config/database';
 import {
   ApiResponse,
   Character,
+  CharacterRoleBadge,
+  CharacterRoleCategory,
+  CharacterStats,
   CharacterJournalComment,
   CharacterJournalEntry,
   CharacterRelationship,
   CharacterRelationshipType,
-  FoundryJsonEntry
+  FoundryJsonEntry,
+  JsonValue
 } from '../types/database';
 import { deriveAbilityBoostsFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
@@ -49,6 +53,101 @@ export interface FoundryCharacterData {
     };
   };
   img?: string;
+}
+
+type CharacterUpdateRow = Partial<{
+  name: string;
+  class: string;
+  class_primary: string;
+  class_secondary: string | null;
+  level: number;
+  race: string;
+  ancestry: string;
+  heritage: string | null;
+  background: string;
+  stats: CharacterStats;
+  equipment: JsonValue[];
+  foundry_json: unknown;
+  foundry_file_name: string | null;
+  main_role: CharacterRoleCategory | null;
+  role_badges: CharacterRoleBadge[];
+  backstory: string;
+  notes: string;
+  is_active: boolean;
+  guild_id: string | undefined;
+  updated_at: string;
+}>;
+
+interface CharacterRow {
+  id: string;
+  user_id: string;
+  name: string;
+  class: string;
+  class_primary?: string | null;
+  class_secondary?: string | null;
+  level: number;
+  race: string;
+  ancestry?: string | null;
+  heritage?: string | null;
+  background?: string;
+  stats?: CharacterStats;
+  equipment?: JsonValue[];
+  foundry_json?: unknown;
+  foundry_file_name?: string;
+  main_role?: CharacterRoleCategory | null;
+  role_badges?: CharacterRoleBadge[] | null;
+  backstory?: string;
+  notes?: string;
+  is_active: boolean;
+  guild_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface FoundryFileRow {
+  id: string;
+  character_id?: string;
+  name: string;
+  json_data: unknown;
+  is_active?: boolean;
+  sort_order?: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface JournalEntryRow {
+  id: string;
+  character_id: string;
+  author_id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface JournalCommentRow {
+  id: string;
+  entry_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface JournalLikeRow {
+  entry_id: string;
+  user_id: string;
+}
+
+interface CharacterRelationshipRow {
+  id: string;
+  source_character_id: string;
+  target_character_id: string;
+  relationship_types?: CharacterRelationshipType[] | null;
+  subtype?: string | null;
+  label?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export class CharacterService {
@@ -218,7 +317,7 @@ export class CharacterService {
     try {
       const supabase = this.dbService.getClient();
 
-      const updateData: any = {
+      const updateData: CharacterUpdateRow = {
         updated_at: new Date().toISOString()
       };
 
@@ -822,7 +921,7 @@ export class CharacterService {
     return [primaryClass, secondaryClass].filter(Boolean).join(' - ');
   }
 
-  private withDerivedAbilityBoosts(stats: any, foundryJson: unknown) {
+  private withDerivedAbilityBoosts(stats: CharacterStats | undefined, foundryJson: unknown): CharacterStats | undefined {
     const abilityBoosts = deriveAbilityBoostsFromFoundryJson(foundryJson);
     if (!abilityBoosts) return stats;
     return {
@@ -862,7 +961,7 @@ export class CharacterService {
     }
   }
 
-  private transformCharacterFromDb(dbCharacter: any): Character {
+  private transformCharacterFromDb(dbCharacter: CharacterRow): Character {
     return {
       _id: dbCharacter.id,
       userId: dbCharacter.user_id,
@@ -890,7 +989,7 @@ export class CharacterService {
     };
   }
 
-  private transformFoundryFileFromDb(dbFile: any): FoundryJsonEntry {
+  private transformFoundryFileFromDb(dbFile: FoundryFileRow): FoundryJsonEntry {
     return {
       id: dbFile.id,
       characterId: dbFile.character_id,
@@ -903,7 +1002,7 @@ export class CharacterService {
     };
   }
 
-  private transformJournalEntryFromDb(dbEntry: any, dbComments: any[], dbLikes: any[], currentUserId: string): CharacterJournalEntry {
+  private transformJournalEntryFromDb(dbEntry: JournalEntryRow, dbComments: JournalCommentRow[], dbLikes: JournalLikeRow[], currentUserId: string): CharacterJournalEntry {
     const entryLikes = dbLikes.filter(like => like.entry_id === dbEntry.id);
 
     return {
@@ -922,7 +1021,7 @@ export class CharacterService {
     };
   }
 
-  private transformJournalCommentFromDb(dbComment: any): CharacterJournalComment {
+  private transformJournalCommentFromDb(dbComment: JournalCommentRow): CharacterJournalComment {
     return {
       id: dbComment.id,
       entryId: dbComment.entry_id,
@@ -934,7 +1033,7 @@ export class CharacterService {
     };
   }
 
-  private transformRelationshipFromDb(dbRelationship: any): CharacterRelationship {
+  private transformRelationshipFromDb(dbRelationship: CharacterRelationshipRow): CharacterRelationship {
     return {
       id: dbRelationship.id,
       sourceCharacterId: dbRelationship.source_character_id,

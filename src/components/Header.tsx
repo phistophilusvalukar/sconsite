@@ -1,8 +1,32 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Shield, Menu, X, Users, Scroll, Newspaper, User, ClipboardList, CalendarDays, Ticket } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import GoogleLogin from './GoogleLogin';
+
+type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/news' | '/profile';
+
+const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
+  '/': () => import('../pages/HomePage'),
+  '/about': () => import('../pages/AboutPage'),
+  '/characters': () => import('../pages/CharacterPage'),
+  '/citizens': () => import('../pages/CitizenRegistryPage'),
+  '/guilds': () => import('../pages/GuildsPage'),
+  '/schedule': () => import('../pages/SchedulePage'),
+  '/games': () => import('../pages/GamesPage'),
+  '/news': () => import('../pages/NewsPage'),
+  '/profile': () => import('../pages/ProfilePage')
+};
+
+const preloadedRoutes = new Set<string>();
+
+function preloadRoute(href: PreloadableRoute) {
+  if (preloadedRoutes.has(href)) return;
+  preloadedRoutes.add(href);
+  routePreloaders[href]().catch(() => {
+    preloadedRoutes.delete(href);
+  });
+}
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -44,6 +68,9 @@ const Header: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.href}
+                  onFocus={() => preloadRoute(item.href as PreloadableRoute)}
+                  onMouseEnter={() => preloadRoute(item.href as PreloadableRoute)}
+                  onTouchStart={() => preloadRoute(item.href as PreloadableRoute)}
                   className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive
                       ? 'text-yellow-400 bg-fantasy-800/30'
@@ -59,6 +86,9 @@ const Header: React.FC = () => {
             {isAuthenticated ? (
               <Link
                 to="/profile"
+                onFocus={() => preloadRoute('/profile')}
+                onMouseEnter={() => preloadRoute('/profile')}
+                onTouchStart={() => preloadRoute('/profile')}
                 className="flex items-center space-x-2 px-4 py-2 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-md transition-colors"
               >
                 <img
@@ -97,6 +127,8 @@ const Header: React.FC = () => {
                   <Link
                     key={item.name}
                     to={item.href}
+                    onFocus={() => preloadRoute(item.href as PreloadableRoute)}
+                    onTouchStart={() => preloadRoute(item.href as PreloadableRoute)}
                     className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
                       isActive
                         ? 'text-yellow-400 bg-fantasy-800/30'
@@ -113,6 +145,8 @@ const Header: React.FC = () => {
                 {isAuthenticated ? (
                   <Link
                     to="/profile"
+                    onFocus={() => preloadRoute('/profile')}
+                    onTouchStart={() => preloadRoute('/profile')}
                     className="flex items-center space-x-2 px-3 py-2 text-base font-medium text-gray-300 hover:text-yellow-400"
                     onClick={() => setIsMenuOpen(false)}
                   >

@@ -1,6 +1,14 @@
 import DatabaseService from './database';
 import { DATABASE_TABLES } from '../config/database';
-import { ApiResponse, Character, Guild, GuildApplication, GuildMembership } from '../types/database';
+import {
+  ApiResponse,
+  Character,
+  CharacterStats,
+  Guild,
+  GuildApplication,
+  GuildMembership,
+  JsonValue
+} from '../types/database';
 
 export interface CreateGuildInput {
   name: string;
@@ -10,6 +18,86 @@ export interface CreateGuildInput {
   type?: string;
   region?: string;
   requirements?: string;
+}
+
+interface GuildCharacterRow {
+  id: string;
+  user_id: string;
+  name: string;
+  class: string;
+  class_primary?: string | null;
+  class_secondary?: string | null;
+  level: number;
+  race: string;
+  ancestry?: string | null;
+  heritage?: string | null;
+  background?: string;
+  stats?: CharacterStats;
+  equipment?: JsonValue[];
+  foundry_file_name?: string;
+  backstory?: string;
+  notes?: string;
+  is_active: boolean;
+  guild_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface GuildMembershipRow {
+  id: string;
+  guild_id: string;
+  user_id: string;
+  character_id?: string;
+  role: GuildMembership['role'];
+  role_category?: GuildMembership['roleCategory'];
+  role_title?: string;
+  membership_status?: GuildMembership['membershipStatus'];
+  joined_at: string;
+  accepted_at?: string | null;
+  invited_by?: string;
+  badges?: string[];
+  contributions?: number;
+  character?: GuildCharacterRow | null;
+}
+
+interface GuildApplicationRow {
+  id: string;
+  guild_id: string;
+  user_id: string;
+  character_id?: string;
+  requested_role_category: GuildApplication['requestedRoleCategory'];
+  message?: string;
+  status: GuildApplication['status'];
+  created_at: string;
+  updated_at: string;
+  character?: GuildCharacterRow | null;
+}
+
+interface GuildRow {
+  id: string;
+  name: string;
+  description: string;
+  type?: string;
+  leader_id: string;
+  created_by?: string;
+  leader_character_id?: string;
+  leader_character?: { name?: string } | null;
+  logo?: string;
+  region?: string;
+  status?: Guild['status'];
+  recruitment_status?: Guild['recruitmentStatus'];
+  requirements?: string;
+  badges?: string[];
+  recent_activity?: string;
+  rank?: Guild['rank'];
+  member_count?: number;
+  max_members?: number;
+  founding_required?: number;
+  founded_at?: string | null;
+  memberships?: GuildMembershipRow[];
+  applications?: GuildApplicationRow[];
+  created_at: string;
+  updated_at: string;
 }
 
 export class GuildService {
@@ -569,9 +657,9 @@ export class GuildService {
       .eq('id', guildId);
   }
 
-  private transformGuildFromDb(dbGuild: any): Guild {
-    const memberships = (dbGuild.memberships || []).map((membership: any) => this.transformMembershipFromDb(membership));
-    const applications = (dbGuild.applications || []).map((application: any) => this.transformApplicationFromDb(application));
+  private transformGuildFromDb(dbGuild: GuildRow): Guild {
+    const memberships = (dbGuild.memberships || []).map((membership) => this.transformMembershipFromDb(membership));
+    const applications = (dbGuild.applications || []).map((application) => this.transformApplicationFromDb(application));
 
     return {
       _id: dbGuild.id,
@@ -602,7 +690,7 @@ export class GuildService {
     };
   }
 
-  private transformMembershipFromDb(dbMembership: any): GuildMembership {
+  private transformMembershipFromDb(dbMembership: GuildMembershipRow): GuildMembership {
     return {
       _id: dbMembership.id,
       guildId: dbMembership.guild_id,
@@ -621,7 +709,7 @@ export class GuildService {
     };
   }
 
-  private transformApplicationFromDb(dbApplication: any): GuildApplication {
+  private transformApplicationFromDb(dbApplication: GuildApplicationRow): GuildApplication {
     return {
       _id: dbApplication.id,
       guildId: dbApplication.guild_id,
@@ -636,7 +724,7 @@ export class GuildService {
     };
   }
 
-  private transformCharacterFromDb(dbCharacter: any): Character {
+  private transformCharacterFromDb(dbCharacter: GuildCharacterRow): Character {
     return {
       _id: dbCharacter.id,
       userId: dbCharacter.user_id,

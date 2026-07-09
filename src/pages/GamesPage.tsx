@@ -17,7 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { DATABASE_TABLES } from '../config/database';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { Character, GameApplication, GameApplicationStatus, GameArchiveComment, GameListing, GameRewardsBonus, GameStatus, SchedulePoll } from '../types/database';
 import GameService, { getTierForLevel } from '../services/gameService';

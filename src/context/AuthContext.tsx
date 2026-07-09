@@ -1,38 +1,10 @@
-import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import React, { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { DATABASE_TABLES, supabase } from '../config/database';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { UserService } from '../services/userService';
 import { UserProfile } from '../types/database';
-
-interface User {
-  id: string;
-  username: string;
-  avatar: string;
-  email: string;
-  isAdmin?: boolean;
-  profile?: UserProfile;
-}
-
-interface AuthContextType {
-  user: User | null;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  error: string | null;
-  refreshUserProfile: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+import { AuthContext, AuthUser } from './authContextCore';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -107,30 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!session?.user) return;
-
-    let isCurrent = true;
-
-    syncUserProfile(session.user)
-      .then((syncedProfile) => {
-        if (isCurrent) {
-          setProfile(syncedProfile);
-        }
-      })
-      .catch((err) => {
-        console.error('Signed in, but profile sync failed:', err);
-        if (isCurrent) {
-          setError(err instanceof Error ? err.message : 'Signed in, but profile sync failed');
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [session?.user?.id]);
-
-  const syncUserProfile = async (supabaseUser: SupabaseUser): Promise<UserProfile | undefined> => {
+  const syncUserProfile = useCallback(async (supabaseUser: SupabaseUser): Promise<UserProfile | undefined> => {
     const transformedUser = transformSupabaseUser(supabaseUser);
     const existingUserResponse = await userService.getUserByAuthUserId(transformedUser.id);
 
@@ -166,7 +115,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     return newUserResponse.data;
-  };
+  }, [userService]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+
+    let isCurrent = true;
+
+    syncUserProfile(session.user)
+      .then((syncedProfile) => {
+        if (isCurrent) {
+          setProfile(syncedProfile);
+        }
+      })
+      .catch((err) => {
+        console.error('Signed in, but profile sync failed:', err);
+        if (isCurrent) {
+          setError(err instanceof Error ? err.message : 'Signed in, but profile sync failed');
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [session?.user, syncUserProfile]);
 
   const login = async () => {
     setIsLoading(true);
@@ -234,7 +206,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-const transformSupabaseUser = (supabaseUser: SupabaseUser): User => {
+const transformSupabaseUser = (supabaseUser: SupabaseUser): AuthUser => {
   const metadata = supabaseUser.user_metadata || {};
   const username = metadata.full_name || metadata.name || metadata.preferred_username || supabaseUser.email || 'Adventurer';
 

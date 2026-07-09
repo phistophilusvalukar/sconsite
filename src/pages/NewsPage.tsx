@@ -17,7 +17,7 @@ import {
   Users,
   XCircle
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { DATABASE_TABLES } from '../config/database';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import NewsService, { SaveNewsPostInput } from '../services/newsService';

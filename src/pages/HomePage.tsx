@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Users, Scroll, Sword, ArrowRight, Star, MessageCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 const HomePage: React.FC = () => {
   const { isAuthenticated } = useAuth();

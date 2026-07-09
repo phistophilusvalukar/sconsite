@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowDownUp, Loader2, Shield, Users } from 'lucide-react';
 import { DATABASE_TABLES } from '../config/database';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import CitizenRegistryService, { CitizenRegistry, RegistryRow, RegistryTierKey } from '../services/citizenRegistryService';
 

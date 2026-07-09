@@ -1,6 +1,46 @@
 import DatabaseService from './database';
 import { DATABASE_TABLES } from '../config/database';
-import { UserProfile, ApiResponse } from '../types/database';
+import { UserProfile, ApiResponse, JsonObject } from '../types/database';
+
+type UserUpdateRow = Partial<{
+  username: string;
+  avatar: string;
+  email: string;
+  discriminator: string;
+  bio: string;
+  settings: UserProfile['settings'];
+  stats: UserProfile['stats'];
+  is_online: boolean;
+  updated_at: string;
+}>;
+
+interface UserStats {
+  totalSessions?: number;
+  totalAchievements?: number;
+  joinedGuilds?: number;
+  wallPosts: number;
+  friends: number;
+  characters: number;
+  memberSince: string;
+}
+
+interface UserRow {
+  id: string;
+  auth_user_id: string;
+  username: string;
+  discriminator?: string;
+  email: string;
+  avatar: string;
+  bio?: string;
+  join_date: string;
+  last_active: string;
+  is_online: boolean;
+  is_admin?: boolean;
+  settings: UserProfile['settings'];
+  stats: UserProfile['stats'] & JsonObject;
+  created_at: string;
+  updated_at: string;
+}
 
 export class UserService {
   private static instance: UserService;
@@ -155,7 +195,7 @@ export class UserService {
 
       console.log('Updating user with auth user ID:', authUserId);
 
-      const updateData: any = {
+      const updateData: UserUpdateRow = {
         updated_at: new Date().toISOString()
       };
 
@@ -319,7 +359,7 @@ export class UserService {
     }
   }
 
-  async getUserStats(authUserId: string): Promise<ApiResponse<any>> {
+  async getUserStats(authUserId: string): Promise<ApiResponse<UserStats>> {
     try {
       const supabase = this.dbService.getClient();
 
@@ -381,7 +421,7 @@ export class UserService {
     }
   }
 
-  private transformUserFromDb(dbUser: any): UserProfile {
+  private transformUserFromDb(dbUser: UserRow): UserProfile {
     return {
       _id: dbUser.id,
       authUserId: dbUser.auth_user_id, // This is the primary identifier

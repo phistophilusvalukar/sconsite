@@ -1,19 +1,29 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/useAuth';
 import { Loader2, Network, Plus, Shield, Users } from 'lucide-react';
 import { DATABASE_TABLES } from '../config/database';
 import { Character, CharacterRelationship, CharacterRoleCategory } from '../types/database';
 import { CharacterService } from '../services/characterService';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import CharacterCard from '../components/CharacterCard';
-import CharacterDetailsModal from '../components/CharacterDetailsModal';
-import CharacterForm from '../components/CharacterForm';
-import CharacterRelationshipGraph from '../components/CharacterRelationshipGraph';
 import CharacterRoleBadges from '../components/CharacterRoleBadges';
 import { getRoleCategoryForBadge } from '../utils/characterRoles';
 import { DEFAULT_NPC_PLACEHOLDER, getAvatarFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
+const CharacterDetailsModal = lazy(() => import('../components/CharacterDetailsModal'));
+const CharacterForm = lazy(() => import('../components/CharacterForm'));
+const CharacterRelationshipGraph = lazy(() => import('../components/CharacterRelationshipGraph'));
+
 type CharacterView = 'characters' | 'all' | 'relationships';
+
+function CharacterFeatureFallback({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-[220px] flex-col items-center justify-center rounded-xl border border-fantasy-700/30 bg-fantasy-900/20 p-8 text-center">
+      <Loader2 className="mb-4 h-8 w-8 animate-spin text-yellow-400" />
+      <p className="text-gray-300">{label}</p>
+    </div>
+  );
+}
 
 const CharacterPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -264,11 +274,13 @@ const CharacterPage: React.FC = () => {
         )}
 
         {!isLoading && activeView === 'relationships' && (
-          <CharacterRelationshipGraph
-            characters={publicCharacters}
-            relationships={publicRelationships}
-            onSelectCharacter={handleSelectPublicCharacter}
-          />
+          <Suspense fallback={<CharacterFeatureFallback label="Loading relationship graph..." />}>
+            <CharacterRelationshipGraph
+              characters={publicCharacters}
+              relationships={publicRelationships}
+              onSelectCharacter={handleSelectPublicCharacter}
+            />
+          </Suspense>
         )}
 
         {/* Empty State */}
@@ -289,25 +301,29 @@ const CharacterPage: React.FC = () => {
         )}
 
         {selectedCharacter && (
-          <CharacterDetailsModal
-            character={selectedCharacter}
-            characters={mergeCharacters(characters, publicCharacters)}
-            currentUserId={user?.id || ''}
-            canEdit={selectedCanEdit}
-            onClose={() => setSelectedCharacter(null)}
-            onEdit={handleEditCharacter}
-            onRelationshipsChanged={loadCharacters}
-          />
+          <Suspense fallback={<CharacterFeatureFallback label="Loading character details..." />}>
+            <CharacterDetailsModal
+              character={selectedCharacter}
+              characters={mergeCharacters(characters, publicCharacters)}
+              currentUserId={user?.id || ''}
+              canEdit={selectedCanEdit}
+              onClose={() => setSelectedCharacter(null)}
+              onEdit={handleEditCharacter}
+              onRelationshipsChanged={loadCharacters}
+            />
+          </Suspense>
         )}
 
         {/* Character Form Modal */}
         {showForm && user?.id && (
-          <CharacterForm
-            character={editingCharacter}
-            onSave={handleSaveCharacter}
-            onCancel={handleCancelForm}
-            userId={user.id}
-          />
+          <Suspense fallback={<CharacterFeatureFallback label="Loading character form..." />}>
+            <CharacterForm
+              character={editingCharacter}
+              onSave={handleSaveCharacter}
+              onCancel={handleCancelForm}
+              userId={user.id}
+            />
+          </Suspense>
         )}
       </div>
     </div>
