@@ -97,7 +97,8 @@ const GamesPage: React.FC = () => {
     query: '',
     tag: '',
     tier: '',
-    date: ''
+    date: '',
+    myGames: false
   });
   const [form, setForm] = useState<GameFormState>(() => createInitialForm());
   const [tagSearch, setTagSearch] = useState('');
@@ -215,7 +216,13 @@ const GamesPage: React.FC = () => {
 
   const visibleGames = useMemo(() => {
     return games
-      .filter(game => game.status === 'Open')
+      .filter(game => {
+        if (filters.myGames) {
+          return isMyGame(game, user?.id || '') && !isArchivedGame(game);
+        }
+
+        return game.status === 'Open';
+      })
       .filter(game => {
         const query = filters.query.trim().toLowerCase();
         if (!query) return true;
@@ -226,7 +233,7 @@ const GamesPage: React.FC = () => {
       .filter(game => !filters.tier || game.tier === filters.tier)
       .filter(game => !filters.date || toDateInputValue(game.startTime) === filters.date)
       .sort((first, second) => first.startTime.getTime() - second.startTime.getTime());
-  }, [filters, games]);
+  }, [filters, games, user?.id]);
 
   const confirmedGames = useMemo(() => {
     const now = Date.now();
@@ -630,6 +637,15 @@ const GamesPage: React.FC = () => {
                     <h2 className="text-lg font-bold text-white">Find a Table</h2>
                   </div>
                   <div className="space-y-4">
+                    <label className="flex items-center justify-between gap-3 rounded-lg border border-fantasy-700/30 bg-midnight-900/40 p-3 text-sm text-gray-200">
+                      <span className="font-semibold">My Games</span>
+                      <input
+                        type="checkbox"
+                        checked={filters.myGames}
+                        onChange={(event) => setFilters(prev => ({ ...prev, myGames: event.target.checked }))}
+                        className="h-5 w-5 accent-yellow-500"
+                      />
+                    </label>
                     <input
                       type="search"
                       value={filters.query}
@@ -703,14 +719,19 @@ const GamesPage: React.FC = () => {
                     <GameListingCard
                       key={game._id}
                       game={game}
+                      userId={user?.id || ''}
                       onOpen={() => setSelectedGameId(game._id || null)}
                     />
                   ))}
                   {visibleGames.length === 0 && (
                     <div className="border border-fantasy-700/30 bg-fantasy-900/25 rounded-lg p-10 text-center">
                       <CalendarDays className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <h2 className="text-xl font-bold text-white mb-2">No open games match those filters</h2>
-                      <p className="text-gray-300">Clear a filter or create the next table.</p>
+                      <h2 className="text-xl font-bold text-white mb-2">
+                        {filters.myGames ? 'No my games match those filters' : 'No open games match those filters'}
+                      </h2>
+                      <p className="text-gray-300">
+                        {filters.myGames ? 'Clear a filter or turn off My Games.' : 'Clear a filter or create the next table.'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1009,15 +1030,20 @@ const GamesPage: React.FC = () => {
 
 interface GameListingCardProps {
   game: GameListing;
+  userId: string;
   onOpen: () => void;
 }
 
 const GameListingCard: React.FC<GameListingCardProps> = ({
   game,
+  userId,
   onOpen
 }) => {
+  const isGm = game.gmId === userId;
+  const ownApplication = game.applications.find(application => application.userId === userId);
   const roster = game.applications.filter(application => application.status === 'Roster');
   const applied = game.applications.filter(application => application.status === 'Applied');
+  const onDeck = game.applications.filter(application => application.status === 'On Deck');
 
   return (
     <button
@@ -1030,6 +1056,9 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <h3 className="font-fantasy text-2xl font-bold text-white">{game.title}</h3>
             <span className="rounded bg-fantasy-800/60 px-2 py-1 text-xs font-bold text-yellow-200">{game.tier}</span>
+            {getGameRelationshipBadges(game, userId).map(badge => (
+              <span key={badge} className="rounded bg-emerald-500/20 px-2 py-1 text-xs font-bold text-emerald-200">{badge}</span>
+            ))}
           </div>
           <p className="mb-3 line-clamp-3 text-gray-300">{game.description}</p>
           <div className="flex flex-wrap gap-3 text-sm text-gray-300">
@@ -1038,6 +1067,7 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
             <span className="flex items-center gap-1"><Users className="w-4 h-4 text-yellow-400" />{roster.length}/{game.partySize} rostered</span>
             <span>Level {game.characterLevel}</span>
             <span>{applied.length} applied</span>
+            {onDeck.length > 0 && <span>{onDeck.length} on deck</span>}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {game.tags.map(tag => (
@@ -1047,6 +1077,12 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
         </div>
         <div className="text-sm text-gray-300 lg:text-right">
           <p className="font-bold text-white">GM {game.gmName}</p>
+          {isGm && applied.length > 0 && (
+            <p className="font-semibold text-yellow-200">{applied.length} application{applied.length === 1 ? '' : 's'} waiting</p>
+          )}
+          {!isGm && ownApplication && (
+            <p className="font-semibold text-yellow-200">Your status: {ownApplication.status === 'Roster' ? 'On Roster' : ownApplication.status}</p>
+          )}
           {game.rewardCharacter && (
             <p>{game.rewardCharacter.name} earns rewards</p>
           )}
@@ -1632,6 +1668,27 @@ const gameToEditState = (game: GameListing): GameEditState => ({
 
 const isArchivedGame = (game: GameListing) =>
   game.status === 'Completed' || (game.status === 'Cancelled' && game.startTime.getTime() < Date.now());
+
+const isMyGame = (game: GameListing, userId: string) => {
+  if (!userId) return false;
+  return game.gmId === userId || game.applications.some(application =>
+    application.userId === userId && application.status === 'Roster'
+  );
+};
+
+const getGameRelationshipBadges = (game: GameListing, userId: string) => {
+  if (!userId) return [];
+  if (game.gmId === userId) return ['GM'];
+
+  const application = game.applications.find(entry => entry.userId === userId);
+  if (!application) return [];
+
+  if (application.status === 'Roster') return ['On Roster'];
+  if (application.status === 'On Deck') return ['On Deck'];
+  if (application.status === 'Applied') return ['Applied'];
+
+  return [];
+};
 
 const getRewardRows = (game: GameListing) =>
   game.applications
