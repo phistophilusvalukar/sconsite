@@ -10,6 +10,7 @@ export interface UserProfile {
   joinDate: Date;
   lastActive: Date;
   isOnline: boolean;
+  isAdmin?: boolean;
   primaryGuildId?: string;
   settings: {
     allowWallPosts: boolean;
@@ -311,6 +312,40 @@ export interface GameApplication {
 export interface GameArchiveComment {
   _id?: string;
   gameId: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  isEdited: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type NewsCategory = 'Announcements' | 'Events' | 'Updates' | 'Community';
+export type NewsPostStatus = 'draft' | 'published';
+
+export interface NewsPost {
+  _id?: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  slug: string;
+  summary: string;
+  body: string;
+  category: NewsCategory;
+  tags: string[];
+  status: NewsPostStatus;
+  imageUrl: string;
+  publishedAt?: Date;
+  likeCount: number;
+  likedByCurrentUser: boolean;
+  comments: NewsComment[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface NewsComment {
+  _id?: string;
+  postId: string;
   authorId: string;
   authorName: string;
   body: string;

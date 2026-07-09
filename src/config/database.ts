@@ -37,4 +37,7 @@ export const DATABASE_TABLES = {
   CHARACTER_JOURNAL_COMMENTS: 'character_journal_comments',
   CHARACTER_JOURNAL_LIKES: 'character_journal_likes',
   CHARACTER_RELATIONSHIPS: 'character_relationships',
+  NEWS_POSTS: 'news_posts',
+  NEWS_COMMENTS: 'news_comments',
+  NEWS_LIKES: 'news_likes',
 };

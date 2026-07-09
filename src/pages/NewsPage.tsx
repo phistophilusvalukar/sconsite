@@ -1,299 +1,714 @@
-import React, { useState } from 'react';
-import { Calendar, User, Tag, MessageCircle, Heart, Share2, Newspaper, Trophy, Users, Sword } from 'lucide-react';
+import React, { FormEvent, SyntheticEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  Calendar,
+  CheckCircle,
+  Edit3,
+  Eye,
+  Heart,
+  MessageCircle,
+  Newspaper,
+  Plus,
+  Save,
+  Send,
+  Tag,
+  Trash2,
+  User,
+  Users,
+  XCircle
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import NewsService, { SaveNewsPostInput } from '../services/newsService';
+import { NewsCategory, NewsPost, NewsPostStatus } from '../types/database';
+
+const categories: Array<'All' | NewsCategory> = ['All', 'Announcements', 'Events', 'Updates', 'Community'];
+const commonTags = ['Campaign', 'Major Event', 'All Guilds', 'Update', 'Features', 'Spotlight', 'Festival', 'Downtime', 'Recap'];
+
+const emptyEditor = {
+  title: '',
+  summary: '',
+  body: '',
+  category: 'Announcements' as NewsCategory,
+  tagsText: '',
+  imageUrl: '/npc-placeholder.png',
+  status: 'draft' as NewsPostStatus
+};
 
 const NewsPage: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, login } = useAuth();
+  const newsService = useMemo(() => NewsService.getInstance(), []);
+  const isAdmin = Boolean(user?.isAdmin || user?.profile?.isAdmin);
 
-  const categories = ['All', 'Announcements', 'Events', 'Updates', 'Community'];
+  const [posts, setPosts] = useState<NewsPost[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<'All' | NewsCategory>('All');
+  const [selectedTag, setSelectedTag] = useState('All');
+  const [editor, setEditor] = useState(emptyEditor);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [commentBody, setCommentBody] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const mockNews = [
-    {
-      id: 1,
-      title: "The Sundering Crisis: New Campaign Arc Begins",
-      excerpt: "A catastrophic magical event threatens to tear reality apart. All guilds are called to investigate strange rifts appearing across the realm.",
-      content: "The Great Sundering has begun, and reality itself hangs in the balance. Strange rifts have been spotted across all major regions, spewing forth otherworldly creatures and warping the very fabric of magic. Guild leaders are urged to organize immediate response teams to investigate these phenomena. Our scholars believe this may be connected to the ancient prophecies found in the recently discovered Library of Aethros. Time is of the essence - every moment we delay, the rifts grow stronger.",
-      category: "Announcements",
-      author: "Magnus Ironforge",
-      date: "2 hours ago",
-      image: "/npc-placeholder.png",
-      likes: 47,
-      comments: 23,
-      tags: ["Campaign", "Major Event", "All Guilds"]
-    },
-    {
-      id: 2,
-      title: "Guild Tournament Championship Results",
-      excerpt: "Shadowbane Company claims victory in the annual Guild Championship, earning the Platinum rank and exclusive rewards.",
-      content: "After three weeks of intense competition, Shadowbane Company has emerged victorious in our annual Guild Championship tournament. Led by their exceptional coordination and strategic prowess, they defeated 15 other guilds in the final brackets. As champions, they receive the coveted Platinum rank, exclusive access to the Dragonheart Sanctum, and special championship regalia for all members. Congratulations to all participants - the competition was fierce and the stories legendary!",
-      category: "Events",
-      author: "Lyra Moonwhisper",
-      date: "1 day ago",
-      image: "/npc-placeholder.png",
-      likes: 89,
-      comments: 34,
-      tags: ["Tournament", "Guilds", "Competition"]
-    },
-    {
-      id: 3,
-      title: "Server Update 2.4: Enhanced Character Tools",
-      excerpt: "New features for character management, improved FoundryVTT integration, and quality of life improvements now live.",
-      content: "We're excited to announce Server Update 2.4 is now live! This update brings significant improvements to character management, including enhanced FoundryVTT file synchronization, automatic backup systems, and a new character comparison tool. We've also added guild badge tracking, improved social features, and fixed several bugs reported by the community. Check out the full changelog in the community announcements.",
-      category: "Updates",
-      author: "Thaldrin Stormcaller",
-      date: "3 days ago",
-      image: "/npc-placeholder.png",
-      likes: 56,
-      comments: 18,
-      tags: ["Update", "Features", "Bug Fixes"]
-    },
-    {
-      id: 4,
-      title: "Community Spotlight: The Wild Hunt's Conservation Efforts",
-      excerpt: "How one guild's dedication to nature preservation has shaped an entire region of our world.",
-      content: "This month's community spotlight focuses on The Wild Hunt, whose consistent environmental protection efforts have transformed the Whispering Woods into a thriving ecosystem. Through their 'Cleanse the Corruption' initiative, they've removed three major sources of magical pollution, restored habitats for rare creatures, and established protected sanctuaries. Their work has not only enhanced the region's biodiversity but also unlocked new quest opportunities for all players. Guild leader Theron Wildstrike shares: 'We believe that protecting nature isn't just roleplay - it's about creating a better world for all of us to adventure in.'",
-      category: "Community",
-      author: "Community Team",
-      date: "5 days ago",
-      image: "/npc-placeholder.png",
-      likes: 73,
-      comments: 29,
-      tags: ["Spotlight", "Conservation", "The Wild Hunt"]
-    },
-    {
-      id: 5,
-      title: "Upcoming: Midsummer Festival Event",
-      excerpt: "Join us for a week-long celebration featuring special quests, unique rewards, and community activities starting June 21st.",
-      content: "Get ready for our annual Midsummer Festival! From June 21st to 28th, the realm will come alive with celebration. Special event quests will be available across all regions, offering unique cosmetic rewards and limited-time titles. The festival will feature guild competitions, storytelling contests, costume contests, and the traditional Bonfire Blessing ceremony. Don't miss the Grand Feast on June 24th, where all players can come together for food, music, and merriment. Mark your calendars and prepare your finest festival attire!",
-      category: "Events",
-      author: "Event Coordination Team",
-      date: "1 week ago",
-      image: "/npc-placeholder.png",
-      likes: 134,
-      comments: 45,
-      tags: ["Festival", "Event", "Celebration"]
+  const selectedPost = slug ? posts.find(post => post.slug === slug) : undefined;
+  const publishedPosts = posts.filter(post => post.status === 'published');
+  const draftPosts = posts.filter(post => post.status === 'draft');
+  const visiblePosts = posts.filter(post => isAdmin || post.status === 'published');
+  const allTags = useMemo(() => Array.from(new Set(visiblePosts.flatMap(post => post.tags))).sort(), [visiblePosts]);
+  const filteredPosts = visiblePosts.filter(post => {
+    const categoryMatches = selectedCategory === 'All' || post.category === selectedCategory;
+    const tagMatches = selectedTag === 'All' || post.tags.includes(selectedTag);
+    return categoryMatches && tagMatches;
+  });
+
+  const loadPosts = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const result = await newsService.getPosts(user?.id, isAdmin);
+    if (result.success && result.data) {
+      setPosts(result.data);
+    } else {
+      setError(result.error || 'Failed to load news posts.');
     }
-  ];
+    setIsLoading(false);
+  }, [isAdmin, newsService, user?.id]);
 
-  const filteredNews = selectedCategory === 'All' 
-    ? mockNews 
-    : mockNews.filter(item => item.category === selectedCategory);
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Announcements': return <Newspaper className="w-4 h-4" />;
-      case 'Events': return <Calendar className="w-4 h-4" />;
-      case 'Updates': return <Sword className="w-4 h-4" />;
-      case 'Community': return <Users className="w-4 h-4" />;
-      default: return <Newspaper className="w-4 h-4" />;
+  useEffect(() => {
+    if (!slug || isLoading || selectedPost) return;
+    setError('That news post could not be found or is not published yet.');
+  }, [slug, isLoading, selectedPost]);
+
+  const handleSavePost = async (event: SyntheticEvent, nextStatus: NewsPostStatus = editor.status) => {
+    event.preventDefault();
+    if (!user?.id || !isAdmin) return;
+
+    if (!editor.title.trim() || !editor.summary.trim() || !editor.body.trim()) {
+      setError('Title, summary, and body are required.');
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    const input: SaveNewsPostInput = {
+      authorId: user.id,
+      authorName: user.globalName || user.username,
+      title: editor.title,
+      summary: editor.summary,
+      body: editor.body,
+      category: editor.category,
+      tags: parseTags(editor.tagsText),
+      status: nextStatus,
+      imageUrl: editor.imageUrl
+    };
+
+    const result = editingPostId
+      ? await newsService.updatePost(editingPostId, input)
+      : await newsService.createPost(input);
+
+    if (result.success) {
+      await loadPosts();
+      setEditor(emptyEditor);
+      setEditingPostId(null);
+      setShowEditor(false);
+    } else {
+      setError(result.error || 'Failed to save post.');
+    }
+
+    setIsSaving(false);
+  };
+
+  const startEditing = (post: NewsPost) => {
+    setEditor({
+      title: post.title,
+      summary: post.summary,
+      body: post.body,
+      category: post.category,
+      tagsText: post.tags.join(', '),
+      imageUrl: post.imageUrl,
+      status: post.status
+    });
+    setEditingPostId(post._id || null);
+    setShowEditor(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeletePost = async (post: NewsPost) => {
+    if (!post._id || !isAdmin || !window.confirm(`Delete "${post.title}"?`)) return;
+    const result = await newsService.deletePost(post._id);
+    if (result.success) {
+      if (slug === post.slug) navigate('/news');
+      await loadPosts();
+    } else {
+      setError(result.error || 'Failed to delete post.');
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Announcements': return 'text-red-400 bg-red-400/20';
-      case 'Events': return 'text-purple-400 bg-purple-400/20';
-      case 'Updates': return 'text-blue-400 bg-blue-400/20';
-      case 'Community': return 'text-green-400 bg-green-400/20';
-      default: return 'text-gray-400 bg-gray-400/20';
+  const handleToggleLike = async (post: NewsPost) => {
+    if (!post._id) return;
+    if (!isAuthenticated || !user?.id) {
+      await login();
+      return;
+    }
+
+    const result = await newsService.toggleLike(post._id, user.id, post.likedByCurrentUser);
+    if (result.success) {
+      await loadPosts();
+    } else {
+      setError(result.error || 'Failed to update like.');
     }
   };
+
+  const handleAddComment = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedPost?._id) return;
+    if (!isAuthenticated || !user?.id) {
+      await login();
+      return;
+    }
+
+    const body = commentBody.trim();
+    if (!body) return;
+
+    const result = await newsService.addComment(selectedPost._id, user.id, user.globalName || user.username, body);
+    if (result.success) {
+      setCommentBody('');
+      await loadPosts();
+    } else {
+      setError(result.error || 'Failed to add comment.');
+    }
+  };
+
+  const handleDeleteComment = async (commentId?: string) => {
+    if (!commentId) return;
+    const result = await newsService.deleteComment(commentId);
+    if (result.success) {
+      await loadPosts();
+    } else {
+      setError(result.error || 'Failed to delete comment.');
+    }
+  };
+
+  if (slug) {
+    return (
+      <NewsShell
+        isLoading={isLoading}
+        error={error}
+        isAdmin={isAdmin}
+        onNewPost={() => setShowEditor(true)}
+        editor={showEditor ? (
+          <NewsEditor
+            editor={editor}
+            editingPostId={editingPostId}
+            isSaving={isSaving}
+            onChange={setEditor}
+            onSubmit={handleSavePost}
+            onCancel={() => {
+              setShowEditor(false);
+              setEditingPostId(null);
+              setEditor(emptyEditor);
+            }}
+          />
+        ) : null}
+      >
+        {selectedPost ? (
+          <PostDetail
+            post={selectedPost}
+            isAdmin={isAdmin}
+            currentUserId={user?.id}
+            commentBody={commentBody}
+            isAuthenticated={isAuthenticated}
+            onCommentBodyChange={setCommentBody}
+            onAddComment={handleAddComment}
+            onToggleLike={handleToggleLike}
+            onEdit={startEditing}
+            onDelete={handleDeletePost}
+            onDeleteComment={handleDeleteComment}
+            onLogin={login}
+          />
+        ) : !isLoading ? (
+          <EmptyState title="Post unavailable" body="This post is still drafted, unpublished, or no longer exists." />
+        ) : null}
+      </NewsShell>
+    );
+  }
 
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <Newspaper className="w-16 h-16 text-yellow-400 mx-auto mb-6" />
-          <h1 className="font-fantasy text-4xl md:text-6xl font-bold text-white mb-6">
-            News & Events
-          </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Stay updated with the latest happenings in our world, from major story developments 
-            to community events and server updates.
-          </p>
-        </div>
+    <NewsShell
+      isLoading={isLoading}
+      error={error}
+      isAdmin={isAdmin}
+      onNewPost={() => setShowEditor(true)}
+      editor={showEditor ? (
+        <NewsEditor
+          editor={editor}
+          editingPostId={editingPostId}
+          isSaving={isSaving}
+          onChange={setEditor}
+          onSubmit={handleSavePost}
+          onCancel={() => {
+            setShowEditor(false);
+            setEditingPostId(null);
+            setEditor(emptyEditor);
+          }}
+        />
+      ) : null}
+    >
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px]">
+        <div>
+          <div className="mb-6 flex flex-wrap gap-3">
+            {categories.map(category => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setSelectedCategory(category)}
+                className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${
+                  selectedCategory === category
+                    ? 'bg-yellow-500 text-midnight-900'
+                    : 'bg-fantasy-800/60 text-gray-300 hover:bg-fantasy-700/70 hover:text-white'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
 
-        {/* Category Filter */}
-        <div className="flex flex-wrap justify-center gap-4 mb-8">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedCategory === category
-                  ? 'bg-yellow-500 text-midnight-900'
-                  : 'bg-fantasy-700/50 text-gray-300 hover:bg-fantasy-600/50 hover:text-white'
-              }`}
-            >
-              {getCategoryIcon(category)}
-              <span>{category}</span>
-            </button>
-          ))}
-        </div>
+          {allTags.length > 0 && (
+            <div className="mb-8 flex flex-wrap gap-2">
+              {['All', ...allTags].map(tag => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setSelectedTag(tag)}
+                  className={`inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-bold transition-all ${
+                    selectedTag === tag
+                      ? 'bg-fantasy-200 text-midnight-900'
+                      : 'bg-fantasy-900/50 text-yellow-300 ring-1 ring-fantasy-700/40 hover:bg-fantasy-800'
+                  }`}
+                >
+                  <Tag className="h-3 w-3" />
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
 
-        {/* Featured Article */}
-        {filteredNews.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-6">Featured</h2>
-            <div className="bg-fantasy-900/30 border border-fantasy-700/30 rounded-xl overflow-hidden hover:bg-fantasy-800/30 transition-all">
-              <div className="md:flex">
-                <div className="md:w-1/3">
-                  <img
-                    src={filteredNews[0].image}
-                    alt={filteredNews[0].title}
-                    className="w-full h-48 md:h-full object-cover"
-                  />
-                </div>
-                <div className="md:w-2/3 p-6">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1 ${getCategoryColor(filteredNews[0].category)}`}>
-                      {getCategoryIcon(filteredNews[0].category)}
-                      <span>{filteredNews[0].category}</span>
-                    </span>
-                    <div className="flex items-center space-x-2 text-gray-400 text-sm">
-                      <User className="w-4 h-4" />
-                      <span>{filteredNews[0].author}</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-gray-400 text-sm">
-                      <Calendar className="w-4 h-4" />
-                      <span>{filteredNews[0].date}</span>
-                    </div>
-                  </div>
-                  
-                  <h3 className="font-fantasy text-2xl md:text-3xl font-bold text-white mb-4">
-                    {filteredNews[0].title}
-                  </h3>
-                  
-                  <p className="text-gray-300 mb-4 leading-relaxed">
-                    {filteredNews[0].content}
-                  </p>
-
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {filteredNews[0].tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-fantasy-700/50 text-yellow-400 text-sm rounded-full flex items-center space-x-1"
-                      >
-                        <Tag className="w-3 h-3" />
-                        <span>{tag}</span>
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center space-x-2 text-gray-400">
-                        <Heart className="w-4 h-4" />
-                        <span>{filteredNews[0].likes}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-gray-400">
-                        <MessageCircle className="w-4 h-4" />
-                        <span>{filteredNews[0].comments}</span>
-                      </div>
-                    </div>
-                    <button className="flex items-center space-x-2 text-gray-400 hover:text-yellow-400 transition-colors">
-                      <Share2 className="w-4 h-4" />
-                      <span>Share</span>
-                    </button>
-                  </div>
-                </div>
+          {filteredPosts.length > 0 ? (
+            <>
+              <FeaturedPost post={filteredPosts[0]} onToggleLike={handleToggleLike} />
+              <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
+                {filteredPosts.slice(1).map(post => (
+                  <PostCard key={post._id} post={post} onToggleLike={handleToggleLike} />
+                ))}
               </div>
+            </>
+          ) : !isLoading ? (
+            <EmptyState title="No posts yet" body="Published news will appear here once the staff posts an announcement, event, update, or community story." />
+          ) : null}
+        </div>
+
+        <aside className="space-y-4">
+          <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-5">
+            <h2 className="mb-3 font-fantasy text-xl font-bold text-white">News Desk</h2>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Stat label="Published" value={publishedPosts.length} />
+              <Stat label="Drafts" value={isAdmin ? draftPosts.length : 0} />
+              <Stat label="Comments" value={publishedPosts.reduce((sum, post) => sum + post.comments.length, 0)} />
+              <Stat label="Likes" value={publishedPosts.reduce((sum, post) => sum + post.likeCount, 0)} />
             </div>
           </div>
-        )}
 
-        {/* News Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredNews.slice(1).map((item) => (
-            <article
-              key={item.id}
-              className="bg-fantasy-900/30 border border-fantasy-700/30 rounded-xl overflow-hidden hover:bg-fantasy-800/30 transition-all cursor-pointer group"
-            >
-              <img
-                src={item.image}
-                alt={item.title}
-                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getCategoryColor(item.category)}`}>
-                    {getCategoryIcon(item.category)}
-                    <span>{item.category}</span>
-                  </span>
-                  <span className="text-gray-400 text-sm">{item.date}</span>
-                </div>
-
-                <h3 className="font-bold text-white text-lg mb-3 group-hover:text-yellow-400 transition-colors">
-                  {item.title}
-                </h3>
-
-                <p className="text-gray-300 mb-4 text-sm leading-relaxed">
-                  {item.excerpt}
-                </p>
-
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2 text-gray-400 text-sm">
-                    <User className="w-4 h-4" />
-                    <span>{item.author}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {item.tags.slice(0, 2).map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-fantasy-700/30 text-yellow-400 text-xs rounded"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1 text-gray-400 text-sm">
-                      <Heart className="w-4 h-4 hover:text-red-400 cursor-pointer transition-colors" />
-                      <span>{item.likes}</span>
-                    </div>
-                    <div className="flex items-center space-x-1 text-gray-400 text-sm">
-                      <MessageCircle className="w-4 h-4 hover:text-blue-400 cursor-pointer transition-colors" />
-                      <span>{item.comments}</span>
-                    </div>
-                  </div>
-                  <button className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    <Share2 className="w-4 h-4" />
+          {isAdmin && draftPosts.length > 0 && (
+            <div className="rounded-xl border border-amber-400/20 bg-amber-950/20 p-5">
+              <h2 className="mb-3 font-fantasy text-xl font-bold text-white">Drafts</h2>
+              <div className="space-y-3">
+                {draftPosts.map(post => (
+                  <button
+                    key={post._id}
+                    type="button"
+                    onClick={() => startEditing(post)}
+                    className="block w-full rounded-lg bg-fantasy-900/60 p-3 text-left hover:bg-fantasy-800/80"
+                  >
+                    <span className="block text-sm font-bold text-white">{post.title}</span>
+                    <span className="text-xs text-gray-400">Updated {formatDate(post.updatedAt)}</span>
                   </button>
-                </div>
+                ))}
               </div>
-            </article>
-          ))}
-        </div>
+            </div>
+          )}
 
-        {/* Newsletter Signup */}
-        <div className="mt-16 bg-gradient-to-r from-fantasy-800/30 to-midnight-800/30 rounded-2xl p-8 text-center">
-          <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-          <h2 className="font-fantasy text-2xl font-bold text-white mb-4">
-            Never Miss an Update
-          </h2>
-          <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
-            Stay informed about the latest news, events, and developments in our world. 
-            Check back here for updates and community announcements.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1 px-4 py-3 bg-fantasy-900/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-            />
-            <button className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 font-bold rounded-lg transition-all transform hover:scale-105">
-              Subscribe
-            </button>
+          <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-5">
+            <h2 className="mb-3 font-fantasy text-xl font-bold text-white">Common Tags</h2>
+            <div className="flex flex-wrap gap-2">
+              {commonTags.map(tag => (
+                <span key={tag} className="rounded bg-fantasy-800/70 px-2 py-1 text-xs font-bold text-yellow-300">
+                  {tag}
+                </span>
+              ))}
+            </div>
           </div>
+        </aside>
+      </div>
+    </NewsShell>
+  );
+};
+
+interface NewsShellProps {
+  children: React.ReactNode;
+  editor: React.ReactNode;
+  error: string | null;
+  isAdmin: boolean;
+  isLoading: boolean;
+  onNewPost: () => void;
+}
+
+const NewsShell: React.FC<NewsShellProps> = ({ children, editor, error, isAdmin, isLoading, onNewPost }) => (
+  <div className="min-h-screen px-4 py-12 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl">
+      <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div>
+          <Newspaper className="mb-5 h-14 w-14 text-yellow-400" />
+          <h1 className="font-fantasy text-4xl font-bold text-white md:text-6xl">News & Events</h1>
+          <p className="mt-4 max-w-3xl text-lg text-gray-300">
+            Announcements, events, campaign updates, and community dispatches from the Scon table.
+          </p>
         </div>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={onNewPost}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-midnight-900 transition-all hover:bg-yellow-400"
+          >
+            <Plus className="h-5 w-5" />
+            New Post
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-400/30 bg-red-950/40 p-4 text-red-200">
+          {error}
+        </div>
+      )}
+
+      {editor}
+
+      {isLoading ? (
+        <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-8 text-center text-gray-300">
+          Loading news...
+        </div>
+      ) : children}
+    </div>
+  </div>
+);
+
+interface NewsEditorProps {
+  editor: typeof emptyEditor;
+  editingPostId: string | null;
+  isSaving: boolean;
+  onChange: (nextEditor: typeof emptyEditor) => void;
+  onSubmit: (event: SyntheticEvent, nextStatus?: NewsPostStatus) => void;
+  onCancel: () => void;
+}
+
+const NewsEditor: React.FC<NewsEditorProps> = ({ editor, editingPostId, isSaving, onChange, onSubmit, onCancel }) => (
+  <form onSubmit={(event) => onSubmit(event, editor.status)} className="mb-10 rounded-xl border border-yellow-400/20 bg-fantasy-900/50 p-5">
+    <div className="mb-5 flex items-center justify-between gap-4">
+      <div>
+        <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">Admin CMS</p>
+        <h2 className="font-fantasy text-2xl font-bold text-white">{editingPostId ? 'Edit Post' : 'Create Post'}</h2>
+      </div>
+      <button type="button" onClick={onCancel} className="rounded-lg p-2 text-gray-300 hover:bg-fantasy-800 hover:text-white" aria-label="Close editor">
+        <XCircle className="h-5 w-5" />
+      </button>
+    </div>
+
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <label className="block">
+        <span className="mb-2 block text-sm font-bold text-gray-300">Title</span>
+        <input value={editor.title} onChange={(event) => onChange({ ...editor, title: event.target.value })} className="w-full rounded-lg border border-fantasy-700/40 bg-fantasy-950/50 p-3 text-white" />
+      </label>
+      <label className="block">
+        <span className="mb-2 block text-sm font-bold text-gray-300">Category</span>
+        <select value={editor.category} onChange={(event) => onChange({ ...editor, category: event.target.value as NewsCategory })} className="w-full rounded-lg border border-fantasy-700/40 bg-fantasy-950/50 p-3 text-white">
+          {categories.filter(category => category !== 'All').map(category => <option key={category} value={category}>{category}</option>)}
+        </select>
+      </label>
+      <label className="block md:col-span-2">
+        <span className="mb-2 block text-sm font-bold text-gray-300">Summary</span>
+        <textarea value={editor.summary} onChange={(event) => onChange({ ...editor, summary: event.target.value })} rows={2} className="w-full rounded-lg border border-fantasy-700/40 bg-fantasy-950/50 p-3 text-white" />
+      </label>
+      <label className="block md:col-span-2">
+        <span className="mb-2 block text-sm font-bold text-gray-300">Full Body</span>
+        <textarea value={editor.body} onChange={(event) => onChange({ ...editor, body: event.target.value })} rows={8} className="w-full rounded-lg border border-fantasy-700/40 bg-fantasy-950/50 p-3 text-white" />
+      </label>
+      <label className="block">
+        <span className="mb-2 block text-sm font-bold text-gray-300">Minor Tags</span>
+        <input value={editor.tagsText} onChange={(event) => onChange({ ...editor, tagsText: event.target.value })} placeholder="Campaign, Major Event, All Guilds" className="w-full rounded-lg border border-fantasy-700/40 bg-fantasy-950/50 p-3 text-white placeholder-gray-500" />
+      </label>
+      <label className="block">
+        <span className="mb-2 block text-sm font-bold text-gray-300">Image URL</span>
+        <input value={editor.imageUrl} onChange={(event) => onChange({ ...editor, imageUrl: event.target.value })} className="w-full rounded-lg border border-fantasy-700/40 bg-fantasy-950/50 p-3 text-white" />
+      </label>
+    </div>
+
+    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={(event) => onSubmit(event, 'draft')}
+        className="inline-flex items-center justify-center gap-2 rounded-lg bg-fantasy-700 px-5 py-3 font-bold text-white hover:bg-fantasy-600 disabled:opacity-60"
+      >
+        <Save className="h-4 w-4" />
+        Save Draft
+      </button>
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={(event) => onSubmit(event, 'published')}
+        className="inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-midnight-900 hover:bg-yellow-400 disabled:opacity-60"
+      >
+        <CheckCircle className="h-4 w-4" />
+        Publish
+      </button>
+    </div>
+  </form>
+);
+
+const FeaturedPost: React.FC<{ post: NewsPost; onToggleLike: (post: NewsPost) => void }> = ({ post, onToggleLike }) => (
+  <article className="overflow-hidden rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 transition-all hover:bg-fantasy-800/30">
+    <div className="md:flex">
+      <Link to={`/news/${post.slug}`} className="block md:w-1/3">
+        <img src={post.imageUrl} alt={post.title} className="h-56 w-full object-cover md:h-full" />
+      </Link>
+      <div className="p-6 md:w-2/3">
+        <PostMeta post={post} />
+        <Link to={`/news/${post.slug}`} className="group">
+          <h2 className="mt-4 font-fantasy text-3xl font-bold text-white transition-colors group-hover:text-yellow-400">{post.title}</h2>
+          <p className="mt-4 text-gray-300">{post.summary}</p>
+        </Link>
+        <PostTags post={post} />
+        <PostActions post={post} onToggleLike={onToggleLike} />
       </div>
     </div>
+  </article>
+);
+
+const PostCard: React.FC<{ post: NewsPost; onToggleLike: (post: NewsPost) => void }> = ({ post, onToggleLike }) => (
+  <article className="overflow-hidden rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 transition-all hover:bg-fantasy-800/30">
+    <Link to={`/news/${post.slug}`} className="group block">
+      <img src={post.imageUrl} alt={post.title} className="h-44 w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+      <div className="p-5">
+        <PostMeta post={post} compact />
+        <h2 className="mt-3 text-xl font-bold text-white transition-colors group-hover:text-yellow-400">{post.title}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-gray-300">{post.summary}</p>
+      </div>
+    </Link>
+    <div className="px-5 pb-5">
+      <PostTags post={post} limit={3} />
+      <PostActions post={post} onToggleLike={onToggleLike} compact />
+    </div>
+  </article>
+);
+
+interface PostDetailProps {
+  post: NewsPost;
+  isAdmin: boolean;
+  currentUserId?: string;
+  commentBody: string;
+  isAuthenticated: boolean;
+  onCommentBodyChange: (body: string) => void;
+  onAddComment: (event: FormEvent) => void;
+  onToggleLike: (post: NewsPost) => void;
+  onEdit: (post: NewsPost) => void;
+  onDelete: (post: NewsPost) => void;
+  onDeleteComment: (commentId?: string) => void;
+  onLogin: () => Promise<void>;
+}
+
+const PostDetail: React.FC<PostDetailProps> = ({
+  post,
+  isAdmin,
+  currentUserId,
+  commentBody,
+  isAuthenticated,
+  onCommentBodyChange,
+  onAddComment,
+  onToggleLike,
+  onEdit,
+  onDelete,
+  onDeleteComment,
+  onLogin
+}) => (
+  <article className="mx-auto max-w-4xl">
+    <Link to="/news" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-yellow-300 hover:text-yellow-200">
+      Back to news
+    </Link>
+    <img src={post.imageUrl} alt={post.title} className="mb-6 h-72 w-full rounded-xl object-cover" />
+    <PostMeta post={post} />
+    {post.status === 'draft' && <p className="mt-4 inline-flex rounded bg-amber-500/20 px-3 py-1 text-sm font-bold text-amber-200">Draft</p>}
+    <h1 className="mt-4 font-fantasy text-4xl font-bold text-white md:text-5xl">{post.title}</h1>
+    <p className="mt-5 text-xl leading-relaxed text-gray-300">{post.summary}</p>
+    <PostTags post={post} />
+    <div className="mt-8 whitespace-pre-wrap rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-6 text-lg leading-8 text-gray-100">
+      {post.body}
+    </div>
+
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+      <PostActions post={post} onToggleLike={onToggleLike} />
+      {isAdmin && (
+        <div className="flex gap-2">
+          <button type="button" onClick={() => onEdit(post)} className="inline-flex items-center gap-2 rounded-lg bg-fantasy-700 px-4 py-2 font-bold text-white hover:bg-fantasy-600">
+            <Edit3 className="h-4 w-4" />
+            Edit
+          </button>
+          <button type="button" onClick={() => onDelete(post)} className="inline-flex items-center gap-2 rounded-lg bg-red-900/60 px-4 py-2 font-bold text-red-100 hover:bg-red-800">
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+
+    <section className="mt-10 rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-5">
+      <h2 className="mb-4 font-fantasy text-2xl font-bold text-white">Comments</h2>
+      {isAuthenticated ? (
+        <form onSubmit={onAddComment} className="mb-6 flex flex-col gap-3">
+          <textarea value={commentBody} onChange={(event) => onCommentBodyChange(event.target.value)} rows={3} placeholder="Add a comment" className="w-full rounded-lg border border-fantasy-700/40 bg-fantasy-950/50 p-3 text-white placeholder-gray-500" />
+          <button type="submit" className="inline-flex items-center justify-center gap-2 self-end rounded-lg bg-yellow-500 px-4 py-2 font-bold text-midnight-900 hover:bg-yellow-400">
+            <Send className="h-4 w-4" />
+            Comment
+          </button>
+        </form>
+      ) : (
+        <button type="button" onClick={onLogin} className="mb-6 rounded-lg bg-yellow-500 px-4 py-2 font-bold text-midnight-900 hover:bg-yellow-400">
+          Sign in to comment
+        </button>
+      )}
+
+      <div className="space-y-3">
+        {post.comments.map(comment => {
+          const canDelete = isAdmin || comment.authorId === currentUserId;
+          return (
+            <div key={comment._id} className="rounded-lg bg-fantasy-950/40 p-4">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="font-bold text-white">{comment.authorName}</p>
+                <div className="flex items-center gap-3 text-xs text-gray-400">
+                  <span>{formatDate(comment.createdAt)}{comment.isEdited ? ' edited' : ''}</span>
+                  {canDelete && (
+                    <button type="button" onClick={() => onDeleteComment(comment._id)} className="text-red-300 hover:text-red-200">
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+              <p className="whitespace-pre-wrap text-gray-300">{comment.body}</p>
+            </div>
+          );
+        })}
+        {post.comments.length === 0 && <p className="text-gray-400">No comments yet.</p>}
+      </div>
+    </section>
+  </article>
+);
+
+const PostMeta: React.FC<{ post: NewsPost; compact?: boolean }> = ({ post, compact = false }) => (
+  <div className={`flex flex-wrap items-center gap-3 ${compact ? 'text-xs' : 'text-sm'}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 font-bold ${categoryTone(post.category)}`}>
+      {categoryIcon(post.category)}
+      {post.category}
+    </span>
+    <span className="inline-flex items-center gap-1 text-gray-400">
+      <User className="h-4 w-4" />
+      {post.authorName}
+    </span>
+    <span className="inline-flex items-center gap-1 text-gray-400">
+      <Calendar className="h-4 w-4" />
+      {formatDate(post.publishedAt || post.createdAt)}
+    </span>
+    {post.status === 'draft' && (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-3 py-1 font-bold text-amber-200">
+        <Eye className="h-4 w-4" />
+        Draft
+      </span>
+    )}
+  </div>
+);
+
+const PostTags: React.FC<{ post: NewsPost; limit?: number }> = ({ post, limit }) => {
+  const tags = limit ? post.tags.slice(0, limit) : post.tags;
+  if (tags.length === 0) return null;
+
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      {tags.map(tag => (
+        <span key={tag} className="inline-flex items-center gap-1 rounded bg-fantasy-800/70 px-2 py-1 text-xs font-bold text-yellow-300">
+          <Tag className="h-3 w-3" />
+          {tag}
+        </span>
+      ))}
+    </div>
   );
+};
+
+const PostActions: React.FC<{ post: NewsPost; compact?: boolean; onToggleLike: (post: NewsPost) => void }> = ({ post, compact = false, onToggleLike }) => (
+  <div className={`mt-5 flex items-center gap-5 ${compact ? 'text-sm' : ''}`}>
+    <button type="button" onClick={() => onToggleLike(post)} className={`inline-flex items-center gap-2 transition-colors ${post.likedByCurrentUser ? 'text-red-300' : 'text-gray-400 hover:text-red-300'}`}>
+      <Heart className={`h-5 w-5 ${post.likedByCurrentUser ? 'fill-current' : ''}`} />
+      {post.likeCount}
+    </button>
+    <Link to={`/news/${post.slug}`} className="inline-flex items-center gap-2 text-gray-400 hover:text-blue-300">
+      <MessageCircle className="h-5 w-5" />
+      {post.comments.length}
+    </Link>
+  </div>
+);
+
+const Stat: React.FC<{ label: string; value: number }> = ({ label, value }) => (
+  <div className="rounded-lg bg-fantasy-950/40 p-3">
+    <p className="text-2xl font-bold text-white">{value}</p>
+    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{label}</p>
+  </div>
+);
+
+const EmptyState: React.FC<{ title: string; body: string }> = ({ title, body }) => (
+  <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-8 text-center">
+    <Newspaper className="mx-auto mb-4 h-10 w-10 text-yellow-400" />
+    <h2 className="font-fantasy text-2xl font-bold text-white">{title}</h2>
+    <p className="mt-2 text-gray-300">{body}</p>
+  </div>
+);
+
+const parseTags = (tagsText: string) => tagsText.split(',').map(tag => tag.trim()).filter(Boolean);
+
+const formatDate = (date: Date) => new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric'
+}).format(date);
+
+const categoryTone = (category: NewsCategory) => {
+  switch (category) {
+    case 'Announcements': return 'bg-red-400/20 text-red-200';
+    case 'Events': return 'bg-purple-400/20 text-purple-200';
+    case 'Updates': return 'bg-blue-400/20 text-blue-200';
+    case 'Community': return 'bg-green-400/20 text-green-200';
+    default: return 'bg-gray-400/20 text-gray-200';
+  }
+};
+
+const categoryIcon = (category: NewsCategory) => {
+  switch (category) {
+    case 'Events': return <Calendar className="h-4 w-4" />;
+    case 'Community': return <Users className="h-4 w-4" />;
+    default: return <Newspaper className="h-4 w-4" />;
+  }
 };
 
 export default NewsPage;

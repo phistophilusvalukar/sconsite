@@ -31,6 +31,7 @@ function App() {
               <Route path="/schedule/:pollId" element={<SchedulePage />} />
               <Route path="/games" element={<GamesPage />} />
               <Route path="/news" element={<NewsPage />} />
+              <Route path="/news/:slug" element={<NewsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
             </Routes>

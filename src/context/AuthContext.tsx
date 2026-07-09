@@ -10,6 +10,7 @@ interface User {
   avatar: string;
   email: string;
   globalName?: string | null;
+  isAdmin?: boolean;
   profile?: UserProfile;
 }
 
@@ -66,6 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return {
       ...transformSupabaseUser(session.user),
+      isAdmin: profile?.isAdmin,
       profile,
     };
   }, [session, profile]);

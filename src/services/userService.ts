@@ -396,6 +396,7 @@ export class UserService {
       joinDate: new Date(dbUser.join_date),
       lastActive: new Date(dbUser.last_active),
       isOnline: dbUser.is_online,
+      isAdmin: Boolean(dbUser.is_admin),
       settings: dbUser.settings,
       stats: dbUser.stats,
       createdAt: new Date(dbUser.created_at),
