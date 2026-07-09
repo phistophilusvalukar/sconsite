@@ -226,7 +226,6 @@ class GameService {
         .update({
           character_ids: characterIds,
           note,
-          status: 'Applied',
           updated_at: new Date().toISOString()
         })
         .eq('id', applicationId);
