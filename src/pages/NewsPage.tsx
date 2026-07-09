@@ -110,7 +110,7 @@ const NewsPage: React.FC = () => {
 
     const input: SaveNewsPostInput = {
       authorId: user.id,
-      authorName: user.globalName || user.username,
+      authorName: user.username,
       title: editor.title,
       summary: editor.summary,
       body: editor.body,
@@ -188,7 +188,7 @@ const NewsPage: React.FC = () => {
     const body = commentBody.trim();
     if (!body) return;
 
-    const result = await newsService.addComment(selectedPost._id, user.id, user.globalName || user.username, body);
+    const result = await newsService.addComment(selectedPost._id, user.id, user.username, body);
     if (result.success) {
       setCommentBody('');
       await loadPosts();

@@ -17,6 +17,10 @@ const ProfilePage: React.FC = () => {
   const [games, setGames] = useState<GameListing[]>([]);
   const [isLoadingGames, setIsLoadingGames] = useState(true);
   const [selectedGame, setSelectedGame] = useState<GameListing | null>(null);
+  const [profileName, setProfileName] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsState, setSettingsState] = useState({
     allowWallPosts: true,
@@ -31,6 +35,7 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (user?.profile) {
+      setProfileName(user.profile.username);
       setSettingsState(user.profile.settings);
     }
   }, [user?.profile]);
@@ -133,6 +138,36 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleSaveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user.id) return;
+
+    const nextUsername = profileName.trim();
+    setProfileMessage(null);
+    setProfileError(null);
+
+    if (nextUsername.length < 2 || nextUsername.length > 40) {
+      setProfileError('Display name must be 2 to 40 characters.');
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const response = await userService.updateUser(user.id, { username: nextUsername });
+      if (response.success) {
+        await refreshUserProfile();
+        setProfileMessage('Display name saved.');
+      } else {
+        setProfileError(response.error || 'Failed to save display name');
+      }
+    } catch (error) {
+      console.error('Error updating display name:', error);
+      setProfileError('Failed to save display name');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const handleAvatarUpload = () => {
     alert('Avatar upload functionality will be implemented. For now, your Google profile image is used automatically.');
   };
@@ -201,8 +236,18 @@ const ProfilePage: React.FC = () => {
 
           {activeTab === 'settings' && (
             <SettingsPanel
+              username={profileName}
               settings={settingsState}
+              isSavingProfile={isSavingProfile}
               isSaving={isSavingSettings}
+              profileMessage={profileMessage}
+              profileError={profileError}
+              onUsernameChange={(value) => {
+                setProfileName(value);
+                setProfileMessage(null);
+                setProfileError(null);
+              }}
+              onSaveProfile={handleSaveProfile}
               onChange={setSettingsState}
               onSave={handleSaveSettings}
             />
@@ -270,6 +315,7 @@ const TimelineCard: React.FC<{
 );
 
 const SettingsPanel: React.FC<{
+  username: string;
   settings: {
     allowWallPosts: boolean;
     showOnlineStatus: boolean;
@@ -280,7 +326,12 @@ const SettingsPanel: React.FC<{
       eventReminders: boolean;
     };
   };
+  isSavingProfile: boolean;
   isSaving: boolean;
+  profileMessage: string | null;
+  profileError: string | null;
+  onUsernameChange: (value: string) => void;
+  onSaveProfile: (event: React.FormEvent<HTMLFormElement>) => void;
   onChange: React.Dispatch<React.SetStateAction<{
     allowWallPosts: boolean;
     showOnlineStatus: boolean;
@@ -292,9 +343,47 @@ const SettingsPanel: React.FC<{
     };
   }>>;
   onSave: () => void;
-}> = ({ settings, isSaving, onChange, onSave }) => (
+}> = ({
+  username,
+  settings,
+  isSavingProfile,
+  isSaving,
+  profileMessage,
+  profileError,
+  onUsernameChange,
+  onSaveProfile,
+  onChange,
+  onSave
+}) => (
   <div className="space-y-6">
     <h2 className="text-2xl font-bold text-white">Settings</h2>
+    <form onSubmit={onSaveProfile} className="border-b border-fantasy-700/30 pb-6">
+      <label htmlFor="profile-display-name" className="mb-2 block text-lg font-semibold text-white">
+        Display name
+      </label>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <input
+          id="profile-display-name"
+          type="text"
+          value={username}
+          onChange={(event) => onUsernameChange(event.target.value)}
+          minLength={2}
+          maxLength={40}
+          className="min-w-0 flex-1 rounded-lg border border-fantasy-700 bg-midnight-950 px-4 py-3 text-white placeholder-gray-500 focus:border-yellow-400 focus:outline-none focus:ring-1 focus:ring-yellow-400"
+          placeholder="Your display name"
+        />
+        <button
+          type="submit"
+          disabled={isSavingProfile}
+          className="flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-midnight-900 transition-colors hover:bg-yellow-400 disabled:bg-gray-600"
+        >
+          {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          <span>{isSavingProfile ? 'Saving...' : 'Save Name'}</span>
+        </button>
+      </div>
+      {profileError && <p className="mt-2 text-sm text-red-300">{profileError}</p>}
+      {profileMessage && <p className="mt-2 text-sm text-emerald-300">{profileMessage}</p>}
+    </form>
     <div>
       <h3 className="text-lg font-semibold text-white mb-4">Privacy Settings</h3>
       <div className="space-y-3">

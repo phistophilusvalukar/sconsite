@@ -66,8 +66,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const user = useMemo(() => {
     if (!session?.user) return null;
 
+    const authUser = transformSupabaseUser(session.user);
+
     return {
-      ...transformSupabaseUser(session.user),
+      ...authUser,
+      username: profile?.username?.trim() || authUser.username,
+      avatar: profile?.avatar || authUser.avatar,
+      email: profile?.email || authUser.email,
+      globalName: profile?.globalName ?? authUser.globalName,
       isAdmin: profile?.isAdmin,
       profile,
     };
@@ -134,10 +140,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await userService.updateLastActive(transformedUser.id);
 
       const updateResponse = await userService.updateUser(transformedUser.id, {
-        username: transformedUser.username,
         avatar: transformedUser.avatar,
         email: transformedUser.email,
-        globalName: transformedUser.globalName,
         isOnline: true
       });
 
