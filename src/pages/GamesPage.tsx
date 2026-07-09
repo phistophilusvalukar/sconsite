@@ -420,16 +420,6 @@ const GamesPage: React.FC = () => {
     }
   };
 
-  const handleCloseGame = async (game: GameListing) => {
-    if (!game._id || !user?.id) return;
-    const result = await gameService.updateGameStatus(game._id, user.id, 'Closed');
-    if (result.success) {
-      await loadData();
-    } else {
-      alert(result.error || 'Failed to confirm game');
-    }
-  };
-
   const handleUpdateGame = async (game: GameListing, updates: GameEditState) => {
     if (!game._id || !user?.id) return;
     const result = await gameService.updateGame(game._id, user.id, {
@@ -681,23 +671,7 @@ const GamesPage: React.FC = () => {
                     <GameListingCard
                       key={game._id}
                       game={game}
-                      userId={user?.id || ''}
-                      characters={characters}
-                      selectedCharacterIds={applicationCharacters[game._id || ''] || []}
-                      applicationNote={applicationNotes[game._id || ''] || ''}
-                        onToggleCharacter={(characterId) => {
-                          const gameId = game._id || '';
-                          setApplicationCharacters(prev => ({
-                            ...prev,
-                            [gameId]: toggleSingleSelection(prev[gameId] || [], characterId)
-                          }));
-                        }}
-                      onNoteChange={(note) => setApplicationNotes(prev => ({ ...prev, [game._id || '']: note }))}
-                      onApply={() => handleApply(game)}
-                      onUpdateApplication={(application) => handleUpdateApplication(application, game)}
-                      onWithdrawApplication={handleWithdrawApplication}
-                      onApplicationStatus={handleApplicationStatus}
-                      onCloseGame={() => handleCloseGame(game)}
+                      onOpen={() => setSelectedGameId(game._id || null)}
                     />
                   ))}
                   {visibleGames.length === 0 && (
@@ -965,6 +939,7 @@ const GamesPage: React.FC = () => {
               setApplicationCharacters(prev => ({ ...prev, [gameId]: toggleSingleSelection(prev[gameId] || [], characterId) }));
             }}
             onNoteChange={(note) => setApplicationNotes(prev => ({ ...prev, [selectedGame._id || '']: note }))}
+            onApply={() => handleApply(selectedGame)}
             onUpdateApplication={(application) => handleUpdateApplication(application, selectedGame)}
             onWithdrawApplication={handleWithdrawApplication}
             onApplicationStatus={handleApplicationStatus}
@@ -992,61 +967,39 @@ const GamesPage: React.FC = () => {
 
 interface GameListingCardProps {
   game: GameListing;
-  userId: string;
-  characters: Character[];
-  selectedCharacterIds: string[];
-  applicationNote: string;
-  onToggleCharacter: (characterId: string) => void;
-  onNoteChange: (note: string) => void;
-  onApply: () => void;
-  onUpdateApplication: (application: GameApplication) => void;
-  onWithdrawApplication: (application: GameApplication) => void;
-  onApplicationStatus: (application: GameApplication, status: GameApplicationStatus) => void;
-  onCloseGame: () => void;
+  onOpen: () => void;
 }
 
 const GameListingCard: React.FC<GameListingCardProps> = ({
   game,
-  userId,
-  characters,
-  selectedCharacterIds,
-  applicationNote,
-  onToggleCharacter,
-  onNoteChange,
-  onApply,
-  onUpdateApplication,
-  onWithdrawApplication,
-  onApplicationStatus,
-  onCloseGame
+  onOpen
 }) => {
-  const isGm = game.gmId === userId;
-  const ownApplication = game.applications.find(application => application.userId === userId);
   const roster = game.applications.filter(application => application.status === 'Roster');
-  const onDeck = game.applications.filter(application => application.status === 'On Deck');
-  const withdrawn = game.applications.filter(application => application.status === 'Withdrawn');
   const applied = game.applications.filter(application => application.status === 'Applied');
-  const actionableApplications = game.applications.filter(application => application.status !== 'Withdrawn');
-  const invited = game.invites.some(invite => invite.userId === userId);
 
   return (
-    <article className="border border-fantasy-700/30 bg-fantasy-900/25 rounded-lg p-5">
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-5 text-left transition-colors hover:border-yellow-400/60 hover:bg-fantasy-900/40 focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
+    >
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             <h3 className="font-fantasy text-2xl font-bold text-white">{game.title}</h3>
-            {invited && <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-200 text-xs font-bold">Invited</span>}
+            <span className="rounded bg-fantasy-800/60 px-2 py-1 text-xs font-bold text-yellow-200">{game.tier}</span>
           </div>
-          <p className="text-gray-300 mb-3">{game.description}</p>
+          <p className="mb-3 line-clamp-3 text-gray-300">{game.description}</p>
           <div className="flex flex-wrap gap-3 text-sm text-gray-300">
             <span className="flex items-center gap-1"><CalendarDays className="w-4 h-4 text-yellow-400" />{formatDateTime(game.startTime)}</span>
             <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-yellow-400" />{formatDuration(game.durationMinutes)}</span>
             <span className="flex items-center gap-1"><Users className="w-4 h-4 text-yellow-400" />{roster.length}/{game.partySize} rostered</span>
             <span>Level {game.characterLevel}</span>
-            <span>{game.tier}</span>
+            <span>{applied.length} applied</span>
           </div>
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="mt-3 flex flex-wrap gap-2">
             {game.tags.map(tag => (
-              <span key={tag} className="px-2 py-1 rounded bg-fantasy-800/60 text-gray-200 text-xs font-semibold">{tag}</span>
+              <span key={tag} className="rounded bg-fantasy-800/60 px-2 py-1 text-xs font-semibold text-gray-200">{tag}</span>
             ))}
           </div>
         </div>
@@ -1055,158 +1008,12 @@ const GameListingCard: React.FC<GameListingCardProps> = ({
           {game.rewardCharacter && (
             <p>{game.rewardCharacter.name} earns rewards</p>
           )}
+          <p className="mt-3 text-xs font-bold uppercase tracking-widest text-yellow-300">View Details</p>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5">
-        <div className="bg-midnight-900/30 rounded-lg p-4">
-          <h4 className="font-bold text-white mb-3">Roster</h4>
-          <ApplicantList label="Playing" applications={roster} />
-          <ApplicantList label="On Deck" applications={onDeck} />
-          <ApplicantList label="Withdrawn" applications={withdrawn} />
-          <ApplicantList label="Applied" applications={applied} />
-        </div>
-
-        {isGm ? (
-          <div className="bg-midnight-900/30 rounded-lg p-4">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <h4 className="font-bold text-white">Applicants</h4>
-              <button
-                type="button"
-                onClick={onCloseGame}
-                className="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold"
-              >
-                <Ticket className="w-4 h-4" />
-                <span>Confirm Closed</span>
-              </button>
-            </div>
-            <div className="space-y-3">
-              {actionableApplications.map(application => (
-                <div key={application._id} className="border border-fantasy-700/30 rounded-lg p-3">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                    <div>
-                      <p className={`font-semibold ${roleNameTone(getApplicationPrimaryRole(application))}`}>{application.displayName}</p>
-                      <div className="mt-1 flex flex-wrap gap-2">{renderCharacterChips(application)}</div>
-                      {application.note && <p className="text-sm text-gray-400 mt-1">{application.note}</p>}
-                    </div>
-                    <span className="text-xs font-bold text-yellow-300">{application.status}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {(['Roster', 'On Deck', 'Declined'] as GameApplicationStatus[]).map(status => (
-                      <button
-                        key={status}
-                        type="button"
-                        onClick={() => onApplicationStatus(application, status)}
-                        className="px-3 py-2 rounded bg-fantasy-700 hover:bg-fantasy-600 text-white text-sm"
-                      >
-                        {status}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              {actionableApplications.length === 0 && <p className="text-sm text-gray-400">No applications yet.</p>}
-            </div>
-          </div>
-        ) : (
-          <div className="bg-midnight-900/30 rounded-lg p-4">
-            <h4 className="font-bold text-white mb-3">{ownApplication ? 'Your Application' : 'Apply to Join'}</h4>
-            {ownApplication ? (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-300">Status: <span className="font-bold text-yellow-300">{ownApplication.status}</span></p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {characters.map(character => (
-                    <label key={character._id} className="flex items-center gap-2 rounded border border-fantasy-700/30 p-2 text-sm text-gray-200">
-                      <input
-                        type="checkbox"
-                        checked={selectedCharacterIds.includes(character._id || '')}
-                        onChange={() => character._id && onToggleCharacter(character._id)}
-                        className="h-4 w-4"
-                      />
-                      <span>{character.name} L{character.level}</span>
-                    </label>
-                  ))}
-                </div>
-                <textarea
-                  value={applicationNote}
-                  onChange={(event) => onNoteChange(event.target.value)}
-                  rows={2}
-                  placeholder="Application note"
-                  className="w-full p-2 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 resize-none"
-                />
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onUpdateApplication(ownApplication)}
-                    className="flex-1 px-3 py-2 rounded bg-yellow-500 hover:bg-yellow-400 text-midnight-900 text-sm font-bold"
-                  >
-                    Save Changes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onWithdrawApplication(ownApplication)}
-                    className="flex-1 px-3 py-2 rounded bg-red-700 hover:bg-red-600 text-white text-sm font-bold"
-                  >
-                    Withdraw
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {characters.map(character => (
-                    <label key={character._id} className="flex items-center gap-2 rounded border border-fantasy-700/30 p-2 text-sm text-gray-200">
-                      <input
-                        type="checkbox"
-                        checked={selectedCharacterIds.includes(character._id || '')}
-                        onChange={() => character._id && onToggleCharacter(character._id)}
-                        className="h-4 w-4"
-                      />
-                      <span className={roleNameTone(character.mainRole)}>{character.name} L{character.level}</span>
-                    </label>
-                  ))}
-                </div>
-                <textarea
-                  value={applicationNote}
-                  onChange={(event) => onNoteChange(event.target.value)}
-                  rows={2}
-                  placeholder="Application note"
-                  className="w-full p-2 bg-fantasy-800/50 border border-fantasy-700/30 rounded-lg text-white placeholder-gray-400 resize-none"
-                />
-                <button
-                  type="button"
-                  onClick={onApply}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 font-bold rounded-lg"
-                >
-                  <UserCheck className="w-4 h-4" />
-                  <span>Apply</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </article>
+    </button>
   );
 };
-
-const ApplicantList: React.FC<{ label: string; applications: GameApplication[] }> = ({ label, applications }) => (
-  <div className="mb-3 last:mb-0">
-    <p className="text-sm font-semibold text-yellow-300 mb-1">{label}</p>
-    <div className="space-y-1">
-      {applications.map(application => (
-        <div key={application._id} className="flex items-center gap-2 text-sm text-gray-200">
-          <Check className="w-4 h-4 text-emerald-300" />
-          <span className={`${application.status === 'Withdrawn' ? 'line-through opacity-60' : ''} font-semibold ${roleNameTone(getApplicationPrimaryRole(application))}`}>
-            {application.displayName}
-          </span>
-          <span className="flex flex-wrap gap-1.5">{renderCharacterChips(application)}</span>
-        </div>
-      ))}
-      {applications.length === 0 && <p className="text-sm text-gray-500">Empty</p>}
-    </div>
-  </div>
-);
 
 const GameTicket: React.FC<{ game: GameListing; onOpen: () => void }> = ({ game, onOpen }) => {
   const roster = game.applications.filter(application => application.status === 'Roster');
@@ -1278,10 +1085,11 @@ interface GameDetailsModalProps {
   onClose: () => void;
   onToggleCharacter: (characterId: string) => void;
   onNoteChange: (note: string) => void;
+  onApply: () => void;
   onUpdateApplication: (application: GameApplication) => void;
   onWithdrawApplication: (application: GameApplication) => void;
   onApplicationStatus: (application: GameApplication, status: GameApplicationStatus) => void;
-  onUpdateGame: (updates: GameEditState) => void;
+  onUpdateGame: (updates: GameEditState) => void | Promise<void>;
   onStatusChange: (status: GameStatus) => void;
   onRewardsBonusChange: (bonus: GameRewardsBonus) => void;
   onComplete: () => void;
@@ -1306,6 +1114,7 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
   onClose,
   onToggleCharacter,
   onNoteChange,
+  onApply,
   onUpdateApplication,
   onWithdrawApplication,
   onApplicationStatus,
@@ -1330,10 +1139,12 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
   const applied = game.applications.filter(application => application.status === 'Applied');
   const [editState, setEditState] = useState<GameEditState>(() => gameToEditState(game));
   const [tagDraft, setTagDraft] = useState(game.tags.join(', '));
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
 
   useEffect(() => {
     setEditState(gameToEditState(game));
     setTagDraft(game.tags.join(', '));
+    setIsEditingDetails(false);
   }, [game]);
 
   return (
@@ -1355,11 +1166,22 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
             {game.status === 'Completed' && <RewardsSection game={game} />}
 
             <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Ticket className="h-5 w-5 text-yellow-300" />
-                <h3 className="text-lg font-bold text-white">Details</h3>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Ticket className="h-5 w-5 text-yellow-300" />
+                  <h3 className="text-lg font-bold text-white">Details</h3>
+                </div>
+                {isGm && !isArchived && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDetails(prev => !prev)}
+                    className="rounded-lg bg-fantasy-700 px-3 py-2 text-sm font-semibold text-white hover:bg-fantasy-600"
+                  >
+                    {isEditingDetails ? 'Cancel Edit' : 'Edit Details'}
+                  </button>
+                )}
               </div>
-              {isGm && !isArchived ? (
+              {isGm && !isArchived && isEditingDetails ? (
                 <div className="grid gap-3">
                   <input value={editState.title} onChange={event => setEditState(prev => ({ ...prev, title: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white" />
                   <textarea value={editState.description} onChange={event => setEditState(prev => ({ ...prev, description: event.target.value }))} rows={4} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white" />
@@ -1373,7 +1195,14 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                     setTagDraft(event.target.value);
                     setEditState(prev => ({ ...prev, tags: parseTags(event.target.value) }));
                   }} placeholder="Tags, comma separated" className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white placeholder-gray-400" />
-                  <button type="button" onClick={() => onUpdateGame(editState)} className="flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-2 font-bold text-midnight-900 hover:bg-yellow-400">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await onUpdateGame(editState);
+                      setIsEditingDetails(false);
+                    }}
+                    className="flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-2 font-bold text-midnight-900 hover:bg-yellow-400"
+                  >
                     <Save className="h-4 w-4" />
                     <span>Save Ticket</span>
                   </button>
@@ -1441,9 +1270,29 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
               </section>
             )}
           <aside className="space-y-5">
+            {!isGm && !ownApplication && !isArchived && (
+              <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
+                <h3 className="mb-3 text-lg font-bold text-white">Apply to Join</h3>
+                <div className="grid gap-2">
+                  {characters.map(character => (
+                    <label key={character._id} className="flex items-center gap-2 rounded border border-fantasy-700/30 p-2 text-sm text-gray-200">
+                      <input type="checkbox" checked={selectedCharacterIds.includes(character._id || '')} onChange={() => character._id && onToggleCharacter(character._id)} className="h-4 w-4" />
+                      <span className={roleNameTone(character.mainRole)}>{character.name} L{character.level}</span>
+                    </label>
+                  ))}
+                </div>
+                <textarea value={applicationNote} onChange={event => onNoteChange(event.target.value)} rows={3} className="mt-3 w-full rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-2 text-white placeholder-gray-400" placeholder="Application note" />
+                <button type="button" onClick={onApply} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-3 font-bold text-midnight-900 hover:bg-yellow-400">
+                  <UserCheck className="h-4 w-4" />
+                  <span>Apply</span>
+                </button>
+              </section>
+            )}
+
             {ownApplication && !isArchived && (
               <section className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/25 p-4">
-                <h3 className="mb-3 text-lg font-bold text-white">Your Character</h3>
+                <h3 className="mb-3 text-lg font-bold text-white">Your Application</h3>
+                <p className="mb-3 text-sm text-gray-300">Status: <span className="font-bold text-yellow-300">{ownApplication.status}</span></p>
                 <div className="grid gap-2">
                   {characters.map(character => (
                     <label key={character._id} className="flex items-center gap-2 rounded border border-fantasy-700/30 p-2 text-sm text-gray-200">
@@ -1471,6 +1320,18 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                     </button>
                   ) : (
                     <>
+                      {game.status === 'Open' && (
+                        <button type="button" onClick={() => onStatusChange('Closed')} className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-500">
+                          <Ticket className="h-4 w-4" />
+                          <span>Confirm Closed</span>
+                        </button>
+                      )}
+                      {game.status === 'Closed' && (
+                        <button type="button" onClick={() => onStatusChange('Open')} className="flex w-full items-center justify-center gap-2 rounded-lg bg-fantasy-700 px-4 py-2 font-bold text-white hover:bg-fantasy-600">
+                          <Ticket className="h-4 w-4" />
+                          <span>Reopen Applications</span>
+                        </button>
+                      )}
                       <button type="button" onClick={() => onStatusChange('Cancelled')} className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2 font-bold text-white hover:bg-red-600">
                         <Ban className="h-4 w-4" />
                         <span>Cancel Game</span>
