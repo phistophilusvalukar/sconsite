@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, Loader2, LogOut, Save, Settings, Upload, User, X } from 'lucide-react';
+import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/AuthContext';
+import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import GameService from '../services/gameService';
 import { UserService } from '../services/userService';
 import { GameListing } from '../types/database';
@@ -60,6 +62,29 @@ const ProfilePage: React.FC = () => {
 
     loadGames();
   }, [isAuthenticated, loadGames]);
+
+  useSupabaseRealtime({
+    channelName: `profile-schedule-${user?.id || 'anonymous'}`,
+    tables: [
+      DATABASE_TABLES.GAMES,
+      DATABASE_TABLES.GAME_INVITES,
+      DATABASE_TABLES.GAME_APPLICATIONS,
+      DATABASE_TABLES.CHARACTERS
+    ],
+    onChange: loadGames,
+    enabled: isAuthenticated
+  });
+
+  useEffect(() => {
+    if (!selectedGame?._id) return;
+
+    const refreshedGame = games.find(game => game._id === selectedGame._id);
+    if (refreshedGame) {
+      setSelectedGame(refreshedGame);
+    } else {
+      setSelectedGame(null);
+    }
+  }, [games, selectedGame?._id]);
 
   const schedule = useMemo(() => {
     const now = Date.now();

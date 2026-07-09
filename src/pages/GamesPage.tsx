@@ -16,7 +16,9 @@ import {
   Users,
   X
 } from 'lucide-react';
+import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/AuthContext';
+import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { Character, GameApplication, GameApplicationStatus, GameArchiveComment, GameListing, GameRewardsBonus, GameStatus, SchedulePoll } from '../types/database';
 import GameService, { getTierForLevel } from '../services/gameService';
 import ScheduleService from '../services/scheduleService';
@@ -152,6 +154,22 @@ const GamesPage: React.FC = () => {
 
     loadData();
   }, [isAuthenticated, loadData]);
+
+  useSupabaseRealtime({
+    channelName: `games-page-${user?.id || 'anonymous'}`,
+    tables: [
+      DATABASE_TABLES.GAMES,
+      DATABASE_TABLES.GAME_INVITES,
+      DATABASE_TABLES.GAME_APPLICATIONS,
+      DATABASE_TABLES.GAME_ARCHIVE_COMMENTS,
+      DATABASE_TABLES.GAME_ARCHIVE_LIKES,
+      DATABASE_TABLES.SCHEDULE_POLLS,
+      DATABASE_TABLES.SCHEDULE_PARTICIPANTS,
+      DATABASE_TABLES.CHARACTERS
+    ],
+    onChange: loadData,
+    enabled: isAuthenticated
+  });
 
   useEffect(() => {
     if (characters.length > 0 && !form.rewardCharacterId) {

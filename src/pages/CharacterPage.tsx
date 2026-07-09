@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Loader2, Network, Plus, Shield, Users } from 'lucide-react';
+import { DATABASE_TABLES } from '../config/database';
 import { Character, CharacterRelationship, CharacterRoleCategory } from '../types/database';
 import { CharacterService } from '../services/characterService';
+import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import CharacterCard from '../components/CharacterCard';
 import CharacterDetailsModal from '../components/CharacterDetailsModal';
 import CharacterForm from '../components/CharacterForm';
@@ -25,15 +27,9 @@ const CharacterPage: React.FC = () => {
   const [editingCharacter, setEditingCharacter] = useState<Character | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
 
-  const characterService = CharacterService.getInstance();
+  const characterService = useMemo(() => CharacterService.getInstance(), []);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadCharacters();
-    }
-  }, [user?.id]);
-
-  const loadCharacters = async () => {
+  const loadCharacters = useCallback(async () => {
     if (!user?.id) return;
 
     setIsLoading(true);
@@ -63,7 +59,40 @@ const CharacterPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [characterService, user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadCharacters();
+    }
+  }, [loadCharacters, user?.id]);
+
+  useSupabaseRealtime({
+    channelName: `characters-page-${user?.id || 'anonymous'}`,
+    tables: [
+      DATABASE_TABLES.CHARACTERS,
+      DATABASE_TABLES.CHARACTER_FOUNDRY_FILES,
+      DATABASE_TABLES.CHARACTER_JOURNAL_ENTRIES,
+      DATABASE_TABLES.CHARACTER_JOURNAL_COMMENTS,
+      DATABASE_TABLES.CHARACTER_JOURNAL_LIKES,
+      DATABASE_TABLES.CHARACTER_RELATIONSHIPS,
+      DATABASE_TABLES.GUILD_MEMBERSHIPS
+    ],
+    onChange: loadCharacters,
+    enabled: Boolean(user?.id)
+  });
+
+  useEffect(() => {
+    if (!selectedCharacter?._id) return;
+
+    const refreshedCharacter = mergeCharacters(characters, publicCharacters)
+      .find(character => character._id === selectedCharacter._id);
+    if (refreshedCharacter) {
+      setSelectedCharacter(refreshedCharacter);
+    } else {
+      setSelectedCharacter(null);
+    }
+  }, [characters, publicCharacters, selectedCharacter?._id]);
 
   const handleCreateCharacter = () => {
     setEditingCharacter(undefined);

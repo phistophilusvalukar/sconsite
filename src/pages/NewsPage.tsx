@@ -18,6 +18,8 @@ import {
   XCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { DATABASE_TABLES } from '../config/database';
+import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import NewsService, { SaveNewsPostInput } from '../services/newsService';
 import { NewsCategory, NewsPost, NewsPostStatus } from '../types/database';
 
@@ -78,6 +80,16 @@ const NewsPage: React.FC = () => {
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
+
+  useSupabaseRealtime({
+    channelName: `news-page-${user?.id || 'anonymous'}-${isAdmin ? 'admin' : 'public'}`,
+    tables: [
+      DATABASE_TABLES.NEWS_POSTS,
+      DATABASE_TABLES.NEWS_COMMENTS,
+      DATABASE_TABLES.NEWS_LIKES
+    ],
+    onChange: loadPosts
+  });
 
   useEffect(() => {
     if (!slug || isLoading || selectedPost) return;

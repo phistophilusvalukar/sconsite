@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Crown, Loader2, LogOut, Plus, Search, Shield, UserPlus, Users } from 'lucide-react';
+import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/AuthContext';
+import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { Character, Guild } from '../types/database';
 import { CharacterService } from '../services/characterService';
 import GuildService from '../services/guildService';
@@ -47,15 +49,28 @@ const GuildsPage: React.FC = () => {
     ? filteredGuilds.slice(0, 6)
     : guilds.slice(0, 6);
 
-  useEffect(() => {
-    loadGuilds();
-  }, []);
-
-  useEffect(() => {
-    if (user?.id) {
-      loadCharacters();
+  const loadGuilds = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await guildService.getGuilds();
+      if (response.success && response.data) {
+        setGuilds(response.data);
+      } else {
+        console.error('Failed to load guilds:', response.error);
+      }
+    } finally {
+      setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [guildService]);
+
+  const loadCharacters = useCallback(async () => {
+    if (!user?.id) return;
+
+    const response = await characterService.getUserCharacters(user.id);
+    if (response.success && response.data) {
+      setCharacters(response.data);
+    }
+  }, [characterService, user?.id]);
 
   useEffect(() => {
     const searchFounders = async () => {
@@ -81,28 +96,30 @@ const GuildsPage: React.FC = () => {
     return () => window.clearTimeout(debounceTimer);
   }, [founderSearch, guildService, selectedGuild?._id, user?.id]);
 
-  const loadGuilds = async () => {
-    setIsLoading(true);
-    try {
-      const response = await guildService.getGuilds();
-      if (response.success && response.data) {
-        setGuilds(response.data);
-      } else {
-        console.error('Failed to load guilds:', response.error);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    loadGuilds();
+  }, [loadGuilds]);
 
-  const loadCharacters = async () => {
-    if (!user?.id) return;
-
-    const response = await characterService.getUserCharacters(user.id);
-    if (response.success && response.data) {
-      setCharacters(response.data);
+  useEffect(() => {
+    if (user?.id) {
+      loadCharacters();
     }
-  };
+  }, [loadCharacters, user?.id]);
+
+  useSupabaseRealtime({
+    channelName: `guilds-page-${user?.id || 'anonymous'}`,
+    tables: [
+      DATABASE_TABLES.GUILDS,
+      DATABASE_TABLES.GUILD_MEMBERSHIPS,
+      DATABASE_TABLES.GUILD_APPLICATIONS,
+      DATABASE_TABLES.CHARACTERS
+    ],
+    onChange: () => {
+      void loadGuilds();
+      void loadCharacters();
+    },
+    enabled: isAuthenticated
+  });
 
   const handleCreateGuild = async (e: React.FormEvent) => {
     e.preventDefault();

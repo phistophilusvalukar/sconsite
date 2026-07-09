@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Check, Clock, Copy, Loader2, Plus, Save, Trash2, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/AuthContext';
+import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import ScheduleService from '../services/scheduleService';
 import { ScheduleAvailability, SchedulePoll } from '../types/database';
 
@@ -117,6 +119,17 @@ const SchedulePage: React.FC = () => {
   useEffect(() => {
     loadPolls();
   }, [loadPolls]);
+
+  useSupabaseRealtime({
+    channelName: `schedule-page-${pollId || 'all'}`,
+    tables: [
+      DATABASE_TABLES.SCHEDULE_POLLS,
+      DATABASE_TABLES.SCHEDULE_PARTICIPANTS,
+      DATABASE_TABLES.SCHEDULE_AVAILABILITY
+    ],
+    onChange: loadPolls,
+    enabled: isAuthenticated
+  });
 
   const handleCreatePoll = async (event: React.FormEvent) => {
     event.preventDefault();

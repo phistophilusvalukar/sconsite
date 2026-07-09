@@ -1,6 +1,7 @@
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from '../config/database';
+import { DATABASE_TABLES, supabase } from '../config/database';
+import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { UserService } from '../services/userService';
 import { UserProfile } from '../types/database';
 
@@ -209,6 +210,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setProfile(userResponse.data);
     }
   };
+
+  useSupabaseRealtime({
+    channelName: `auth-profile-${session?.user?.id || 'anonymous'}`,
+    tables: [DATABASE_TABLES.USERS],
+    onChange: refreshUserProfile,
+    enabled: Boolean(session?.user?.id)
+  });
 
   return (
     <AuthContext.Provider value={{

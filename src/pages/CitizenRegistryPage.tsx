@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowDownUp, Loader2, Shield, Users } from 'lucide-react';
+import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/AuthContext';
+import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import CitizenRegistryService, { CitizenRegistry, RegistryRow, RegistryTierKey } from '../services/citizenRegistryService';
 
 type SortKey = keyof RegistryRow;
@@ -124,15 +126,7 @@ const CitizenRegistryPage: React.FC = () => {
 
   const registryService = useMemo(() => CitizenRegistryService.getInstance(), []);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadRegistry();
-    } else {
-      setIsLoading(false);
-    }
-  }, [isAuthenticated]);
-
-  const loadRegistry = async () => {
+  const loadRegistry = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -144,7 +138,26 @@ const CitizenRegistryPage: React.FC = () => {
     }
 
     setIsLoading(false);
-  };
+  }, [registryService]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadRegistry();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, loadRegistry]);
+
+  useSupabaseRealtime({
+    channelName: 'citizen-registry-page',
+    tables: [
+      DATABASE_TABLES.CHARACTERS,
+      DATABASE_TABLES.GUILDS,
+      DATABASE_TABLES.GUILD_MEMBERSHIPS
+    ],
+    onChange: loadRegistry,
+    enabled: isAuthenticated
+  });
 
   if (!isAuthenticated) {
     return (
