@@ -9,7 +9,7 @@ import {
   CharacterRelationshipType,
   FoundryJsonEntry
 } from '../types/database';
-import { deriveAbilityBoostsFromFoundryJson } from '../utils/foundryCharacter';
+import { deriveAbilityBoostsFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
 export interface FoundryCharacterData {
   name: string;
@@ -766,7 +766,7 @@ export class CharacterService {
         weight: details.weight?.value || '',
         level: details.level?.value || 1,
         wealth: attributes.wealth?.value || 0,
-        avatar: jsonData.img || ''
+        avatar: normalizeFoundryAvatar(jsonData.img)
       }, jsonData)
     };
   }

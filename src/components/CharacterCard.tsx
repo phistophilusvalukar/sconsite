@@ -3,8 +3,9 @@ import { Calendar, Edit, Shield, Trash2, Users } from 'lucide-react';
 import { Character } from '../types/database';
 import CharacterRoleBadges from './CharacterRoleBadges';
 import { roleBorderTone, rolePillTone } from '../utils/characterRoles';
+import { DEFAULT_NPC_PLACEHOLDER, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
-const DEFAULT_CHARACTER_AVATAR = '/npc-placeholder.png';
+const DEFAULT_CHARACTER_AVATAR = DEFAULT_NPC_PLACEHOLDER;
 
 interface CharacterCardProps {
   character: Character;
@@ -24,7 +25,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   const parsedData = character.foundryJson ? getCharacterDataFromJson(character.foundryJson) : null;
 
   // Get character avatar from main file or use default
-  const characterAvatar = parsedData?.avatar || character.stats?.avatar || DEFAULT_CHARACTER_AVATAR;
+  const characterAvatar = parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || DEFAULT_CHARACTER_AVATAR;
 
   return (
     <div
@@ -140,7 +141,7 @@ function getCharacterDataFromJson(jsonData: unknown) {
       weight: details.weight?.value || '',
       level: details.level?.value || 1,
       wealth: attributes.wealth?.value || 0,
-      avatar: data.img || ''
+      avatar: normalizeFoundryAvatar(data.img)
     };
   } catch (error) {
     console.error('Error parsing character JSON:', error);

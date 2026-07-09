@@ -27,7 +27,7 @@ import {
   FoundryJsonEntry
 } from '../types/database';
 import { CharacterService } from '../services/characterService';
-import { abilityLabels, getAbilityScoresFromFoundryJson } from '../utils/foundryCharacter';
+import { DEFAULT_NPC_PLACEHOLDER, abilityLabels, getAbilityScoresFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
 type DetailsTab = 'foundry' | 'journal' | 'relationships';
 
@@ -41,7 +41,7 @@ interface CharacterDetailsModalProps {
   onRelationshipsChanged?: () => void | Promise<void>;
 }
 
-const defaultPortrait = '/npc-placeholder.png';
+const defaultPortrait = DEFAULT_NPC_PLACEHOLDER;
 
 const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   character,
@@ -73,7 +73,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const activeFoundryEntry = foundryFiles.find(file => file.isActive) || foundryFiles[0];
   const activeFoundryJson = activeFoundryEntry?.json || character.foundryJson;
   const parsedData = activeFoundryJson ? getCharacterDataFromJson(activeFoundryJson) : null;
-  const characterPortrait = parsedData?.avatar || character.stats?.avatar || defaultPortrait;
+  const characterPortrait = parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
   const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
   const visibleTabs: DetailsTab[] = canEdit ? ['foundry', 'journal', 'relationships'] : ['journal', 'relationships'];
@@ -812,7 +812,7 @@ function getCharacterDataFromJson(jsonData: unknown) {
       height: details.height?.value || '',
       weight: details.weight?.value || '',
       wealth: attributes.wealth?.value || 0,
-      avatar: data.img || details.biography?.appearance || ''
+      avatar: normalizeFoundryAvatar(data.img || details.biography?.appearance)
     };
   } catch (error) {
     console.error('Error parsing character JSON:', error);

@@ -11,7 +11,7 @@ import CharacterForm from '../components/CharacterForm';
 import CharacterRelationshipGraph from '../components/CharacterRelationshipGraph';
 import CharacterRoleBadges from '../components/CharacterRoleBadges';
 import { getRoleCategoryForBadge } from '../utils/characterRoles';
-import { getAvatarFromFoundryJson } from '../utils/foundryCharacter';
+import { DEFAULT_NPC_PLACEHOLDER, getAvatarFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
 type CharacterView = 'characters' | 'all' | 'relationships';
 
@@ -375,7 +375,7 @@ function AllCharactersView({ characters, currentUserId, onSelectCharacter }: { c
 }
 
 function PublicCharacterCard({ character, isOwnCharacter, onSelect }: { character: Character; isOwnCharacter: boolean; onSelect: () => void }) {
-  const avatar = getAvatarFromFoundryJson(character.foundryJson) || character.stats?.avatar || '/npc-placeholder.png';
+  const avatar = getAvatarFromFoundryJson(character.foundryJson) || normalizeFoundryAvatar(character.stats?.avatar) || DEFAULT_NPC_PLACEHOLDER;
 
   return (
     <button

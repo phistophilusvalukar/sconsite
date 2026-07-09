@@ -11,9 +11,35 @@ export const abilityLabels: Array<{ key: AbilityKey; label: string }> = [
   { key: 'cha', label: 'CHA' }
 ];
 
+export const DEFAULT_NPC_PLACEHOLDER = '/npc-placeholder.png';
+
+const DEFAULT_FOUNDRY_CHARACTER_ICON = 'systems/pf2e/icons/default-icons/character.svg';
+
 export function getAvatarFromFoundryJson(jsonData: unknown) {
   const data = jsonData as { img?: string; system?: { details?: { biography?: { appearance?: string } } } } | null;
-  return data?.img || data?.system?.details?.biography?.appearance || '';
+  return normalizeFoundryAvatar(data?.img || data?.system?.details?.biography?.appearance || '');
+}
+
+export function normalizeFoundryAvatar(avatar?: string | null) {
+  if (!avatar) return '';
+  return isDefaultFoundryCharacterIcon(avatar) ? DEFAULT_NPC_PLACEHOLDER : avatar;
+}
+
+function isDefaultFoundryCharacterIcon(avatar: string) {
+  const normalized = normalizePathForComparison(avatar);
+  return normalized === DEFAULT_FOUNDRY_CHARACTER_ICON || normalized.endsWith(`/${DEFAULT_FOUNDRY_CHARACTER_ICON}`);
+}
+
+function normalizePathForComparison(path: string) {
+  const trimmed = path.trim().replace(/\\/g, '/');
+
+  try {
+    const decoded = decodeURI(trimmed);
+    const parsed = new URL(decoded, 'https://foundry.local/');
+    return parsed.pathname.replace(/^\/+/, '').toLowerCase();
+  } catch {
+    return trimmed.split(/[?#]/)[0].replace(/^\/+/, '').toLowerCase();
+  }
 }
 
 export function getAbilityScoresFromFoundryJson(jsonData: unknown): Record<AbilityKey, number | null> {
