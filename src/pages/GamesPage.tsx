@@ -1690,8 +1690,8 @@ const getGameRelationshipBadges = (game: GameListing, userId: string) => {
   return [];
 };
 
-const getRewardRows = (game: GameListing) =>
-  game.applications
+const getRewardRows = (game: GameListing) => {
+  const playerRows = game.applications
     .filter(application => application.status === 'Roster')
     .flatMap(application => {
       const character = application.characters[0];
@@ -1705,6 +1705,21 @@ const getRewardRows = (game: GameListing) =>
         reward: rewardTable[level]?.[game.rewardsBonus] || rewardTable[level]?.[0] || 0
       }];
     });
+
+  if (!game.rewardCharacter) return playerRows;
+
+  const gmLevel = Math.max(1, Math.min(20, game.rewardCharacter.level));
+  return [
+    ...playerRows,
+    {
+      applicationId: `gm-${game.gmId}`,
+      playerName: `GM ${game.gmName}`,
+      characterName: game.rewardCharacter.name,
+      level: gmLevel,
+      reward: rewardTable[gmLevel]?.[game.rewardsBonus] || rewardTable[gmLevel]?.[0] || 0
+    }
+  ];
+};
 
 const formatReward = (value: number) =>
   Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, '');
