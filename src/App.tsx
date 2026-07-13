@@ -15,6 +15,7 @@ const NewsPage = lazy(() => import('./pages/NewsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SchedulePage = lazy(() => import('./pages/SchedulePage'));
 const GamesPage = lazy(() => import('./pages/GamesPage'));
+const SkillChecksPage = lazy(() => import('./pages/SkillChecksPage'));
 
 function RouteFallback() {
   return (
@@ -48,6 +49,10 @@ function AppRoutes() {
         <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/schedule/:pollId" element={<SchedulePage />} />
         <Route path="/games" element={<GamesPage />} />
+        <Route path="/skill-checks" element={<SkillChecksPage />} />
+        <Route path="/skill-checks/challenges" element={<SkillChecksPage />} />
+        <Route path="/lock-challenge/:challengeId/player/:token" element={<SkillChecksPage />} />
+        <Route path="/lock-challenge/:challengeId/spectate/:token" element={<SkillChecksPage />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/news/:slug" element={<NewsPage />} />
         <Route path="/profile" element={<ProfilePage />} />

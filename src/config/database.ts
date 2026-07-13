@@ -41,4 +41,5 @@ export const DATABASE_TABLES = {
   NEWS_POSTS: 'news_posts',
   NEWS_COMMENTS: 'news_comments',
   NEWS_LIKES: 'news_likes',
+  LOCK_CHALLENGES: 'lock_challenges',
 };

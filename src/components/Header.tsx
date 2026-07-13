@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, Menu, X, Users, Scroll, Newspaper, User, ClipboardList, CalendarDays, Ticket } from 'lucide-react';
+import { Shield, Menu, X, Users, Scroll, Newspaper, User, ClipboardList, CalendarDays, Ticket, Wrench } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import GoogleLogin from './GoogleLogin';
 
-type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/news' | '/profile';
+type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/skill-checks' | '/news' | '/profile';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -14,6 +14,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/guilds': () => import('../pages/GuildsPage'),
   '/schedule': () => import('../pages/SchedulePage'),
   '/games': () => import('../pages/GamesPage'),
+  '/skill-checks': () => import('../pages/SkillChecksPage'),
   '/news': () => import('../pages/NewsPage'),
   '/profile': () => import('../pages/ProfilePage')
 };
@@ -41,6 +42,7 @@ const Header: React.FC = () => {
     { name: 'Guilds', href: '/guilds', icon: Users },
     { name: 'Schedule', href: '/schedule', icon: CalendarDays },
     { name: 'Games', href: '/games', icon: Ticket },
+    { name: 'GM Tools', href: '/skill-checks', icon: Wrench },
     { name: 'News', href: '/news', icon: Newspaper },
   ];
 
@@ -63,7 +65,9 @@ const Header: React.FC = () => {
               const Icon = item.icon;
               const isActive = item.href === '/schedule'
                 ? location.pathname.startsWith('/schedule')
-                : location.pathname === item.href;
+                : item.href === '/skill-checks'
+                  ? location.pathname.startsWith('/skill-checks') || location.pathname.startsWith('/lock-challenge')
+                  : location.pathname === item.href;
               return (
                 <Link
                   key={item.name}
@@ -122,7 +126,9 @@ const Header: React.FC = () => {
                 const Icon = item.icon;
                 const isActive = item.href === '/schedule'
                   ? location.pathname.startsWith('/schedule')
-                  : location.pathname === item.href;
+                  : item.href === '/skill-checks'
+                    ? location.pathname.startsWith('/skill-checks') || location.pathname.startsWith('/lock-challenge')
+                    : location.pathname === item.href;
                 return (
                   <Link
                     key={item.name}
