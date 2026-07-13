@@ -61,16 +61,25 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen bg-fantasy-gradient">
-          <Header />
-          <main className="flex-1">
-            <AppRoutes />
-          </main>
-          <Footer />
-        </div>
+        <AppLayout />
         <SpeedInsights />
       </Router>
     </AuthProvider>
+  );
+}
+
+function AppLayout() {
+  const location = useLocation();
+  const hideFooter = location.pathname === '/';
+
+  return (
+    <div className="flex min-h-screen flex-col bg-fantasy-gradient">
+      <Header />
+      <main className="flex-1">
+        <AppRoutes />
+      </main>
+      {!hideFooter && <Footer />}
+    </div>
   );
 }
 
