@@ -324,19 +324,9 @@ const NewsPage: React.FC = () => {
             <EmptyState title="No posts yet" body="Published news will appear here once the staff posts an announcement, event, update, or community story." />
           ) : null}
         </div>
-
-        <aside className="space-y-4">
-          <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-5">
-            <h2 className="mb-3 font-fantasy text-xl font-bold text-white">News Desk</h2>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <Stat label="Published" value={publishedPosts.length} />
-              <Stat label="Drafts" value={isAdmin ? draftPosts.length : 0} />
-              <Stat label="Comments" value={publishedPosts.reduce((sum, post) => sum + post.comments.length, 0)} />
-              <Stat label="Likes" value={publishedPosts.reduce((sum, post) => sum + post.likeCount, 0)} />
-            </div>
-          </div>
-
+          
           {isAdmin && draftPosts.length > 0 && (
+        <aside className="space-y-4">
             <div className="rounded-xl border border-amber-400/20 bg-amber-950/20 p-5">
               <h2 className="mb-3 font-fantasy text-xl font-bold text-white">Drafts</h2>
               <div className="space-y-3">
@@ -353,19 +343,8 @@ const NewsPage: React.FC = () => {
                 ))}
               </div>
             </div>
-          )}
-
-          <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-5">
-            <h2 className="mb-3 font-fantasy text-xl font-bold text-white">Common Tags</h2>
-            <div className="flex flex-wrap gap-2">
-              {commonTags.map(tag => (
-                <span key={tag} className="rounded bg-fantasy-800/70 px-2 py-1 text-xs font-bold text-yellow-300">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
         </aside>
+        )}
       </div>
     </NewsShell>
   );
