@@ -320,13 +320,15 @@ const PublicChallengePage: React.FC = () => {
     void loadChallenge();
   }, [loadChallenge]);
 
-  useSupabaseRealtime({
-    channelName: `lock-challenge-public-${challengeId}`,
-    tables: [DATABASE_TABLES.LOCK_CHALLENGES],
-    onChange: loadChallenge,
-    enabled: Boolean(challengeId),
-    debounceMs: 120
-  });
+  useEffect(() => {
+    if (!challengeId || !token) return;
+
+    const interval = window.setInterval(() => {
+      void loadChallenge();
+    }, 900);
+
+    return () => window.clearInterval(interval);
+  }, [challengeId, loadChallenge, token]);
 
   const updatePlayerState = async (state: LockChallengeStateUpdate) => {
     if (!challengeId || !token || !isPlayer) return;
