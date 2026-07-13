@@ -21,6 +21,9 @@ ALTER TABLE lock_challenges
   ADD CONSTRAINT lock_challenges_time_limit_seconds_check
   CHECK (time_limit_seconds IS NULL OR (time_limit_seconds >= 5 AND time_limit_seconds <= 3600));
 
+DROP FUNCTION IF EXISTS public.get_lock_challenge_for_player(uuid, text);
+DROP FUNCTION IF EXISTS public.get_lock_challenge_for_spectator(uuid, text);
+
 CREATE OR REPLACE FUNCTION public.get_lock_challenge_for_player(
   challenge_id uuid,
   access_token text
