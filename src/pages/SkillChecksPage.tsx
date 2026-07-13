@@ -17,6 +17,10 @@ const OPEN_ROTATION = 92;
 const RELEASE_SPEED = 44;
 const PICK_MAX_HEALTH = 100;
 const LOCK_CENTER = { x: 50, y: 50 };
+const NOISE_DRAIN_PER_SECOND = 8;
+const CLICK_NOISE = 3;
+const MOVE_NOISE_PER_DEGREE = 0.18;
+const BREAK_NOISE = 36;
 
 interface DifficultyProfile {
   label: LockDifficulty;
@@ -45,6 +49,13 @@ interface LockGameState {
   isTesting: boolean;
   isUnlocked: boolean;
   status: LockChallengeStatus;
+  noiseLevel: number;
+  wasAlerted: boolean;
+  timerEnabled: boolean;
+  timeLimitSeconds?: number;
+  timerStartedAt?: Date;
+  showNoiseMeter: boolean;
+  showTimer: boolean;
 }
 
 const randomSweetSpot = () =>
@@ -68,8 +79,26 @@ const challengeToGameState = (challenge: LockChallenge): LockGameState => ({
   lastResult: challenge.lastResult,
   isTesting: challenge.isTesting,
   isUnlocked: challenge.isUnlocked,
-  status: challenge.status
+  status: challenge.status,
+  noiseLevel: challenge.noiseLevel,
+  wasAlerted: challenge.wasAlerted,
+  timerEnabled: challenge.timerEnabled,
+  timeLimitSeconds: challenge.timeLimitSeconds,
+  timerStartedAt: challenge.timerStartedAt,
+  showNoiseMeter: challenge.showNoiseMeter,
+  showTimer: challenge.showTimer
 });
+
+const getRemainingSeconds = (state: {
+  timerEnabled: boolean;
+  timeLimitSeconds?: number;
+  timerStartedAt?: Date;
+}) => {
+  if (!state.timerEnabled || !state.timeLimitSeconds) return undefined;
+  if (!state.timerStartedAt) return state.timeLimitSeconds;
+  const elapsed = (Date.now() - state.timerStartedAt.getTime()) / 1000;
+  return Math.max(0, Math.ceil(state.timeLimitSeconds - elapsed));
+};
 
 const SkillChecksPage: React.FC = () => {
   const location = useLocation();
@@ -156,6 +185,10 @@ const ChallengeManagerPage: React.FC = () => {
   const service = useMemo(() => LockChallengeService.getInstance(), []);
   const [difficulty, setDifficulty] = useState<LockDifficulty>('Standard');
   const [pickCount, setPickCount] = useState(3);
+  const [timerEnabled, setTimerEnabled] = useState(false);
+  const [timeLimitSeconds, setTimeLimitSeconds] = useState(60);
+  const [showNoiseMeter, setShowNoiseMeter] = useState(true);
+  const [showTimer, setShowTimer] = useState(true);
   const [challenges, setChallenges] = useState<LockChallenge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -198,7 +231,11 @@ const ChallengeManagerPage: React.FC = () => {
       gmId: user.id,
       gmName: user.username,
       difficulty,
-      pickCount
+      pickCount,
+      timerEnabled,
+      timeLimitSeconds,
+      showNoiseMeter,
+      showTimer
     });
     if (response.success) {
       setMessage('Challenge created.');
@@ -241,6 +278,24 @@ const ChallengeManagerPage: React.FC = () => {
                 <span className="mb-2 block text-sm font-semibold text-gray-300">Lockpicks</span>
                 <input type="number" min={1} max={20} value={pickCount} onChange={event => setPickCount(clamp(Number(event.target.value), 1, 20))} className="w-full rounded-lg border border-fantasy-700/35 bg-fantasy-900/70 p-3 text-white" />
               </label>
+              <label className="flex items-center gap-3 rounded-lg border border-fantasy-700/35 bg-fantasy-900/45 p-3 text-sm font-semibold text-gray-200">
+                <input type="checkbox" checked={timerEnabled} onChange={event => setTimerEnabled(event.target.checked)} className="h-4 w-4" />
+                <span>Use timer</span>
+              </label>
+              {timerEnabled && (
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-gray-300">Seconds</span>
+                  <input type="number" min={5} max={3600} value={timeLimitSeconds} onChange={event => setTimeLimitSeconds(clamp(Number(event.target.value), 5, 3600))} className="w-full rounded-lg border border-fantasy-700/35 bg-fantasy-900/70 p-3 text-white" />
+                </label>
+              )}
+              <label className="flex items-center gap-3 rounded-lg border border-fantasy-700/35 bg-fantasy-900/45 p-3 text-sm font-semibold text-gray-200">
+                <input type="checkbox" checked={showNoiseMeter} onChange={event => setShowNoiseMeter(event.target.checked)} className="h-4 w-4" />
+                <span>Show noise meter</span>
+              </label>
+              <label className="flex items-center gap-3 rounded-lg border border-fantasy-700/35 bg-fantasy-900/45 p-3 text-sm font-semibold text-gray-200">
+                <input type="checkbox" checked={showTimer} onChange={event => setShowTimer(event.target.checked)} className="h-4 w-4" />
+                <span>Show timer</span>
+              </label>
               <button type="submit" disabled={isSaving} className="flex w-full items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-3 font-bold text-midnight-950 hover:bg-yellow-400 disabled:bg-gray-600 disabled:text-gray-300">
                 <LinkIcon className="h-4 w-4" />
                 <span>{isSaving ? 'Creating...' : 'Create URLs'}</span>
@@ -274,6 +329,8 @@ const ChallengeCard: React.FC<{ challenge: LockChallenge; onClose: () => void }>
           <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">{challenge.status}</p>
           <h3 className="font-fantasy text-2xl font-bold text-white">{challenge.difficulty} Lock</h3>
           <p className="mt-1 text-sm text-gray-400">{challenge.picksRemaining}/{challenge.pickCount} picks remaining</p>
+          <p className="mt-1 text-sm text-gray-400">Noise {Math.round(challenge.noiseLevel)}%{challenge.wasAlerted ? ' - alerted' : ''}</p>
+          {challenge.timerEnabled && <p className="mt-1 text-sm text-gray-400">Timer {challenge.timeLimitSeconds || 0}s</p>}
         </div>
         {challenge.status !== 'Closed' && (
           <button type="button" onClick={onClose} className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white hover:bg-red-600">
@@ -354,6 +411,15 @@ const PublicChallengePage: React.FC = () => {
             <p className="text-xs font-bold uppercase tracking-widest text-yellow-300">Lockpicks</p>
             <p className="text-2xl font-bold">{challenge.picksRemaining}</p>
           </div>
+          {challenge.showNoiseMeter && (
+            <MeterPanel label="Noise" value={challenge.noiseLevel} suffix={challenge.wasAlerted ? 'Alerted' : `${Math.round(challenge.noiseLevel)}%`} />
+          )}
+          {challenge.showTimer && challenge.timerEnabled && (
+            <div className="rounded-lg border border-fantasy-700/35 bg-midnight-950/65 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-yellow-300">Time</p>
+              <p className="text-2xl font-bold">{getRemainingSeconds(challenge) ?? '--'}s</p>
+            </div>
+          )}
           {!isPlayer && (
             <div className="inline-flex items-center gap-2 rounded-lg border border-fantasy-700/35 bg-midnight-950/65 px-4 py-3 text-sm font-bold text-gray-200">
               <Eye className="h-4 w-4 text-yellow-300" />
@@ -363,7 +429,8 @@ const PublicChallengePage: React.FC = () => {
         </div>
 
         {challenge.status === 'Success' && <OutcomeBanner tone="success" text="Success! The lock opens." />}
-        {challenge.status === 'Failure' && <OutcomeBanner tone="failure" text="Failure. All lockpicks are broken." />}
+        {challenge.status === 'Failure' && <OutcomeBanner tone="failure" text={challenge.lastResult || 'Failure. The challenge is over.'} />}
+        {challenge.wasAlerted && challenge.status === 'Active' && <OutcomeBanner tone="failure" text="Alerted! Something heard the attempt." />}
 
         <LockGame
           key={`${challenge.id}-${isPlayer ? 'player' : 'spectator'}`}
@@ -407,6 +474,9 @@ const LockGame: React.FC<{
   const [brokenPicks, setBrokenPicks] = useState(challengeState?.brokenPicks ?? 0);
   const [status, setStatus] = useState<LockChallengeStatus>(challengeState?.status ?? 'Active');
   const [lastResult, setLastResult] = useState(challengeState?.lastResult ?? 'Awaiting thievery check');
+  const [noiseLevel, setNoiseLevel] = useState(challengeState?.noiseLevel ?? 0);
+  const [wasAlerted, setWasAlerted] = useState(challengeState?.wasAlerted ?? false);
+  const [timerStartedAt, setTimerStartedAt] = useState<Date | undefined>(challengeState?.timerStartedAt);
 
   useEffect(() => {
     if (!challengeState || isInteractive) return;
@@ -419,7 +489,21 @@ const LockGame: React.FC<{
     setIsUnlocked(challengeState.isUnlocked);
     setStatus(challengeState.status);
     setLastResult(challengeState.lastResult);
+    setNoiseLevel(challengeState.noiseLevel);
+    setWasAlerted(challengeState.wasAlerted);
+    setTimerStartedAt(challengeState.timerStartedAt);
   }, [challengeState, isInteractive]);
+
+  const addNoise = useCallback((amount: number) => {
+    setNoiseLevel(current => {
+      const next = clamp(current + amount, 0, 100);
+      if (next >= 100) {
+        setWasAlerted(true);
+        setLastResult('Alerted by noise.');
+      }
+      return next;
+    });
+  }, []);
 
   const precision = useMemo(() => {
     const miss = Math.abs(pickAngle - sweetSpot);
@@ -435,6 +519,9 @@ const LockGame: React.FC<{
       p: nextState.picksRemaining,
       b: nextState.brokenPicks,
       s: nextState.status,
+      n: Math.round(nextState.noiseLevel),
+      w: nextState.wasAlerted,
+      ts: nextState.timerStartedAt?.toISOString() || '',
       t: nextState.isTesting,
       u: nextState.isUnlocked,
       l: nextState.lastResult
@@ -462,8 +549,13 @@ const LockGame: React.FC<{
     const centerX = bounds.left + bounds.width * (LOCK_CENTER.x / 100);
     const centerY = bounds.top + bounds.height * (LOCK_CENTER.y / 100);
     const nextAngle = Math.atan2(clientX - centerX, centerY - clientY) * (180 / Math.PI);
-    setPickAngle(clamp(nextAngle, LOCK_MIN_ANGLE, LOCK_MAX_ANGLE));
-  }, [isInteractive, isTesting, isUnlocked, status]);
+    const clampedAngle = clamp(nextAngle, LOCK_MIN_ANGLE, LOCK_MAX_ANGLE);
+    const moved = Math.abs(clampedAngle - pickAngle);
+    if (moved > 0.25) {
+      addNoise(moved * MOVE_NOISE_PER_DEGREE);
+    }
+    setPickAngle(clampedAngle);
+  }, [addNoise, isInteractive, isTesting, isUnlocked, pickAngle, status]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -472,6 +564,23 @@ const LockGame: React.FC<{
       const previous = previousFrameRef.current ?? timestamp;
       const elapsedSeconds = Math.min((timestamp - previous) / 1000, 0.05);
       previousFrameRef.current = timestamp;
+
+      setNoiseLevel(current => Math.max(0, current - NOISE_DRAIN_PER_SECOND * elapsedSeconds));
+
+      if (wasAlerted && status === 'Active') {
+        setStatus('Failure');
+        setIsTesting(false);
+        setLastResult('Alerted by noise.');
+      }
+
+      if (challengeState?.timerEnabled && challengeState.timeLimitSeconds && timerStartedAt && status === 'Active') {
+        const remaining = challengeState.timeLimitSeconds - ((Date.now() - timerStartedAt.getTime()) / 1000);
+        if (remaining <= 0) {
+          setStatus('Failure');
+          setIsTesting(false);
+          setLastResult('Time expired.');
+        }
+      }
 
       if (status !== 'Active') {
         setVibration(0);
@@ -519,6 +628,7 @@ const LockGame: React.FC<{
             const nextHealth = Math.max(0, currentHealth - damage);
 
             if (nextHealth <= 0) {
+              addNoise(BREAK_NOISE);
               setBrokenPicks(count => count + 1);
               setPicksRemaining(currentPicks => {
                 const nextPicks = Math.max(0, currentPicks - 1);
@@ -554,7 +664,7 @@ const LockGame: React.FC<{
     return () => {
       if (animationRef.current) window.cancelAnimationFrame(animationRef.current);
     };
-  }, [isTesting, isUnlocked, pickAngle, precision, profile, readOnly, status, sweetSpot]);
+  }, [addNoise, challengeState?.timeLimitSeconds, challengeState?.timerEnabled, isTesting, isUnlocked, pickAngle, precision, profile, readOnly, status, sweetSpot, timerStartedAt, wasAlerted]);
 
   useEffect(() => {
     if (mode !== 'player') return;
@@ -567,9 +677,12 @@ const LockGame: React.FC<{
       lastResult,
       isTesting,
       isUnlocked,
-      status
+      status,
+      noiseLevel,
+      wasAlerted,
+      timerStartedAt
     });
-  }, [brokenPicks, emitChallengeState, isTesting, isUnlocked, lastResult, mode, pickAngle, pickHealth, picksRemaining, rotation, status]);
+  }, [brokenPicks, emitChallengeState, isTesting, isUnlocked, lastResult, mode, noiseLevel, pickAngle, pickHealth, picksRemaining, rotation, status, timerStartedAt, wasAlerted]);
 
   const centerPositionStyle = {
     left: `${LOCK_CENTER.x}%`,
@@ -607,6 +720,10 @@ const LockGame: React.FC<{
           updatePickFromPointer(event.clientX, event.clientY);
           event.currentTarget.setPointerCapture(event.pointerId);
           if (isInteractive && !isUnlocked && status === 'Active' && picksRemaining > 0) {
+            addNoise(CLICK_NOISE);
+            if (challengeState?.timerEnabled && !timerStartedAt) {
+              setTimerStartedAt(new Date());
+            }
             setIsTesting(true);
             setLastResult('Testing lock');
           }
@@ -633,10 +750,12 @@ const LockGame: React.FC<{
         </div>
 
         {!hideStats && (
-          <div className="absolute bottom-4 left-4 right-4 grid gap-3 rounded-lg border border-fantasy-700/30 bg-midnight-950/75 p-4 backdrop-blur sm:grid-cols-4">
+          <div className="absolute bottom-4 left-4 right-4 grid gap-3 rounded-lg border border-fantasy-700/30 bg-midnight-950/75 p-4 backdrop-blur sm:grid-cols-4 lg:grid-cols-6">
             <Readout icon={<Gauge className="h-4 w-4" />} label="Turn" value={`${Math.round((rotation / OPEN_ROTATION) * 100)}%`} />
             <Readout icon={<Wrench className="h-4 w-4" />} label="Pick" value={formatAngle(pickAngle)} />
             <Readout label="Durability" value={`${Math.ceil(pickHealth)}%`} />
+            <Readout label="Noise" value={wasAlerted ? 'Alerted' : `${Math.round(noiseLevel)}%`} />
+            {challengeState?.timerEnabled && <Readout label="Time" value={`${getRemainingSeconds({ timerEnabled: true, timeLimitSeconds: challengeState.timeLimitSeconds, timerStartedAt }) ?? '--'}s`} />}
             <Readout icon={<CheckCircle2 className="h-4 w-4" />} label="State" value={isUnlocked ? 'Open' : lastResult} />
           </div>
         )}
@@ -681,6 +800,21 @@ const UrlRow: React.FC<{ label: string; url: string }> = ({ label, url }) => (
 const OutcomeBanner: React.FC<{ tone: 'success' | 'failure'; text: string }> = ({ tone, text }) => (
   <div className={`mb-5 rounded-lg border p-4 text-center text-xl font-bold ${tone === 'success' ? 'border-emerald-400/50 bg-emerald-950/50 text-emerald-100' : 'border-red-400/50 bg-red-950/50 text-red-100'}`}>
     {text}
+  </div>
+);
+
+const MeterPanel: React.FC<{ label: string; value: number; suffix: string }> = ({ label, value, suffix }) => (
+  <div className="min-w-[11rem] rounded-lg border border-fantasy-700/35 bg-midnight-950/65 px-4 py-3">
+    <div className="mb-2 flex items-center justify-between gap-3">
+      <p className="text-xs font-bold uppercase tracking-widest text-yellow-300">{label}</p>
+      <span className="text-sm font-bold text-white">{suffix}</span>
+    </div>
+    <div className="h-2 overflow-hidden rounded-full bg-midnight-900 ring-1 ring-fantasy-700/30">
+      <div
+        className={`h-full rounded-full ${value >= 100 ? 'bg-red-400' : value >= 70 ? 'bg-yellow-400' : 'bg-emerald-400'}`}
+        style={{ width: `${clamp(value, 0, 100)}%` }}
+      />
+    </div>
   </div>
 );
 

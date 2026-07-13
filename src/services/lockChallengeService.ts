@@ -22,6 +22,13 @@ export interface LockChallenge {
   lastResult: string;
   isTesting: boolean;
   isUnlocked: boolean;
+  noiseLevel: number;
+  wasAlerted: boolean;
+  timerEnabled: boolean;
+  timeLimitSeconds?: number;
+  timerStartedAt?: Date;
+  showNoiseMeter: boolean;
+  showTimer: boolean;
   completedAt?: Date;
   closedAt?: Date;
   createdAt: Date;
@@ -38,6 +45,9 @@ export interface LockChallengeStateUpdate {
   isTesting: boolean;
   isUnlocked: boolean;
   status: LockChallengeStatus;
+  noiseLevel: number;
+  wasAlerted: boolean;
+  timerStartedAt?: Date;
 }
 
 export interface ApiResponse<T> {
@@ -82,6 +92,10 @@ class LockChallengeService {
     gmName: string;
     difficulty: LockDifficulty;
     pickCount: number;
+    timerEnabled: boolean;
+    timeLimitSeconds?: number;
+    showNoiseMeter: boolean;
+    showTimer: boolean;
   }): Promise<ApiResponse<LockChallenge>> {
     try {
       const now = new Date().toISOString();
@@ -96,6 +110,10 @@ class LockChallengeService {
           spectator_token: createToken(),
           sweet_spot: randomSweetSpot(),
           picks_remaining: input.pickCount,
+          timer_enabled: input.timerEnabled,
+          time_limit_seconds: input.timerEnabled ? input.timeLimitSeconds : null,
+          show_noise_meter: input.showNoiseMeter,
+          show_timer: input.showTimer,
           created_at: now,
           updated_at: now
         })
@@ -149,7 +167,10 @@ class LockChallengeService {
           next_last_result: update.lastResult,
           next_is_testing: update.isTesting,
           next_is_unlocked: update.isUnlocked,
-          next_status: update.status
+          next_status: update.status,
+          next_noise_level: update.noiseLevel,
+          next_was_alerted: update.wasAlerted,
+          next_timer_started_at: update.timerStartedAt?.toISOString() || null
         });
 
       if (error) return { success: false, error: error.message };
@@ -221,6 +242,13 @@ class LockChallengeService {
       lastResult: String(dbChallenge.last_result || 'Awaiting thievery check'),
       isTesting: Boolean(dbChallenge.is_testing),
       isUnlocked: Boolean(dbChallenge.is_unlocked),
+      noiseLevel: Number(dbChallenge.noise_level || 0),
+      wasAlerted: Boolean(dbChallenge.was_alerted),
+      timerEnabled: Boolean(dbChallenge.timer_enabled),
+      timeLimitSeconds: dbChallenge.time_limit_seconds === null || dbChallenge.time_limit_seconds === undefined ? undefined : Number(dbChallenge.time_limit_seconds),
+      timerStartedAt: dbChallenge.timer_started_at ? new Date(String(dbChallenge.timer_started_at)) : undefined,
+      showNoiseMeter: dbChallenge.show_noise_meter === undefined ? true : Boolean(dbChallenge.show_noise_meter),
+      showTimer: dbChallenge.show_timer === undefined ? true : Boolean(dbChallenge.show_timer),
       completedAt: dbChallenge.completed_at ? new Date(String(dbChallenge.completed_at)) : undefined,
       closedAt: dbChallenge.closed_at ? new Date(String(dbChallenge.closed_at)) : undefined,
       createdAt: new Date(String(dbChallenge.created_at)),
