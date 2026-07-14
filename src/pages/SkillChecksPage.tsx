@@ -377,12 +377,20 @@ const PublicChallengePage: React.FC = () => {
     void loadChallenge();
   }, [loadChallenge]);
 
+  useSupabaseRealtime({
+    channelName: `lock-challenge-public-${challengeId || 'unknown'}`,
+    tables: [DATABASE_TABLES.LOCK_CHALLENGES],
+    onChange: loadChallenge,
+    enabled: Boolean(challengeId && token),
+    debounceMs: 80
+  });
+
   useEffect(() => {
     if (!challengeId || !token) return;
 
     const interval = window.setInterval(() => {
       void loadChallenge();
-    }, 900);
+    }, 400);
 
     return () => window.clearInterval(interval);
   }, [challengeId, loadChallenge, token]);
@@ -455,7 +463,7 @@ const LockGame: React.FC<{
   onChallengeStateChange?: (state: LockChallengeStateUpdate) => void | Promise<void>;
 }> = ({ mode, difficulty, sweetSpot: providedSweetSpot, pickCount, challengeState, onChallengeStateChange }) => {
   const isInteractive = mode === 'practice' || mode === 'player';
-  const hideStats = mode === 'player' || mode === 'spectator';
+  const hideStats = mode === 'player';
   const readOnly = mode === 'spectator' || mode === 'gm';
   const profile = useMemo(() => getProfile(difficulty), [difficulty]);
   const lockRef = useRef<HTMLDivElement | null>(null);
@@ -749,17 +757,17 @@ const LockGame: React.FC<{
           <div className="absolute right-0 top-1/2 h-8 w-16 -translate-y-1/2 rounded bg-gradient-to-r from-stone-600 to-stone-900 ring-1 ring-stone-300/30" />
         </div>
 
-        {!hideStats && (
-          <div className="absolute bottom-4 left-4 right-4 grid gap-3 rounded-lg border border-fantasy-700/30 bg-midnight-950/75 p-4 backdrop-blur sm:grid-cols-4 lg:grid-cols-6">
-            <Readout icon={<Gauge className="h-4 w-4" />} label="Turn" value={`${Math.round((rotation / OPEN_ROTATION) * 100)}%`} />
-            <Readout icon={<Wrench className="h-4 w-4" />} label="Pick" value={formatAngle(pickAngle)} />
-            <Readout label="Durability" value={`${Math.ceil(pickHealth)}%`} />
-            <Readout label="Noise" value={wasAlerted ? 'Alerted' : `${Math.round(noiseLevel)}%`} />
-            {challengeState?.timerEnabled && <Readout label="Time" value={`${getRemainingSeconds({ timerEnabled: true, timeLimitSeconds: challengeState.timeLimitSeconds, timerStartedAt }) ?? '--'}s`} />}
-            <Readout icon={<CheckCircle2 className="h-4 w-4" />} label="State" value={isUnlocked ? 'Open' : lastResult} />
-          </div>
-        )}
       </div>
+      {!hideStats && (
+        <div className="grid gap-3 border-t border-fantasy-700/35 bg-midnight-950/85 p-4 sm:grid-cols-2 lg:grid-cols-6">
+          <Readout icon={<Gauge className="h-4 w-4" />} label="Turn" value={`${Math.round((rotation / OPEN_ROTATION) * 100)}%`} />
+          <Readout icon={<Wrench className="h-4 w-4" />} label="Pick" value={formatAngle(pickAngle)} />
+          <Readout label="Durability" value={`${Math.ceil(pickHealth)}%`} />
+          <Readout label="Noise" value={wasAlerted ? 'Alerted' : `${Math.round(noiseLevel)}%`} />
+          {challengeState?.timerEnabled && <Readout label="Time" value={`${getRemainingSeconds({ timerEnabled: true, timeLimitSeconds: challengeState.timeLimitSeconds, timerStartedAt }) ?? '--'}s`} />}
+          <Readout icon={<CheckCircle2 className="h-4 w-4" />} label="State" value={isUnlocked ? 'Open' : lastResult} />
+        </div>
+      )}
     </section>
   );
 };
