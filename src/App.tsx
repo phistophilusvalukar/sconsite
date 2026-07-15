@@ -23,6 +23,7 @@ const SchedulePage = lazy(() => import('./pages/SchedulePage'));
 const GamesPage = lazy(() => import('./pages/GamesPage'));
 const SkillChecksPage = lazy(() => import('./pages/SkillChecksPage'));
 const EventPage = lazy(() => import('./pages/EventPage'));
+const ContractsOfficePage = lazy(() => import('./features/contracts/routes/ContractsOfficePage'));
 
 function RouteFallback() {
   return (
@@ -56,6 +57,8 @@ function AppRoutes() {
         <Route path="/schedule" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/schedule/:pollId" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/games" element={<PageGate pageKey="games"><GamesPage /></PageGate>} />
+        <Route path="/underhaul/contracts" element={<PageGate pageKey="underhaul-contracts"><ContractsOfficePage /></PageGate>} />
+        <Route path="/underhaul/contracts/:slug" element={<PageGate pageKey="underhaul-contracts"><ContractsOfficePage /></PageGate>} />
         <Route path="/event" element={<PageGate pageKey="event"><EventPage /></PageGate>} />
         <Route path="/skill-checks" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />
         <Route path="/skill-checks/challenges" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />

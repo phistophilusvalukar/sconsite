@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Ban,
   CalendarDays,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
+import { usePageVisibility } from '../context/usePageVisibility';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { Character, GameApplication, GameApplicationStatus, GameArchiveComment, GameListing, GameRewardsBonus, GameStatus, SchedulePoll } from '../types/database';
 import GameService, { getTierForLevel } from '../services/gameService';
@@ -82,6 +84,7 @@ interface ApplicationModalState {
 
 const GamesPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
+  const { isPageEnabled } = usePageVisibility();
   const gameService = useMemo(() => GameService.getInstance(), []);
   const scheduleService = useMemo(() => ScheduleService.getInstance(), []);
   const characterService = useMemo(() => CharacterService.getInstance(), []);
@@ -272,6 +275,7 @@ const GamesPage: React.FC = () => {
   const selectedPoll = polls.find(poll => poll._id === form.schedulePollId);
   const selectedPollParticipants = selectedPoll?.participants || [];
   const selectedTier = getTierForLevel(form.characterLevel);
+  const canSeeUnderHaulContracts = Boolean(user?.isAdmin || user?.profile?.isAdmin || isPageEnabled('underhaul-contracts'));
 
   const handlePollSelect = (pollId: string) => {
     const poll = polls.find(item => item._id === pollId);
@@ -581,6 +585,23 @@ const GamesPage: React.FC = () => {
             <span>Create Game</span>
           </button>
         </div>
+
+        {canSeeUnderHaulContracts && (
+          <section className="mb-8 rounded-lg border border-yellow-400/40 bg-gradient-to-br from-yellow-500/15 via-fantasy-900/35 to-midnight-900/70 p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">Playable office job</p>
+                <h2 className="font-fantasy text-2xl font-bold text-white">UnderHaul Contracts Office</h2>
+                <p className="mt-2 max-w-3xl text-gray-300">
+                Inspect fantasy dungeon-service case folders, compare documents, flag evidence, question visitors, and submit contract rulings.
+                </p>
+              </div>
+              <Link to="/underhaul/contracts" className="inline-flex items-center justify-center rounded-lg bg-yellow-500 px-4 py-3 font-bold text-midnight-900 hover:bg-yellow-400">
+                Open Contracts Office
+              </Link>
+            </div>
+          </section>
+        )}
 
         {isLoading ? (
           <div className="text-center py-16">

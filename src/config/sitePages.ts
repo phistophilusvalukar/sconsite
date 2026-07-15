@@ -1,5 +1,6 @@
 import type React from 'react';
 import {
+  Briefcase,
   CalendarDays,
   ClipboardList,
   Home,
@@ -21,6 +22,7 @@ export type SitePageKey =
   | 'guilds'
   | 'schedule'
   | 'games'
+  | 'underhaul-contracts'
   | 'event'
   | 'skill-checks'
   | 'news';
@@ -90,6 +92,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Game listings, applications, rosters, and archives.',
     icon: Ticket,
     routePrefixes: ['/games']
+  },
+  {
+    key: 'underhaul-contracts',
+    name: 'UnderHaul',
+    href: '/underhaul/contracts',
+    description: 'UnderHaul Contracts Office document-inspection game.',
+    icon: Briefcase,
+    routePrefixes: ['/underhaul/contracts']
   },
   {
     key: 'event',

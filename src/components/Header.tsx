@@ -6,7 +6,7 @@ import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
 import GoogleLogin from './GoogleLogin';
 
-type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
+type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/underhaul/contracts' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -16,6 +16,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/guilds': () => import('../pages/GuildsPage'),
   '/schedule': () => import('../pages/SchedulePage'),
   '/games': () => import('../pages/GamesPage'),
+  '/underhaul/contracts': () => import('../features/contracts/routes/ContractsOfficePage'),
   '/event': () => import('../pages/EventPage'),
   '/skill-checks': () => import('../pages/SkillChecksPage'),
   '/news': () => import('../pages/NewsPage'),

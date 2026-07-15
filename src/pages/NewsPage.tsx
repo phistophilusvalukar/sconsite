@@ -24,7 +24,6 @@ import NewsService, { SaveNewsPostInput } from '../services/newsService';
 import { NewsCategory, NewsPost, NewsPostStatus } from '../types/database';
 
 const categories: Array<'All' | NewsCategory> = ['All', 'Announcements', 'Events', 'Updates', 'Community'];
-const commonTags = ['Campaign', 'Major Event', 'All Guilds', 'Update', 'Features', 'Spotlight', 'Festival', 'Downtime', 'Recap'];
 
 const emptyEditor = {
   title: '',
@@ -55,7 +54,6 @@ const NewsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const selectedPost = slug ? posts.find(post => post.slug === slug) : undefined;
-  const publishedPosts = posts.filter(post => post.status === 'published');
   const draftPosts = posts.filter(post => post.status === 'draft');
   const visiblePosts = posts.filter(post => isAdmin || post.status === 'published');
   const allTags = useMemo(() => Array.from(new Set(visiblePosts.flatMap(post => post.tags))).sort(), [visiblePosts]);
@@ -658,13 +656,6 @@ const PostActions: React.FC<{ post: NewsPost; compact?: boolean; onToggleLike: (
       <MessageCircle className="h-5 w-5" />
       {post.comments.length}
     </Link>
-  </div>
-);
-
-const Stat: React.FC<{ label: string; value: number }> = ({ label, value }) => (
-  <div className="rounded-lg bg-fantasy-950/40 p-3">
-    <p className="text-2xl font-bold text-white">{value}</p>
-    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{label}</p>
   </div>
 );
 
