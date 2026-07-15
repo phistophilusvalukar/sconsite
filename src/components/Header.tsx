@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, Menu, X, Users, Scroll, Newspaper, User, ClipboardList, CalendarDays, Ticket, Wrench, Sun } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import { adminPage, sitePages } from '../config/sitePages';
 import { useAuth } from '../context/useAuth';
+import { usePageVisibility } from '../context/usePageVisibility';
 import GoogleLogin from './GoogleLogin';
 
-type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/event' | '/skill-checks' | '/news' | '/profile';
+type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -17,7 +19,8 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/event': () => import('../pages/EventPage'),
   '/skill-checks': () => import('../pages/SkillChecksPage'),
   '/news': () => import('../pages/NewsPage'),
-  '/profile': () => import('../pages/ProfilePage')
+  '/profile': () => import('../pages/ProfilePage'),
+  '/admin': () => import('../pages/AdminPage')
 };
 
 const preloadedRoutes = new Set<string>();
@@ -34,19 +37,12 @@ const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
+  const { isPageEnabled } = usePageVisibility();
+  const isAdmin = Boolean(user?.isAdmin || user?.profile?.isAdmin);
+  const BrandIcon = adminPage.icon;
 
-  const navigation = [
-    { name: 'Home', href: '/', icon: Shield },
-    { name: 'About', href: '/about', icon: Scroll },
-    { name: 'Characters', href: '/characters', icon: User },
-    { name: 'Registry', href: '/citizens', icon: ClipboardList },
-    { name: 'Guilds', href: '/guilds', icon: Users },
-    { name: 'Schedule', href: '/schedule', icon: CalendarDays },
-    { name: 'Games', href: '/games', icon: Ticket },
-    { name: 'Event', href: '/event', icon: Sun },
-    { name: 'GM Tools', href: '/skill-checks', icon: Wrench },
-    { name: 'News', href: '/news', icon: Newspaper },
-  ];
+  const navigation = sitePages.filter(page => isAdmin || isPageEnabled(page.key));
+  const fullNavigation = isAdmin ? [...navigation, adminPage] : navigation;
 
   return (
     <header className="bg-midnight-900/90 backdrop-blur-sm border-b border-fantasy-800/50 sticky top-0 z-50">
@@ -54,7 +50,7 @@ const Header: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <Shield className="w-8 h-8 text-yellow-400" />
+              <BrandIcon className="w-8 h-8 text-yellow-400" />
               <span className="font-fantasy text-xl font-bold text-white">
                 Westmarch
               </span>
@@ -63,13 +59,9 @@ const Header: React.FC = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
-            {navigation.map((item) => {
+            {fullNavigation.map((item) => {
               const Icon = item.icon;
-              const isActive = item.href === '/schedule'
-                ? location.pathname.startsWith('/schedule')
-                : item.href === '/skill-checks'
-                  ? location.pathname.startsWith('/skill-checks') || location.pathname.startsWith('/lock-challenge')
-                  : location.pathname === item.href;
+              const isActive = isNavigationActive(item.href, location.pathname);
               return (
                 <Link
                   key={item.name}
@@ -124,13 +116,9 @@ const Header: React.FC = () => {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 border-t border-fantasy-800/50">
-              {navigation.map((item) => {
+              {fullNavigation.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.href === '/schedule'
-                  ? location.pathname.startsWith('/schedule')
-                  : item.href === '/skill-checks'
-                    ? location.pathname.startsWith('/skill-checks') || location.pathname.startsWith('/lock-challenge')
-                    : location.pathname === item.href;
+                const isActive = isNavigationActive(item.href, location.pathname);
                 return (
                   <Link
                     key={item.name}
@@ -178,5 +166,11 @@ const Header: React.FC = () => {
     </header>
   );
 };
+
+function isNavigationActive(href: string, pathname: string) {
+  if (href === '/') return pathname === '/';
+  if (href === '/skill-checks') return pathname.startsWith('/skill-checks') || pathname.startsWith('/lock-challenge');
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export default Header;
