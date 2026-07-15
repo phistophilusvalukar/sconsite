@@ -4,6 +4,7 @@ import { CheckCircle2, Copy, Eye, Gauge, Link as LinkIcon, Lock, RotateCcw, Shuf
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
+import PerformanceMelodyGame from '../features/performance-game/PerformanceMelodyGame';
 import LockChallengeService, {
   LockChallenge,
   LockChallengeStateUpdate,
@@ -111,6 +112,10 @@ const SkillChecksPage: React.FC = () => {
     return <ChallengeManagerPage />;
   }
 
+  if (location.pathname === '/skill-checks/performance') {
+    return <PerformanceMelodyGame />;
+  }
+
   return <PracticePage />;
 };
 
@@ -144,6 +149,10 @@ const PracticePage: React.FC = () => {
           <Link to="/skill-checks/challenges" className="inline-flex items-center gap-2 rounded-lg bg-fantasy-800 px-4 py-2 text-sm font-bold text-gray-100 hover:bg-fantasy-700">
             <Users className="h-4 w-4" />
             <span>Challenges</span>
+          </Link>
+          <Link to="/skill-checks/performance" className="inline-flex items-center gap-2 rounded-lg bg-fantasy-800 px-4 py-2 text-sm font-bold text-gray-100 hover:bg-fantasy-700">
+            <Gauge className="h-4 w-4" />
+            <span>Performance</span>
           </Link>
           <button type="button" onClick={() => resetLock()} className="inline-flex items-center gap-2 rounded-lg bg-fantasy-800 px-4 py-2 text-sm font-bold text-gray-100 hover:bg-fantasy-700">
             <RotateCcw className="h-4 w-4" />

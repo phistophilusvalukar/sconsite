@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, Menu, X, Users, Scroll, Newspaper, User, ClipboardList, CalendarDays, Ticket, Wrench } from 'lucide-react';
+import { Shield, Menu, X, Users, Scroll, Newspaper, User, ClipboardList, CalendarDays, Ticket, Wrench, Sun } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import GoogleLogin from './GoogleLogin';
 
-type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/skill-checks' | '/news' | '/profile';
+type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/event' | '/skill-checks' | '/news' | '/profile';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -14,6 +14,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/guilds': () => import('../pages/GuildsPage'),
   '/schedule': () => import('../pages/SchedulePage'),
   '/games': () => import('../pages/GamesPage'),
+  '/event': () => import('../pages/EventPage'),
   '/skill-checks': () => import('../pages/SkillChecksPage'),
   '/news': () => import('../pages/NewsPage'),
   '/profile': () => import('../pages/ProfilePage')
@@ -42,6 +43,7 @@ const Header: React.FC = () => {
     { name: 'Guilds', href: '/guilds', icon: Users },
     { name: 'Schedule', href: '/schedule', icon: CalendarDays },
     { name: 'Games', href: '/games', icon: Ticket },
+    { name: 'Event', href: '/event', icon: Sun },
     { name: 'GM Tools', href: '/skill-checks', icon: Wrench },
     { name: 'News', href: '/news', icon: Newspaper },
   ];
@@ -60,7 +62,7 @@ const Header: React.FC = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-1">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = item.href === '/schedule'
@@ -75,7 +77,7 @@ const Header: React.FC = () => {
                   onFocus={() => preloadRoute(item.href as PreloadableRoute)}
                   onMouseEnter={() => preloadRoute(item.href as PreloadableRoute)}
                   onTouchStart={() => preloadRoute(item.href as PreloadableRoute)}
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex items-center space-x-1 px-2 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive
                       ? 'text-yellow-400 bg-fantasy-800/30'
                       : 'text-gray-300 hover:text-yellow-400 hover:bg-fantasy-800/20'
@@ -93,7 +95,7 @@ const Header: React.FC = () => {
                 onFocus={() => preloadRoute('/profile')}
                 onMouseEnter={() => preloadRoute('/profile')}
                 onTouchStart={() => preloadRoute('/profile')}
-                className="flex items-center space-x-2 px-4 py-2 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-md transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-md transition-colors"
               >
                 <img
                   src={user?.avatar || '/npc-placeholder.png'}

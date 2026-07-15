@@ -42,4 +42,6 @@ export const DATABASE_TABLES = {
   NEWS_COMMENTS: 'news_comments',
   NEWS_LIKES: 'news_likes',
   LOCK_CHALLENGES: 'lock_challenges',
+  PERFORMANCE_CHALLENGES: 'performance_challenges',
+  PERFORMANCE_ATTEMPTS: 'performance_attempts',
 };
