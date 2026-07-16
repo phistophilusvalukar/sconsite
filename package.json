@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "vitest run",
+    "simulate:foundry-access": "node scripts/simulate-foundry-access.mjs",
     "preview": "vite preview",
     "vercel-build": "npm run build"
   },

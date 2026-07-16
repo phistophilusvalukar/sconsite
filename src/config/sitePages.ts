@@ -7,6 +7,7 @@ import {
   Newspaper,
   Scroll,
   Shield,
+  Sparkles,
   Sun,
   Ticket,
   User,
@@ -23,6 +24,7 @@ export type SitePageKey =
   | 'schedule'
   | 'games'
   | 'underhaul-contracts'
+  | 'arcane-locks'
   | 'event'
   | 'skill-checks'
   | 'news';
@@ -100,6 +102,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'UnderHaul Contracts Office document-inspection game.',
     icon: Briefcase,
     routePrefixes: ['/underhaul/contracts']
+  },
+  {
+    key: 'arcane-locks',
+    name: 'Arcane Locks',
+    href: '/arcane-locks',
+    description: 'Collaborative magical lock puzzle sessions.',
+    icon: Sparkles,
+    routePrefixes: ['/arcane-locks']
   },
   {
     key: 'event',

@@ -1,0 +1,594 @@
+.arcane-page {
+  min-height: calc(100vh - 4rem);
+  background:
+    radial-gradient(circle at 28% 18%, rgba(220, 178, 78, 0.18), transparent 32rem),
+    linear-gradient(135deg, #16100f 0%, #1c2028 46%, #0d1117 100%);
+  color: #f6ead2;
+  padding: 24px;
+}
+
+.arcane-shell {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.arcane-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: end;
+  border-bottom: 1px solid rgba(229, 190, 112, 0.28);
+  padding-bottom: 18px;
+}
+
+.arcane-kicker {
+  color: #e6bd6a;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.arcane-header h1 {
+  font-family: Georgia, serif;
+  font-size: clamp(2rem, 4vw, 4rem);
+  margin: 0;
+}
+
+.arcane-status-cluster {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.arcane-pill,
+.arcane-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(229, 190, 112, 0.3);
+  background: rgba(10, 12, 18, 0.62);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.arcane-sync {
+  color: #cbbf9e;
+  font-size: 0.88rem;
+}
+
+.arcane-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 18px 0;
+}
+
+.arcane-tabs button,
+.board-toolbar button,
+.gm-buttons button,
+.access-row button,
+.session-card button,
+.create-session-panel button,
+.invite-row button,
+.invite-results button,
+.invoke-button {
+  border: 1px solid rgba(229, 190, 112, 0.35);
+  background: rgba(27, 29, 36, 0.9);
+  color: #f6ead2;
+  border-radius: 7px;
+  padding: 9px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+}
+
+.primary-action {
+  background: #6f3f19 !important;
+  border-color: #f0c86b !important;
+}
+
+.session-home-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.create-session-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.create-session-panel label {
+  display: grid;
+  gap: 6px;
+  color: #ddcda5;
+}
+
+.create-session-panel input,
+.invite-row input,
+.invite-row select,
+.access-row select {
+  min-height: 38px;
+  border: 1px solid rgba(229, 190, 112, 0.35);
+  background: rgba(15, 17, 22, 0.92);
+  color: #f6ead2;
+  border-radius: 7px;
+  padding: 8px 10px;
+}
+
+.session-card-list {
+  display: grid;
+  gap: 10px;
+}
+
+.session-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid rgba(229, 190, 112, 0.18);
+  background: rgba(25, 27, 35, 0.7);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.session-card h3 {
+  margin: 0;
+  font-family: Georgia, serif;
+}
+
+.session-card p {
+  margin: 4px 0 0;
+  color: #cbbf9e;
+}
+
+.session-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.arcane-tabs button.active {
+  background: rgba(142, 92, 33, 0.85);
+  border-color: #f0c86b;
+  box-shadow: 0 0 18px rgba(244, 194, 92, 0.18);
+}
+
+.arcane-tabs small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #d9cba5;
+}
+
+.arcane-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 18px;
+}
+
+.arcane-board-column,
+.arcane-side {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.below-play-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.inscription-panel,
+.arcane-panel,
+.lock-board-frame {
+  border: 1px solid rgba(229, 190, 112, 0.25);
+  background: rgba(10, 12, 18, 0.66);
+  border-radius: 8px;
+}
+
+.inscription-panel,
+.arcane-panel {
+  padding: 16px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-title h2,
+.arcane-panel h2,
+.arcane-panel h3 {
+  margin: 0 0 10px;
+  font-family: Georgia, serif;
+}
+
+.inscription-text {
+  color: #fff4d8;
+  font-size: 1.2rem;
+}
+
+.inscription-redacted {
+  color: #bbb1a3;
+  background: repeating-linear-gradient(90deg, rgba(214, 183, 114, 0.2), rgba(214, 183, 114, 0.2) 8px, transparent 8px, transparent 16px);
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.inscription-hint {
+  color: #c9d6bb;
+}
+
+.lock-board-frame {
+  padding: 14px;
+}
+
+.board-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.rotate-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rotate-controls div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #d9cba5;
+}
+
+.rotate-controls button {
+  width: 34px;
+  justify-content: center;
+  padding: 6px;
+}
+
+.invoke-button {
+  background: #6f3f19;
+  border-color: #f0c86b;
+}
+
+.arcane-svg {
+  width: 100%;
+  min-height: 560px;
+  max-height: 72vh;
+  touch-action: manipulation;
+}
+
+.ring-track {
+  fill: none;
+  stroke: rgba(229, 190, 112, 0.28);
+  stroke-width: 8;
+}
+
+.arcane-ring {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glyph-socket circle {
+  fill: rgba(20, 24, 31, 0.92);
+  stroke: rgba(239, 205, 127, 0.52);
+  stroke-width: 2;
+}
+
+.glyph-socket path {
+  fill: none;
+  stroke: #f5d47e;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: url(#arcane-glow);
+}
+
+.glyph-socket.selected circle {
+  fill: rgba(111, 63, 25, 0.95);
+  stroke: #fff0a6;
+}
+
+.glyph-socket.receiving circle {
+  stroke: #7fe6d2;
+}
+
+.glyph-socket.empty circle {
+  fill: rgba(12, 14, 18, 0.36);
+  stroke: rgba(239, 205, 127, 0.24);
+  stroke-dasharray: 3 5;
+}
+
+.glyph-hit {
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.glyph-hit:focus-visible {
+  outline: 3px solid #7fe6d2;
+  outline-offset: -4px;
+  border-radius: 999px;
+}
+
+.core-label {
+  fill: #d8c49b;
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.ward-marker .ward-halo {
+  fill: rgba(121, 62, 44, 0.34);
+  stroke: #ffd27a;
+  stroke-width: 4;
+  filter: url(#arcane-glow);
+}
+
+.ward-marker .ward-ring {
+  fill: none;
+  stroke: rgba(255, 244, 207, 0.82);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.core {
+  fill: rgba(19, 23, 30, 0.96);
+  stroke: #f0c86b;
+  stroke-width: 3;
+}
+
+.core.solved {
+  fill: rgba(54, 115, 91, 0.92);
+}
+
+.core.failed {
+  fill: rgba(96, 35, 35, 0.92);
+  stroke: #ef8d76;
+}
+
+.conduit {
+  fill: none;
+  stroke: rgba(201, 188, 154, 0.64);
+  stroke-width: 4;
+  stroke-dasharray: 10 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: arcane-flow 1.8s linear infinite;
+  transition: stroke 180ms ease, opacity 180ms ease, stroke-dasharray 180ms ease;
+  pointer-events: none;
+}
+
+.conduit-channel {
+  fill: none;
+  stroke: rgba(229, 190, 112, 0.12);
+  stroke-width: 9;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.conduit.unjudged {
+  stroke: rgba(224, 194, 128, 0.58);
+  opacity: 0.85;
+}
+
+.conduit.valid {
+  stroke: rgba(127, 230, 210, 0.72);
+}
+
+.conduit.invalid {
+  stroke: rgba(220, 79, 79, 0.74);
+}
+
+.conduit.blocked {
+  stroke-dasharray: 2 8;
+}
+
+.ok-text {
+  color: #aee5be;
+}
+
+.warn-text {
+  color: #f3b27e;
+}
+
+.presence-row,
+.access-row,
+.history-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid rgba(229, 190, 112, 0.14);
+  padding: 9px 0;
+}
+
+.access-row {
+  grid-template-columns: minmax(100px, 1fr) auto auto minmax(150px, auto) minmax(150px, auto) auto;
+}
+
+.invite-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.invite-results {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.invite-results button {
+  justify-content: flex-start;
+}
+
+.invite-results button.selected {
+  border-color: #7fe6d2;
+  background: rgba(29, 83, 81, 0.55);
+}
+
+.invite-results img {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+}
+
+.online-dot,
+.offline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #67e8a5;
+}
+
+.offline-dot {
+  background: #81786c;
+}
+
+.gm-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.integration-status {
+  display: flex;
+  gap: 8px;
+  color: #ddcda5;
+  margin: 12px 0;
+}
+
+.glyph-book {
+  position: sticky;
+  top: 84px;
+}
+
+.glyph-book-list {
+  display: grid;
+  gap: 10px;
+}
+
+.glyph-book-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border-top: 1px solid rgba(229, 190, 112, 0.14);
+  padding-top: 10px;
+}
+
+.glyph-book-row h3 {
+  margin: 0 0 3px;
+  font-family: Georgia, serif;
+  font-size: 1rem;
+}
+
+.glyph-book-row p {
+  margin: 0;
+  color: #cbbf9e;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.glyph-book-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+}
+
+.glyph-book-icon circle {
+  fill: rgba(20, 24, 31, 0.92);
+  stroke: rgba(239, 205, 127, 0.52);
+  stroke-width: 1.4;
+}
+
+.glyph-book-icon path {
+  fill: none;
+  stroke: #f5d47e;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.arcane-loading,
+.arcane-empty {
+  display: grid;
+  min-height: 50vh;
+  place-items: center;
+  color: #f6ead2;
+}
+
+@keyframes arcane-flow {
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conduit {
+    animation: none;
+  }
+
+  .arcane-ring {
+    transition: none;
+  }
+}
+
+@media (max-width: 1060px) {
+  .arcane-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .session-home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .arcane-side {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+
+  .glyph-book {
+    position: static;
+  }
+}
+
+@media (max-width: 720px) {
+  .arcane-page {
+    padding: 12px;
+  }
+
+  .arcane-header,
+  .board-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .arcane-status-cluster {
+    justify-items: start;
+  }
+
+  .arcane-svg {
+    min-height: 430px;
+  }
+
+  .session-card,
+  .access-row,
+  .invite-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
