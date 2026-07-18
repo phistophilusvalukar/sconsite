@@ -25,6 +25,7 @@ const SkillChecksPage = lazy(() => import('./pages/SkillChecksPage'));
 const EventPage = lazy(() => import('./pages/EventPage'));
 const ContractsOfficePage = lazy(() => import('./features/contracts/routes/ContractsOfficePage'));
 const ArcaneLocksPage = lazy(() => import('./features/arcane-locks/routes/ArcaneLocksPage'));
+const CardGamePage = lazy(() => import('./pages/CardGamePage'));
 
 function RouteFallback() {
   return (
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="/schedule" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/schedule/:pollId" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/games" element={<PageGate pageKey="games"><GamesPage /></PageGate>} />
+        <Route path="/arcana" element={<PageGate pageKey="arcana"><CardGamePage /></PageGate>} />
         <Route path="/underhaul/contracts" element={<PageGate pageKey="underhaul-contracts"><ContractsOfficePage /></PageGate>} />
         <Route path="/underhaul/contracts/:slug" element={<PageGate pageKey="underhaul-contracts"><ContractsOfficePage /></PageGate>} />
         <Route path="/arcane-locks" element={<PageGate pageKey="arcane-locks"><ArcaneLocksPage /></PageGate>} />

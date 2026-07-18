@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "assets": [],
+  "note": "The vertical slice uses CSS geometry and Web Audio procedural tones only. No third-party media is bundled."
+}

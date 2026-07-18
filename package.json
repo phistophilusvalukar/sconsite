@@ -3,11 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "vitest run",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run && npm run test --workspaces --if-present",
+    "validate:cards": "npm run validate -w @scon/cards",
     "simulate:foundry-access": "node scripts/simulate-foundry-access.mjs",
     "preview": "vite preview",
     "vercel-build": "npm run build"

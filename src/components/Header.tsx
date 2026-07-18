@@ -6,7 +6,7 @@ import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
 import GoogleLogin from './GoogleLogin';
 
-type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/underhaul/contracts' | '/arcane-locks' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
+type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -16,6 +16,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/guilds': () => import('../pages/GuildsPage'),
   '/schedule': () => import('../pages/SchedulePage'),
   '/games': () => import('../pages/GamesPage'),
+  '/arcana': () => import('../pages/CardGamePage'),
   '/underhaul/contracts': () => import('../features/contracts/routes/ContractsOfficePage'),
   '/arcane-locks': () => import('../features/arcane-locks/routes/ArcaneLocksPage'),
   '/event': () => import('../pages/EventPage'),

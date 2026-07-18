@@ -23,6 +23,7 @@ export type SitePageKey =
   | 'guilds'
   | 'schedule'
   | 'games'
+  | 'arcana'
   | 'underhaul-contracts'
   | 'arcane-locks'
   | 'event'
@@ -94,6 +95,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Game listings, applications, rosters, and archives.',
     icon: Ticket,
     routePrefixes: ['/games']
+  },
+  {
+    key: 'arcana',
+    name: 'Arcana',
+    href: '/arcana',
+    description: 'Arcana Frontiers fantasy trading card game.',
+    icon: Sparkles,
+    routePrefixes: ['/arcana']
   },
   {
     key: 'underhaul-contracts',
