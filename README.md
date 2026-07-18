@@ -44,6 +44,19 @@ https://your-vercel-domain.vercel.app/auth/callback
 npm run dev
 ```
 
+## Arcana Frontiers
+
+The card-game route is available at `/arcana`. It includes a deterministic local match against an AI opponent using the shared rules engine.
+
+Run the authoritative multiplayer service locally in a second PowerShell terminal:
+
+```powershell
+$env:MATCH_SERVER_LOCAL_AUTH='true'
+npm --prefix apps/match-server run dev
+```
+
+The match server listens on `http://localhost:2567`; its health check is `/healthz`. Local authentication must never be enabled in production. See `apps/match-server/README.md` for Supabase JWT configuration and current persistence limitations.
+
 ## Database Migrations
 
 Migrations live in `supabase/migrations`. The project now uses Supabase Auth user IDs as the application user key via `users.auth_user_id`.

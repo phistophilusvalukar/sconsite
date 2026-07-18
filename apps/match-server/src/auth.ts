@@ -9,3 +9,23 @@ export class FunctionJwtVerifier implements JwtVerifier {
     return this.verifyFn(token);
   }
 }
+
+export class LocalJwtVerifier implements JwtVerifier {
+  async verify(token: string): Promise<VerifiedIdentity> {
+    if (!token.startsWith("local:")) throw new Error("Local token must use local:<player-id>");
+    const userId=token.slice(6);
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(userId)) throw new Error("Invalid local player id");
+    return {userId,expiresAt:Math.floor(Date.now()/1000)+3600,claims:{mode:"local"}};
+  }
+}
+
+export async function createSupabaseJwtVerifier(url: string, audience = "authenticated"): Promise<JwtVerifier> {
+  const { createRemoteJWKSet, jwtVerify } = await import("jose");
+  const issuer=`${url.replace(/\/$/,"")}/auth/v1`;
+  const jwks=createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+  return new FunctionJwtVerifier(async token => {
+    const {payload}=await jwtVerify(token,jwks,{issuer,audience});
+    if (!payload.sub || !payload.exp) throw new Error("JWT is missing subject or expiry");
+    return {userId:payload.sub,expiresAt:payload.exp,claims:{...payload}};
+  });
+}

@@ -1,5 +1,13 @@
 # Arcana Frontiers implementation report
 
+## 2026-07-18 playable-milestone update
+
+`/arcana` is now driven by `packages/rules` rather than page-local counters. A player can select either validated prototype deck, start a seeded match against a deterministic AI, commit one hand card per turn as a Font, channel mana, summon creatures through the priority stack, advance turns, ready creatures, attack, deal damage, inspect authoritative events, and copy the command/event replay log. Browser verification completed the Font → mana → summon → next-turn attack flow and reduced the rival from 20 to 18 life.
+
+The multiplayer service is now a runnable Colyseus WebSocket server with `/healthz`, two-player room lifecycle, command transport, player-private snapshots, reconnect handling, local-development auth, and a Supabase JWKS verifier. Its real two-client integration test passes. The web route is not yet connected to this transport; local AI play and server multiplayer are separately runnable foundations.
+
+New `packages/protocol` contracts validate commands, matchmaking, reconnect, snapshots, events, acknowledgements and errors, including hidden-information projection. New `packages/ui` supplies accessible reusable cards, mana/deck displays, modal, match inspector/log and state components.
+
 ## Outcome
 
 This run preserves the existing Westmarch site and adds a runnable card-game foundation and local presentation slice at `/arcana`. The headless rules engine is fully deterministic and covers Fonts/mana, creatures/combat, spells/priority, Auras, equipment salvage/recovery, consumables, victory, command/event logs, and replay. Card content is declarative and validated. The server package supplies an authoritative room adapter with hidden-information projection, sequencing/idempotency, rate/payload limits, reconnect, JWT and persistence seams. A Supabase migration supplies the persistent schema and RLS.

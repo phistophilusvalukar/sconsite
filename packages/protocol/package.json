@@ -1,0 +1,10 @@
+{
+  "name": "@scon/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "dependencies": { "@scon/rules": "*", "zod": "^3.23.8" },
+  "devDependencies": { "typescript": "^5.5.3", "vitest": "^2.1.8" }
+}
