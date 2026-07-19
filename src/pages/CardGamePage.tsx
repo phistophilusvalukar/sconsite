@@ -44,9 +44,9 @@ const audioSettings = {
 
 function GameCard({ card, compact = false }: { card: CardDefinition; compact?: boolean }) {
   return (
-    <div className={`overflow-hidden rounded-xl border border-white/10 bg-slate-900 ${compact ? 'w-32' : ''}`}>
-      <div className={`${compact ? 'h-16' : 'aspect-[16/8]'} flex items-center justify-center bg-gradient-to-br from-violet-900 to-cyan-950`}>
-        <Sparkles className="text-cyan-200/70" size={compact ? 24 : 42} />
+    <div className={`overflow-hidden rounded-xl border border-white/10 bg-slate-950/95 shadow-xl shadow-black/30 ${compact ? 'w-32' : ''}`}>
+      <div className={`${compact ? 'h-32' : 'aspect-[2/3]'} overflow-hidden bg-slate-900`}>
+        <img src={compact ? card.art.thumbnail : card.art.full} alt={`Artwork for ${card.name}`} loading="lazy" className="h-full w-full object-cover transition duration-300 hover:scale-105" />
       </div>
       <div className={compact ? 'p-2' : 'p-5'}>
         <div className="flex gap-2">
@@ -120,13 +120,15 @@ function BattlefieldCard({
     <div className={motionClass}>
       <button
         onClick={onInspect}
-        className={`relative w-36 rounded-xl border p-3 text-left transition hover:-translate-y-1 hover:border-amber-300 focus:-translate-y-1 ${enemy ? 'border-rose-300/20 bg-rose-950/30' : 'border-cyan-300/20 bg-cyan-950/30'} ${instance.exhausted ? 'rotate-3 opacity-60' : ''}`}
+        className={`group relative w-36 overflow-hidden rounded-xl border p-0 text-left shadow-xl shadow-black/40 transition hover:-translate-y-1 hover:border-amber-300 focus:-translate-y-1 ${enemy ? 'border-rose-300/35 bg-rose-950/80' : 'border-cyan-300/35 bg-cyan-950/80'} ${instance.exhausted ? 'rotate-3 opacity-60' : ''}`}
         aria-label={`Inspect ${definition.name}`}
       >
-        <span className="block text-xs font-bold">{definition.name}</span>
-        <span className="mt-1 block text-[10px] uppercase text-slate-400">{definition.type}</span>
-        {effectiveStats && <span className="mt-5 block font-black">{effectiveStats.power} / {Math.max(0, effectiveStats.health - wounded)}</span>}
-        {instance.attachedTo && <span className="mt-2 block text-[10px] text-amber-200">Attached</span>}
+        <img src={definition.art.thumbnail} alt="" loading="lazy" className="h-28 w-full object-cover transition duration-300 group-hover:scale-105" />
+        <span className="block border-t border-white/10 bg-slate-950/90 p-2 backdrop-blur-sm">
+          <span className="block text-xs font-bold">{definition.name}</span>
+          <span className="mt-1 flex items-center justify-between gap-2 text-[10px] uppercase text-slate-400"><span>{definition.type}</span>{effectiveStats && <strong className="text-sm text-amber-200">{effectiveStats.power}/{Math.max(0, effectiveStats.health - wounded)}</strong>}</span>
+          {instance.attachedTo && <span className="mt-1 block text-[10px] text-amber-200">Attached</span>}
+        </span>
       </button>
       {onAttack && <button onClick={onAttack} className="mt-1 w-full rounded-md bg-amber-300 px-2 py-1 text-xs font-bold text-slate-950">Attack rival</button>}
     </div>
@@ -322,8 +324,8 @@ export default function CardGamePage() {
             <button onClick={() => setView('home')} className="flex items-center gap-1 text-cyan-300"><ChevronLeft size={16}/> Leave match</button>
             <div className="flex gap-2"><span className="rounded-full border border-emerald-300/30 px-3 py-1 text-xs text-emerald-300">Rules engine · seed {match.state.seed}</span><button onClick={copyReplay} className="flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-xs"><Copy size={13}/>{copied ? 'Copied' : 'Replay log'}</button></div>
           </div>
-          <div className={`grid min-h-[720px] overflow-hidden rounded-3xl border border-cyan-300/15 bg-[radial-gradient(circle_at_center,_#14213d,_#070b16_70%)] xl:grid-cols-[1fr_300px] ${reducedMotion ? '' : 'transition-all'}`}>
-            <section className="flex min-w-0 flex-col justify-between gap-5 p-4 lg:p-6">
+          <div className={`grid min-h-[720px] overflow-hidden rounded-3xl border border-cyan-300/25 bg-cover bg-center shadow-2xl shadow-black/60 xl:grid-cols-[1fr_300px] ${reducedMotion ? '' : 'transition-all'}`} style={{ backgroundImage: "linear-gradient(180deg, rgba(3,7,18,.55), rgba(3,7,18,.76)), url('/assets/arcana/battlefield-v1.jpg')" }}>
+            <section className="flex min-w-0 flex-col justify-between gap-5 bg-slate-950/20 p-4 backdrop-blur-[1px] lg:p-6">
               <PlayerHeader match={match} playerId={AI_ID} enemy animationClass={animationClass(AI_ID)} />
               <Zone title="Rival field">{match.state.players[AI_ID]!.zones.creatureField.map((id) => <BattlefieldCard key={id} id={id} match={match} enemy onInspect={() => showCard(contentCard(id, match.state))} motionClass={animationClass(id)} />)}</Zone>
               {match.state.players[AI_ID]!.zones.supportField.length > 0 && <Zone title="Rival Auras & support">{match.state.players[AI_ID]!.zones.supportField.map((id) => <BattlefieldCard key={id} id={id} match={match} enemy onInspect={() => showCard(contentCard(id, match.state))} motionClass={animationClass(id)} />)}</Zone>}
@@ -383,8 +385,27 @@ function TargetChooser({ card, choices, choose, close }: { card: CardDefinition;
 }
 
 function CardInspector({ card, close }: { card: CardDefinition; close: () => void }) {
-  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onMouseDown={close}><section role="dialog" aria-modal="true" aria-labelledby="card-inspector-title" onMouseDown={(event) => event.stopPropagation()} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-cyan-300/25 bg-slate-950 shadow-2xl shadow-cyan-950/70"><div className="grid md:grid-cols-[.8fr_1.2fr]"><div className="flex min-h-72 items-center justify-center bg-gradient-to-br from-violet-900 via-cyan-950 to-slate-950 p-8"><Sparkles size={96} className="text-cyan-200/60"/><span className="sr-only">Placeholder artwork for {card.name}</span></div><div className="relative p-7"><button autoFocus onClick={close} className="absolute right-4 top-4 rounded-full border border-white/10 p-2" aria-label="Close card details"><X/></button><p className="text-xs uppercase tracking-[.25em] text-amber-300">{card.setCode} · <GlossaryText>{card.type}</GlossaryText> · version {card.version}</p><h2 id="card-inspector-title" className="mt-3 pr-12 text-3xl font-black">{card.name}</h2><div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-cyan-300 px-3 py-1 text-sm font-bold text-slate-950">Cost {totalCost(card)}</span>{card.traditions.map((tradition) => <span key={tradition} className="rounded-full border border-violet-300/30 px-3 py-1 text-sm capitalize">{tradition}</span>)}{card.type === 'creature' && <span className="rounded-full border border-amber-300/30 px-3 py-1 text-sm font-bold"><GlossaryText>{`${card.power} power · ${card.health} health`}</GlossaryText></span>}{card.keywords.map((keyword) => <KeywordPill key={keyword} keyword={keyword}/>)}</div><div className="mt-7 rounded-xl border border-white/10 bg-white/5 p-5"><h3 className="text-xs font-bold uppercase tracking-widest text-cyan-300">Rules</h3><p className="mt-3 text-lg leading-relaxed text-slate-100"><GlossaryText>{card.rulesText}</GlossaryText></p></div>{card.traits.length > 0 && <p className="mt-5 text-sm"><strong>Traits:</strong> {card.traits.join(', ')}</p>}{card.flavorText && <blockquote className="mt-5 border-l border-amber-300/30 pl-4 italic text-slate-400">{card.flavorText}</blockquote>}<div className="mt-7 border-t border-white/10 pt-4 text-xs text-slate-500"><p>{card.sourceMetadata.attribution}</p><p>License: {card.sourceMetadata.license}</p><p>Artwork: placeholder</p></div></div></div></section></div>;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onMouseDown={close}>
+      <section role="dialog" aria-modal="true" aria-labelledby="card-inspector-title" onMouseDown={(event) => event.stopPropagation()} className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-cyan-300/25 bg-slate-950 shadow-2xl shadow-cyan-950/70">
+        <div className="grid md:grid-cols-[.9fr_1.1fr]">
+          <div className="min-h-96 overflow-hidden bg-slate-900"><img src={card.art.full} alt={`Artwork for ${card.name}`} className="h-full max-h-[82vh] w-full object-cover" /></div>
+          <div className="relative p-7">
+            <button autoFocus onClick={close} className="absolute right-4 top-4 rounded-full border border-white/10 p-2" aria-label="Close card details"><X/></button>
+            <p className="text-xs uppercase tracking-[.25em] text-amber-300">{card.setCode} · <GlossaryText>{card.type}</GlossaryText> · version {card.version}</p>
+            <h2 id="card-inspector-title" className="mt-3 pr-12 text-3xl font-black">{card.name}</h2>
+            <div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-cyan-300 px-3 py-1 text-sm font-bold text-slate-950">Cost {totalCost(card)}</span>{card.traditions.map((tradition) => <span key={tradition} className="rounded-full border border-violet-300/30 px-3 py-1 text-sm capitalize">{tradition}</span>)}{card.type === 'creature' && <span className="rounded-full border border-amber-300/30 px-3 py-1 text-sm font-bold"><GlossaryText>{`${card.power} power · ${card.health} health`}</GlossaryText></span>}{card.keywords.map((keyword) => <KeywordPill key={keyword} keyword={keyword}/>)}</div>
+            <div className="mt-7 rounded-xl border border-white/10 bg-white/5 p-5"><h3 className="text-xs font-bold uppercase tracking-widest text-cyan-300">Rules</h3><p className="mt-3 text-lg leading-relaxed text-slate-100"><GlossaryText>{card.rulesText}</GlossaryText></p></div>
+            {card.traits.length > 0 && <p className="mt-5 text-sm"><strong>Traits:</strong> {card.traits.join(', ')}</p>}
+            {card.flavorText && <blockquote className="mt-5 border-l border-amber-300/30 pl-4 italic text-slate-400">{card.flavorText}</blockquote>}
+            <div className="mt-7 border-t border-white/10 pt-4 text-xs text-slate-500"><p>{card.sourceMetadata.attribution}</p><p>Content license: {card.sourceMetadata.license}</p><p>{card.art.license.attribution}</p></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 }
+
 
 function motionFromEvent(event: GameEvent): MotionCue {
   if (event.type === 'CREATURE_SUMMONED') return { kind: 'summon', id: String(event.instanceId) };
@@ -394,5 +415,5 @@ function motionFromEvent(event: GameEvent): MotionCue {
 }
 
 function Zone({ title, children }: { title: string; children: ReactNode }) {
-  return <div className="min-h-32 rounded-2xl border border-white/5 bg-black/10 p-3"><p className="mb-2 text-xs uppercase tracking-widest text-slate-500">{title}</p><div className="flex min-h-20 items-center justify-center gap-3 overflow-x-auto">{children || <span className="text-sm text-slate-600">Empty</span>}</div></div>;
+  return <div className="min-h-32 rounded-2xl border border-white/15 bg-slate-950/45 p-3 shadow-inner shadow-black/40 backdrop-blur-sm"><p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-300/80">{title}</p><div className="flex min-h-20 items-center justify-center gap-3 overflow-x-auto">{children || <span className="text-sm text-slate-500">Empty</span>}</div></div>;
 }

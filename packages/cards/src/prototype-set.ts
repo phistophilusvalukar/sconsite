@@ -2,7 +2,13 @@ import { cardDefinitionSchema, type CardDefinition, type ManaTradition } from ".
 
 const SET = "FND1";
 const sourceMetadata = { origin: "original" as const, sourceName: "Scon prototype set", license: "CC0-1.0", attribution: "Original prototype content by the Scon project" };
-const art = (id: string) => ({ full: `/assets/cards/placeholders/${id}.svg`, thumbnail: `/assets/cards/placeholders/${id}-thumb.svg`, loadingPlaceholder: "/assets/cards/placeholders/loading.svg", artist: "Unassigned placeholder", license: { license: "CC0-1.0", attribution: "Project-generated placeholder" } });
+const art = (id: string) => ({
+  full: `/assets/cards/generated/${id}.jpg`,
+  thumbnail: `/assets/cards/generated/${id}.jpg`,
+  loadingPlaceholder: "/assets/cards/placeholders/loading.svg",
+  artist: "OpenAI image generation",
+  license: { license: "Project-generated asset", attribution: "Generated for Arcana Frontiers with OpenAI image tools, July 2026" },
+});
 const cost = (generic = 0, typed?: ManaTradition) => ({ generic, ...(typed && typed !== "generic" ? { [typed]: 1 } : {}) });
 const base = (id: string, name: string, traditions: ManaTradition[], rulesText: string) => ({ schemaVersion: 1 as const, id, version: 1, setCode: SET, name, traditions, cost: cost(), traits: [], keywords: [], rulesText, art: art(id), audioProfile: "card.prototype", animationProfile: "card.prototype", targets: [], effects: [], abilities: [], sourceMetadata });
 const card = (value: unknown): CardDefinition => cardDefinitionSchema.parse(value);
