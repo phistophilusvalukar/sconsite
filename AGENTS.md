@@ -1,10 +1,11 @@
 # Project Rules
 
 ## Architecture
-- The match server is authoritative; clients submit commands and never mutate canonical state.
+- Protected Supabase server-side command processing is authoritative; clients submit commands and never mutate canonical state.
 - `packages/rules` is deterministic and platform independent.
 - The renderer displays resolved events and server snapshots. React owns site UI/overlays; Phaser owns the battlefield.
-- Supabase stores persistent data. Colyseus owns live rooms and synchronization.
+- Supabase stores persistent data and Supabase Realtime delivers live match snapshots and events.
+- Authoritative command processing runs behind protected Supabase server-side APIs; clients never publish canonical state.
 
 ## Determinism and hidden information
 - Inject seeded randomness; never call `Math.random` in rules.

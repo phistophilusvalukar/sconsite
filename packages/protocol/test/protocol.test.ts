@@ -17,6 +17,11 @@ describe("strict network inputs", () => {
     expect(() => clientCommandSchema.parse({ ...valid, command: { type: "PLAY_CARD", cardId: "c1", targets: Array(17).fill("x") } })).toThrow();
   });
   it("binds identity from authentication, never client input", () => expect(authorizeCommand({ type: "END_TURN" }, "alice")).toEqual({ type: "END_TURN", playerId: "alice" }));
+  it("accepts BLOCK without accepting a spoofed player identity", () => {
+    const parsed = clientCommandSchema.parse({ ...valid, command: { type: "BLOCK", blockerId: "creature_1" } });
+    expect(authorizeCommand(parsed.command, "bob")).toEqual({ type: "BLOCK", blockerId: "creature_1", playerId: "bob" });
+    expect(clientCommandSchema.safeParse({ ...valid, command: { type: "BLOCK", blockerId: "creature_1", playerId: "alice" } }).success).toBe(false);
+  });
   it("validates matchmaking, reconnect, and errors strictly", () => {
     expect(matchmakingRequestSchema.safeParse({ protocolVersion: 1, type: "MATCHMAKE", deckId: "deck_123", deckVersion: 1 }).success).toBe(true);
     expect(reconnectRequestSchema.safeParse({ protocolVersion: 1, type: "RECONNECT", matchId: "match_123", lastEventIndex: -1, lastSequence: 0, reconnectToken: "0123456789abcdef" }).success).toBe(true);
@@ -51,3 +56,15 @@ describe("hidden-information projection", () => {
 });
 
 it("rejects malformed event shapes", () => expect(gameEventSchema.safeParse({ schemaVersion: 1, eventIndex: 0, type: "DAMAGE_DEALT", targetId: "p", amount: -1 }).success).toBe(false));
+
+it("validates new combat, Font, and Aura events strictly", () => {
+  const events = [
+    { schemaVersion: 1, eventIndex: 0, type: "FONT_EXHAUSTED", playerId: "p1", fontId: "f1" },
+    { schemaVersion: 1, eventIndex: 1, type: "BLOCK_DECLARED", attackerId: "a1", blockerId: "b1" },
+    { schemaVersion: 1, eventIndex: 2, type: "COMBAT_DAMAGE_CLEARED", attackerId: "a1", blockerId: "b1" },
+    { schemaVersion: 1, eventIndex: 3, type: "AURA_TRIGGERED", auraId: "aura1", trigger: "firstEnemyAttacker" },
+    { schemaVersion: 1, eventIndex: 4, type: "SPELL_SURCHARGED", playerId: "p1", amount: 1 },
+  ];
+  for (const event of events) expect(gameEventSchema.safeParse(event).success).toBe(true);
+  expect(gameEventSchema.safeParse({ ...events[1], blockerId: "" }).success).toBe(false);
+});

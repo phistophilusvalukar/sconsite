@@ -46,16 +46,7 @@ npm run dev
 
 ## Arcana Frontiers
 
-The card-game route is available at `/arcana`. It includes a deterministic local match against an AI opponent using the shared rules engine.
-
-Run the authoritative multiplayer service locally in a second PowerShell terminal:
-
-```powershell
-$env:MATCH_SERVER_LOCAL_AUTH='true'
-npm --prefix apps/match-server run dev
-```
-
-The match server listens on `http://localhost:2567`; its health check is `/healthz`. Local authentication must never be enabled in production. See `apps/match-server/README.md` for Supabase JWT configuration and current persistence limitations.
+The card-game route is available at `/arcana`. It includes a deterministic local match against an AI opponent using the shared rules engine. Online matches submit authenticated commands through the `match-command` Supabase Edge Function and receive player-private snapshots and events through Supabase Realtime. See `packages/database/README.md` for the transport contract and apply the Supabase migrations before connecting online clients.
 
 ## Database Migrations
 

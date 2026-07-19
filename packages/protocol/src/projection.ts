@@ -41,7 +41,10 @@ export function projectPublicState(state: GameState): PublicSnapshot {
     stack: state.stack.map((entry) => ({
       id: entry.id, kind: entry.kind, controller: entry.controller, sourceId: entry.sourceId,
       ...(entry.targetId ? { targetId: entry.targetId } : {}), countered: entry.countered,
+      ...(entry.blockerId ? { blockerId: entry.blockerId } : {}),
     })),
+    spellsCastThisTurn: state.spellsCastThisTurn,
+    auraTriggersThisTurn: state.auraTriggersThisTurn,
     ...(state.result ? { result: state.result } : {}),
   };
   return publicSnapshotSchema.parse(snapshot);

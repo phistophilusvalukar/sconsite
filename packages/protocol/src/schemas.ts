@@ -15,6 +15,7 @@ export const gameCommandPayloadSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("COMMIT_AS_FONT"), cardId: id }).strict(),
   z.object({ type: z.literal("ACTIVATE_FONT"), fontId: id, manaType: manaTraditionSchema }).strict(),
   z.object({ type: z.literal("ATTACK"), attackerId: id, targetId: id }).strict(),
+  z.object({ type: z.literal("BLOCK"), blockerId: id }).strict(),
   z.object({ type: z.literal("ACTIVATE_ABILITY"), sourceId: id, abilityId: id, targets: targetList }).strict(),
   z.object({ type: z.literal("EQUIP"), itemId: id, creatureId: id }).strict(),
   z.object({ type: z.literal("PASS_PRIORITY") }).strict(),
@@ -26,9 +27,9 @@ export const clientCommandSchema = z.object({ protocolVersion: z.literal(PROTOCO
 export const publicCardSchema = z.object({ id, definitionId: id.optional(), owner: id, controller: id, zone: zoneSchema.exclude(["deck", "hand", "actionStack"]), faceDown: z.boolean(), exhausted: z.boolean(), damage: z.number().int().nonnegative(), attackedThisTurn: z.boolean(), attachedTo: id.optional(), charges: z.number().int().nonnegative().optional() }).strict();
 export const privateCardSchema = publicCardSchema.extend({ definitionId: id, zone: z.literal("hand") }).strict();
 export const publicPlayerSchema = z.object({ id, life: z.number().int(), mana: manaPoolSchema, zoneCounts: z.object({ deck: z.number().int().nonnegative(), hand: z.number().int().nonnegative(), fontRow: z.number().int().nonnegative(), creatureField: z.number().int().nonnegative(), supportField: z.number().int().nonnegative(), salvageField: z.number().int().nonnegative(), boneyard: z.number().int().nonnegative(), exile: z.number().int().nonnegative() }).strict(), committedFontThisTurn: z.boolean() }).strict();
-export const stackEntryViewSchema = z.object({ id, kind: z.enum(["card", "attack", "ability"]), controller: id, sourceId: id, targetId: id.optional(), countered: z.boolean() }).strict();
+export const stackEntryViewSchema = z.object({ id, kind: z.enum(["card", "attack", "ability"]), controller: id, sourceId: id, targetId: id.optional(), blockerId: id.optional(), countered: z.boolean() }).strict();
 export const matchResultSchema = z.object({ winnerId: id.optional(), loserId: id, reason: z.enum(["life", "deck", "concession", "effect"]) }).strict();
-export const publicSnapshotSchema = z.object({ schemaVersion: z.literal(SNAPSHOT_SCHEMA_VERSION), rulesVersion: id, turn: z.number().int().positive(), activePlayer: id, priorityPlayer: id, consecutivePasses: z.number().int().nonnegative(), players: z.record(id, publicPlayerSchema), cards: z.record(id, publicCardSchema), stack: z.array(stackEntryViewSchema), result: matchResultSchema.optional() }).strict();
+export const publicSnapshotSchema = z.object({ schemaVersion: z.literal(SNAPSHOT_SCHEMA_VERSION), rulesVersion: id, turn: z.number().int().positive(), activePlayer: id, priorityPlayer: id, consecutivePasses: z.number().int().nonnegative(), players: z.record(id, publicPlayerSchema), cards: z.record(id, publicCardSchema), stack: z.array(stackEntryViewSchema), spellsCastThisTurn: z.record(id, z.number().int().nonnegative()), auraTriggersThisTurn: z.record(id, z.boolean()), result: matchResultSchema.optional() }).strict();
 export const privateSnapshotSchema = z.object({ public: publicSnapshotSchema, viewerId: id, privateCards: z.record(id, privateCardSchema) }).strict();
 
 const eventBase = { schemaVersion: z.literal(EVENT_SCHEMA_VERSION), eventIndex: z.number().int().nonnegative() } as const;
@@ -39,10 +40,13 @@ export const gameEventSchema = z.discriminatedUnion("type", [
   event("CARD_MOVED", { instanceId: id, from: zoneSchema, to: zoneSchema }),
   event("FONT_COMMITTED", { playerId: id, instanceId: id }),
   event("MANA_GENERATED", { playerId: id, manaType: manaTraditionSchema, fontId: id }),
-  event("MANA_SPENT", { playerId: id, cost: z.record(manaTraditionSchema, z.number().int().nonnegative()) }),
+  event("MANA_SPENT", { playerId: id, cost: z.record(manaTraditionSchema, z.number().int().nonnegative()), fontsExhausted: z.array(id).optional() }),
+  event("FONT_EXHAUSTED", { playerId: id, fontId: id }),
   event("CARD_PLAYED", { playerId: id, instanceId: id }),
   event("CREATURE_SUMMONED", { instanceId: id }),
   event("ATTACK_DECLARED", { attackerId: id, targetId: id }),
+  event("BLOCK_DECLARED", { attackerId: id, blockerId: id }),
+  event("COMBAT_DAMAGE_CLEARED", { attackerId: id, blockerId: id }),
   event("DAMAGE_DEALT", { targetId: id, amount: z.number().int().nonnegative() }),
   event("HEALED", { targetId: id, amount: z.number().int().nonnegative() }),
   event("CREATURE_DESTROYED", { instanceId: id }),
@@ -51,6 +55,8 @@ export const gameEventSchema = z.discriminatedUnion("type", [
   event("CONSUMABLE_USED", { consumableId: id, chargesRemaining: z.number().int().nonnegative() }),
   event("AURA_CREATED", { auraId: id }),
   event("AURA_DISPELLED", { auraId: id }),
+  event("AURA_TRIGGERED", { auraId: id, trigger: id }),
+  event("SPELL_SURCHARGED", { playerId: id, amount: z.number().int().positive() }),
   event("EFFECT_ADDED_TO_STACK", { effectId: id, sourceId: id }),
   event("EFFECT_RESOLVED", { effectId: id, countered: z.boolean() }),
   event("PRIORITY_PASSED", { playerId: id }),

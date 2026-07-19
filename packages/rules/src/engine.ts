@@ -1,7 +1,6 @@
 import { shuffle } from "./rng.js";
 import { RULES_VERSION, RulesError, type CardDefinition, type CardInstance, type Effect, type GameCommand, type GameEvent, type GameState, type ManaCost, type ManaPool, type ManaTradition, type PlayerId, type PlayerState, type StackEntry, type Transition, type Zone } from "./types.js";
 
-const traditions: readonly ManaTradition[] = ["Arcane", "Divine", "Occult", "Primal", "Generic"];
 const emptyMana = (): ManaPool => ({ Arcane: 0, Divine: 0, Occult: 0, Primal: 0, Generic: 0 });
 const zoneNames: readonly Exclude<Zone, "actionStack">[] = ["deck", "hand", "fontRow", "creatureField", "supportField", "salvageField", "boneyard", "exile"];
 const emptyZones = (): Record<Exclude<Zone, "actionStack">, string[]> => ({ deck: [], hand: [], fontRow: [], creatureField: [], supportField: [], salvageField: [], boneyard: [], exile: [] });
@@ -27,7 +26,7 @@ export function createGame(options: CreateGameOptions): Transition {
     }
     players[input.id] = { id: input.id, life: options.startingLife ?? 20, mana: emptyMana(), zones, committedFontThisTurn: false };
   }
-  let state: GameState = { rulesVersion: RULES_VERSION, seed: options.seed, rngState, nextId, turn: 1, activePlayer: options.players[0]!.id, priorityPlayer: options.players[0]!.id, consecutivePasses: 0, players, cards, definitions, stack: [] };
+  let state: GameState = { rulesVersion: RULES_VERSION, seed: options.seed, rngState, nextId, turn: 1, activePlayer: options.players[0]!.id, priorityPlayer: options.players[0]!.id, consecutivePasses: 0, players, cards, definitions, stack: [], spellsCastThisTurn: {}, auraTriggersThisTurn: {} };
   for (let n = 0; n < (options.startingHand ?? 5) && !state.result; n++) for (const p of options.players) state = draw(state, p.id, events);
   events.push({ type: "TURN_STARTED", playerId: state.activePlayer, turn: 1 });
   return { state, events };
@@ -62,21 +61,34 @@ function draw(state: GameState, playerId: PlayerId, events: GameEvent[]): GameSt
   events.push({ type: "CARD_DRAWN", playerId, cardId: id }); return next;
 }
 
-function canPay(pool: ManaPool, cost: ManaCost = {}): boolean {
-  const copy = { ...pool }; for (const t of traditions.slice(0, 4)) { const needed = cost[t] ?? 0; if (copy[t] < needed) return false; copy[t] -= needed; }
-  return traditions.reduce((n, t) => n + copy[t], 0) >= (cost.Generic ?? 0);
+export interface FontResources { readonly ready: number; readonly total: number; readonly byTradition: Readonly<Record<ManaTradition, number>>; }
+export function fontResources(state: GameState, playerId: PlayerId): FontResources {
+  const player = requirePlayer(state, playerId); const byTradition = emptyMana(); let ready = 0;
+  for (const id of player.zones.fontRow) {
+    const card = state.cards[id]!; if (card.exhausted) continue; ready++;
+    const produced = card.faceDown ? ["Generic" as const] : (state.definitions[card.definitionId]?.fontMana ?? ["Generic" as const]);
+    for (const mana of produced) byTradition[mana]++;
+  }
+  return { ready, total: player.zones.fontRow.length, byTradition };
 }
-function pay(pool: ManaPool, cost: ManaCost = {}): ManaPool {
-  if (!canPay(pool, cost)) throw new RulesError("INSUFFICIENT_MANA", "Not enough mana");
-  const result = { ...pool };
-  for (const t of traditions.slice(0, 4)) result[t] -= cost[t] ?? 0;
-  let generic = cost.Generic ?? 0;
-  for (const t of ["Generic", "Arcane", "Divine", "Occult", "Primal"] as const) { const used = Math.min(generic, result[t]); result[t] -= used; generic -= used; }
-  return result;
-}
-function spend(state: GameState, playerId: PlayerId, cost: ManaCost | undefined, events: GameEvent[]): GameState {
-  const data = mutable(state); data.players[playerId] = { ...data.players[playerId]!, mana: pay(data.players[playerId]!.mana, cost) };
-  events.push({ type: "MANA_SPENT", playerId, cost: cost ?? {} }); return { ...state, ...data };
+
+function autoSpend(state: GameState, playerId: PlayerId, cost: ManaCost | undefined, events: GameEvent[]): GameState {
+  const needed = { Arcane: cost?.Arcane ?? 0, Divine: cost?.Divine ?? 0, Occult: cost?.Occult ?? 0, Primal: cost?.Primal ?? 0, Generic: cost?.Generic ?? 0 };
+  const data = mutable(state); const player = data.players[playerId]!; const pool = { ...player.mana }; const selected = new Set<string>();
+  const readyFonts = player.zones.fontRow.map((id) => data.cards[id]!).filter((c) => !c.exhausted);
+  const options = (c: CardInstance): readonly ManaTradition[] => c.faceDown ? ["Generic"] : (state.definitions[c.definitionId]?.fontMana ?? ["Generic"]);
+  for (const tradition of ["Arcane", "Divine", "Occult", "Primal"] as const) {
+    const fromPool = Math.min(pool[tradition], needed[tradition]); pool[tradition] -= fromPool; needed[tradition] -= fromPool;
+    for (const font of readyFonts) if (needed[tradition] > 0 && !selected.has(font.id) && options(font).includes(tradition)) { selected.add(font.id); needed[tradition]--; }
+    if (needed[tradition] > 0) throw new RulesError("INSUFFICIENT_MANA", "Not enough mana from ready Fonts");
+  }
+  for (const tradition of ["Generic", "Arcane", "Divine", "Occult", "Primal"] as const) { const used = Math.min(pool[tradition], needed.Generic); pool[tradition] -= used; needed.Generic -= used; }
+  for (const font of readyFonts) if (needed.Generic > 0 && !selected.has(font.id)) { selected.add(font.id); needed.Generic--; }
+  if (needed.Generic > 0) throw new RulesError("INSUFFICIENT_MANA", "Not enough mana from ready Fonts");
+  data.players[playerId] = { ...player, mana: pool };
+  for (const fontId of selected) { data.cards[fontId] = { ...data.cards[fontId]!, exhausted: true }; events.push({ type: "FONT_EXHAUSTED", playerId, fontId }); }
+  events.push({ type: "MANA_SPENT", playerId, cost: cost ?? {}, fontsExhausted: [...selected] });
+  return { ...state, ...data };
 }
 
 function validateTarget(state: GameState, def: CardDefinition, targetId?: string): void {
@@ -116,7 +128,10 @@ export function applyCommand(state: GameState, command: GameCommand): Transition
     const card = requireCard(state, command.cardId); if (card.controller !== command.playerId || card.zone !== "hand") throw new RulesError("ILLEGAL_CARD", "Card must be in your hand");
     const def = requireDefinition(state, card); const target = command.targets?.[0]; validateTarget(state, def, target);
     if ((def.type === "MagicItem" || def.type === "Consumable") && (!target || state.cards[target]?.controller !== command.playerId)) throw new RulesError("ILLEGAL_TARGET", "Attachments require a friendly creature");
-    let next = spend(state, command.playerId, def.cost, events); next = move(next, card.id, "supportField", events);
+    const quietingTax = def.type === "Spell" && (state.spellsCastThisTurn[command.playerId] ?? 0) === 0 && Object.values(state.cards).some((c) => c.zone === "supportField" && c.controller !== command.playerId && c.definitionId === "quieting-veil") ? 1 : 0;
+    const adjustedCost: ManaCost = { ...(def.cost ?? {}), Generic: (def.cost?.Generic ?? 0) + quietingTax };
+    let next = autoSpend(state, command.playerId, adjustedCost, events); next = move(next, card.id, "supportField", events);
+    if (def.type === "Spell") { next = { ...next, spellsCastThisTurn: { ...next.spellsCastThisTurn, [command.playerId]: (next.spellsCastThisTurn[command.playerId] ?? 0) + 1 } }; if (quietingTax) events.push({ type: "SPELL_SURCHARGED", playerId: command.playerId, amount: quietingTax }); }
     events.push({ type: "CARD_PLAYED", playerId: command.playerId, instanceId: card.id });
     const onPlayEffects = def.type === "Consumable" ? [] : (def.effects ?? []);
     return { state: addStack(next, { kind: "card", controller: command.playerId, sourceId: card.id, ...(target ? { targetId: target } : {}), effects: onPlayEffects }, events), events };
@@ -128,12 +143,25 @@ export function applyCommand(state: GameState, command: GameCommand): Transition
     const targetCreature = state.cards[command.targetId]; if (!state.players[command.targetId] && targetCreature?.zone !== "creatureField") throw new RulesError("ILLEGAL_TARGET", "Attack target is illegal");
     if (targetCreature?.controller === command.playerId || command.targetId === command.playerId) throw new RulesError("ILLEGAL_TARGET", "Attack target must be hostile");
     const data = mutable(state); data.cards[attacker.id] = { ...attacker, exhausted: !def.keywords?.includes("Vigilant"), attackedThisTurn: true };
-    events.push({ type: "ATTACK_DECLARED", attackerId: attacker.id, targetId: command.targetId });
-    return { state: addStack({ ...state, ...data }, { kind: "attack", controller: command.playerId, sourceId: attacker.id, targetId: command.targetId, effects: [] }, events), events };
+    const defendingPlayer = targetCreature?.controller ?? command.targetId;
+    let next: GameState = { ...state, ...data };
+    const season = Object.values(next.cards).find((c) => c.zone === "supportField" && c.controller === defendingPlayer && c.definitionId === "season-of-thorns" && !next.auraTriggersThisTurn[c.id]);
+    if (season) { next = markCreatureDamage(next, attacker.id, 1, events); next = destroyLethal(next, events); next = { ...next, auraTriggersThisTurn: { ...next.auraTriggersThisTurn, [season.id]: true } }; events.push({ type: "AURA_TRIGGERED", auraId: season.id, trigger: "firstEnemyAttacker" }); }
+    events.push({ type: "ATTACK_DECLARED", attackerId: attacker.id, targetId: defendingPlayer });
+    return { state: addStack(next, { kind: "attack", controller: command.playerId, sourceId: attacker.id, targetId: defendingPlayer, ...(targetCreature ? { blockerId: targetCreature.id } : {}), effects: [] }, events), events };
+  }
+  if (command.type === "BLOCK") {
+    const attack = state.stack.at(-1); const blocker = requireCard(state, command.blockerId);
+    if (!attack || attack.kind !== "attack" || attack.targetId !== command.playerId) throw new RulesError("ILLEGAL_TIMING", "There is no attack to block");
+    if (blocker.controller !== command.playerId || blocker.zone !== "creatureField" || blocker.exhausted) throw new RulesError("ILLEGAL_BLOCKER", "Blocker is unavailable");
+    const guards = availableGuards(state, command.playerId); if (guards.length && !guards.includes(blocker.id)) throw new RulesError("GUARD_REQUIRED", "A ready Guard must block");
+    const blocked: StackEntry = { ...attack, blockerId: blocker.id }; events.push({ type: "BLOCK_DECLARED", attackerId: attack.sourceId, blockerId: blocker.id });
+    return { state: { ...state, stack: [...state.stack.slice(0, -1), blocked], priorityPlayer: attack.controller, consecutivePasses: 0 }, events };
   }
   if (command.type === "EQUIP") return equip(state, command.playerId, command.itemId, command.creatureId, events);
   if (command.type === "ACTIVATE_ABILITY") return activateAbility(state, command.playerId, command.sourceId, command.targets?.[0], events);
   if (command.type === "PASS_PRIORITY") {
+    const attack = state.stack.at(-1); if (attack?.kind === "attack" && attack.targetId === command.playerId && !attack.blockerId && availableGuards(state, command.playerId).length) throw new RulesError("GUARD_REQUIRED", "A ready Guard must block");
     if (state.consecutivePasses === 0) { events.push({ type: "PRIORITY_PASSED", playerId: command.playerId }); return { state: { ...state, priorityPlayer: opponent(state, command.playerId), consecutivePasses: 1 }, events }; }
     if (state.stack.length) return { state: resolveTop({ ...state, consecutivePasses: 0 }, events), events };
     events.push({ type: "PRIORITY_PASSED", playerId: command.playerId }); return { state: { ...state, priorityPlayer: state.activePlayer, consecutivePasses: 0 }, events };
@@ -141,10 +169,17 @@ export function applyCommand(state: GameState, command: GameCommand): Transition
   if (command.type === "END_TURN") {
     if (state.activePlayer !== command.playerId || state.stack.length) throw new RulesError("ILLEGAL_TIMING", "Cannot end turn now");
     let next = state; const data = mutable(next);
-    for (const c of Object.values(data.cards)) if (c.zone === "creatureField") data.cards[c.id] = { ...c, damage: 0 };
+    for (const c of Object.values(data.cards)) if (c.zone === "creatureField") {
+      const reset = { ...c, damage: 0 };
+      delete reset.temporaryPower;
+      delete reset.temporaryHealth;
+      data.cards[c.id] = reset;
+    }
     const newActive = opponent(state, command.playerId); const p = data.players[newActive]!; data.players[newActive] = { ...p, committedFontThisTurn: false, mana: emptyMana() };
     for (const id of [...p.zones.fontRow, ...p.zones.creatureField]) data.cards[id] = { ...data.cards[id]!, exhausted: false, attackedThisTurn: false };
-    next = { ...state, ...data, turn: state.turn + 1, activePlayer: newActive, priorityPlayer: newActive, consecutivePasses: 0 }; next = draw(next, newActive, events);
+    next = { ...state, ...data, turn: state.turn + 1, activePlayer: newActive, priorityPlayer: newActive, consecutivePasses: 0, spellsCastThisTurn: {}, auraTriggersThisTurn: {} }; next = draw(next, newActive, events);
+    const hymnCount = Object.values(next.cards).filter((c) => c.zone === "supportField" && c.controller === newActive && c.definitionId === "hymn-of-returning-light").length;
+    if (hymnCount && !next.result) { const healing = mutable(next), current = healing.players[newActive]!; healing.players[newActive] = { ...current, life: current.life + hymnCount }; next = { ...next, ...healing }; events.push({ type: "HEALED", targetId: newActive, amount: hymnCount }); }
     events.push({ type: "TURN_STARTED", playerId: newActive, turn: next.turn }); return { state: next, events };
   }
   throw new RulesError("UNKNOWN_COMMAND", "Unsupported command");
@@ -154,7 +189,7 @@ function equip(state: GameState, playerId: PlayerId, itemId: string, creatureId:
   const item = requireCard(state, itemId), creature = requireCard(state, creatureId), def = requireDefinition(state, item);
   if ((def.type !== "MagicItem" && def.type !== "Consumable") || item.controller !== playerId || item.zone !== "salvageField" || creature.controller !== playerId || creature.zone !== "creatureField") throw new RulesError("ILLEGAL_EQUIP", "Illegal salvage recovery");
   if (def.type === "MagicItem" && occupiedSlot(state, creatureId, def.slot ?? "accessory")) throw new RulesError("SLOT_OCCUPIED", "Equipment slot is occupied");
-  let next = spend(state, playerId, def.type === "MagicItem" ? def.equipCost : def.recoveryCost, events); next = move(next, itemId, "supportField", events, { attachedTo: creatureId });
+  let next = autoSpend(state, playerId, def.type === "MagicItem" ? def.equipCost : def.recoveryCost, events); next = move(next, itemId, "supportField", events, { attachedTo: creatureId });
   events.push({ type: "ITEM_EQUIPPED", itemId, creatureId }); return { state: next, events };
 }
 function occupiedSlot(state: GameState, creatureId: string, slot: string): boolean { return Object.values(state.cards).some((c) => c.attachedTo === creatureId && state.definitions[c.definitionId]?.type === "MagicItem" && (state.definitions[c.definitionId]?.slot ?? "accessory") === slot); }
@@ -179,7 +214,7 @@ function resolveTop(state: GameState, events: GameEvent[]): GameState {
 }
 function finishCard(state: GameState, entry: StackEntry, events: GameEvent[]): GameState {
   const card = requireCard(state, entry.sourceId), def = requireDefinition(state, card);
-  if (def.type === "Creature") { const next = move(state, card.id, "creatureField", events, { exhausted: true }); events.push({ type: "CREATURE_SUMMONED", instanceId: card.id }); return next; }
+  if (def.type === "Creature") { const next = move(state, card.id, "creatureField", events, { exhausted: !def.keywords?.includes("Swift") }); events.push({ type: "CREATURE_SUMMONED", instanceId: card.id }); return next; }
   if (def.type === "Aura") { events.push({ type: "AURA_CREATED", auraId: card.id }); return state; }
   if (def.type === "MagicItem" || def.type === "Consumable") {
     if (!entry.targetId || state.cards[entry.targetId]?.zone !== "creatureField") return move(state, card.id, "boneyard", events);
@@ -192,9 +227,13 @@ function finishCard(state: GameState, entry: StackEntry, events: GameEvent[]): G
 function resolveAttack(state: GameState, entry: StackEntry, events: GameEvent[]): GameState {
   const attacker = state.cards[entry.sourceId]; if (!attacker || attacker.zone !== "creatureField" || !entry.targetId) return state;
   const attackPower = stats(state, attacker.id).power;
-  if (state.players[entry.targetId]) return dealDamage(state, entry.targetId, attackPower, events);
-  const defender = state.cards[entry.targetId]; if (!defender || defender.zone !== "creatureField") return state;
-  let next = markCreatureDamage(state, defender.id, attackPower, events); next = markCreatureDamage(next, attacker.id, stats(state, defender.id).power, events); return destroyLethal(next, events);
+  const defender = entry.blockerId ? state.cards[entry.blockerId] : undefined;
+  if (!defender || defender.zone !== "creatureField") return dealDamage(state, entry.targetId, attackPower, events);
+  const beforeAttacker = attacker.damage, beforeDefender = defender.damage, defensePower = stats(state, defender.id).power, defenseHealth = stats(state, defender.id).health;
+  let next = markCreatureDamage(state, defender.id, attackPower, events); next = markCreatureDamage(next, attacker.id, defensePower, events); next = destroyLethal(next, events);
+  if (state.definitions[attacker.definitionId]?.keywords?.includes("Trample")) { const excess = Math.max(0, attackPower - Math.max(0, defenseHealth - beforeDefender)); if (excess) next = dealDamage(next, entry.targetId, excess, events); }
+  const data = mutable(next); if (data.cards[attacker.id]?.zone === "creatureField") data.cards[attacker.id] = { ...data.cards[attacker.id]!, damage: beforeAttacker }; if (data.cards[defender.id]?.zone === "creatureField") data.cards[defender.id] = { ...data.cards[defender.id]!, damage: beforeDefender };
+  events.push({ type: "COMBAT_DAMAGE_CLEARED", attackerId: attacker.id, blockerId: defender.id }); return { ...next, ...data };
 }
 function resolveEffect(state: GameState, entry: StackEntry, effect: Effect, events: GameEvent[]): GameState {
   const target = entry.targetId ?? entry.controller; const amount = effect.amount ?? 0;
@@ -204,6 +243,16 @@ function resolveEffect(state: GameState, entry: StackEntry, effect: Effect, even
   if (effect.op === "gainMana") { const t = effect.tradition ?? "Generic", data = mutable(state), p = data.players[target]!; data.players[target] = { ...p, mana: { ...p.mana, [t]: p.mana[t] + amount } }; return { ...state, ...data }; }
   if (effect.op === "destroy" && state.cards[target]) return destroyCreature(state, target, events);
   if (effect.op === "counter" && state.stack.length) { const top = state.stack.at(-1)!; return { ...state, stack: [...state.stack.slice(0, -1), { ...top, countered: true }] }; }
+  if (effect.op === "modifyStats" && state.cards[target]?.zone === "creatureField") {
+    const data = mutable(state), card = data.cards[target]!;
+    data.cards[target] = { ...card, temporaryPower: (card.temporaryPower ?? 0) + (effect.power ?? 0), temporaryHealth: (card.temporaryHealth ?? 0) + (effect.health ?? 0) };
+    events.push({ type: "STATS_MODIFIED", targetId: target, power: effect.power ?? 0, health: effect.health ?? 0, duration: "turn" });
+    return { ...state, ...data };
+  }
+  if (effect.op === "ready" && state.cards[target]?.zone === "creatureField") {
+    const data = mutable(state); data.cards[target] = { ...data.cards[target]!, exhausted: false };
+    events.push({ type: "CARD_READIED", targetId: target }); return { ...state, ...data };
+  }
   return state;
 }
 function dealDamage(state: GameState, targetId: string, amount: number, events: GameEvent[]): GameState {
@@ -212,11 +261,14 @@ function dealDamage(state: GameState, targetId: string, amount: number, events: 
 }
 function markCreatureDamage(state: GameState, id: string, amount: number, events: GameEvent[]): GameState { const c = requireCard(state, id), data = mutable(state); data.cards[id] = { ...c, damage: c.damage + amount }; events.push({ type: "DAMAGE_DEALT", targetId: id, amount }); return { ...state, ...data }; }
 function stats(state: GameState, id: string): { power: number; health: number } {
-  const c = requireCard(state, id), d = requireDefinition(state, c); let power = d.power ?? 0, health = d.health ?? 0;
+  const c = requireCard(state, id), d = requireDefinition(state, c); let power = (d.power ?? 0) + (c.temporaryPower ?? 0), health = (d.health ?? 0) + (c.temporaryHealth ?? 0);
   for (const a of Object.values(state.cards)) if (a.attachedTo === id && a.zone === "supportField") { const m = state.definitions[a.definitionId]?.modifiers; power += m?.power ?? 0; health += m?.health ?? 0; }
   for (const a of Object.values(state.cards)) if (a.zone === "supportField" && state.definitions[a.definitionId]?.type === "Aura" && a.controller === c.controller) { const m = state.definitions[a.definitionId]?.modifiers; power += m?.power ?? 0; health += m?.health ?? 0; }
+  if (Object.values(state.cards).some((a) => a.zone === "supportField" && a.controller === c.controller && a.definitionId === "canopy-fury")) power += 1;
   return { power, health };
 }
+export function cardStats(state: GameState, id: string): { readonly power: number; readonly health: number } { return stats(state, id); }
+function availableGuards(state: GameState, playerId: PlayerId): readonly string[] { return Object.values(state.cards).filter((c) => c.controller === playerId && c.zone === "creatureField" && !c.exhausted && state.definitions[c.definitionId]?.keywords?.includes("Guard")).map((c) => c.id).sort(); }
 function destroyLethal(state: GameState, events: GameEvent[]): GameState { let next = state; const lethal = Object.values(state.cards).filter((c) => c.zone === "creatureField" && c.damage >= stats(state, c.id).health).map((c) => c.id).sort(); for (const id of lethal) if (next.cards[id]?.zone === "creatureField") next = destroyCreature(next, id, events); return next; }
 function destroyCreature(state: GameState, id: string, events: GameEvent[]): GameState {
   let next = state; const attachments = Object.values(next.cards).filter((c) => c.attachedTo === id).map((c) => c.id).sort();
@@ -235,5 +287,5 @@ function endMatch(state: GameState, winnerId: PlayerId, loserId: PlayerId, reaso
 
 export function legalActions(state: GameState, playerId: PlayerId): readonly string[] {
   if (state.result) return []; const result: string[] = ["CONCEDE"]; if (state.priorityPlayer !== playerId) return result;
-  result.push("PASS_PRIORITY"); if (state.activePlayer === playerId && !state.stack.length) result.push("END_TURN", "PLAY_CARD", "ATTACK", "ACTIVATE_FONT", "ACTIVATE_ABILITY", "EQUIP", "COMMIT_AS_FONT"); else result.push("PLAY_CARD", "ACTIVATE_ABILITY"); return result;
+  result.push("PASS_PRIORITY"); if (state.stack.at(-1)?.kind === "attack" && state.stack.at(-1)?.targetId === playerId) result.push("BLOCK"); if (state.activePlayer === playerId && !state.stack.length) result.push("END_TURN", "PLAY_CARD", "ATTACK", "ACTIVATE_FONT", "ACTIVATE_ABILITY", "EQUIP", "COMMIT_AS_FONT"); else result.push("PLAY_CARD", "ACTIVATE_ABILITY"); return result;
 }

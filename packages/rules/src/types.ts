@@ -9,9 +9,11 @@ export type ManaPool = Record<ManaTradition, number>;
 export type ManaCost = Partial<Record<ManaTradition, number>>;
 
 export interface Effect {
-  readonly op: "damage" | "heal" | "draw" | "gainMana" | "destroy" | "counter";
+  readonly op: "damage" | "heal" | "draw" | "gainMana" | "destroy" | "counter" | "modifyStats" | "ready";
   readonly amount?: number;
   readonly tradition?: ManaTradition;
+  readonly power?: number;
+  readonly health?: number;
 }
 
 export interface CardDefinition {
@@ -43,6 +45,8 @@ export interface CardInstance {
   readonly exhausted: boolean;
   readonly damage: number;
   readonly attackedThisTurn: boolean;
+  readonly temporaryPower?: number;
+  readonly temporaryHealth?: number;
   readonly attachedTo?: string;
   readonly charges?: number;
 }
@@ -61,6 +65,7 @@ export interface StackEntry {
   readonly controller: PlayerId;
   readonly sourceId: string;
   readonly targetId?: string;
+  readonly blockerId?: string;
   readonly effects: readonly Effect[];
   readonly countered: boolean;
 }
@@ -79,6 +84,8 @@ export interface GameState {
   readonly cards: Readonly<Record<string, CardInstance>>;
   readonly definitions: Readonly<Record<string, CardDefinition>>;
   readonly stack: readonly StackEntry[];
+  readonly spellsCastThisTurn: Readonly<Record<PlayerId, number>>;
+  readonly auraTriggersThisTurn: Readonly<Record<string, boolean>>;
   readonly result?: MatchResult;
 }
 
@@ -87,6 +94,7 @@ export type GameCommand =
   | { readonly type: "ACTIVATE_FONT"; readonly playerId: PlayerId; readonly fontId: string; readonly manaType: ManaTradition }
   | { readonly type: "PLAY_CARD"; readonly playerId: PlayerId; readonly cardId: string; readonly targets?: readonly string[] }
   | { readonly type: "ATTACK"; readonly playerId: PlayerId; readonly attackerId: string; readonly targetId: string }
+  | { readonly type: "BLOCK"; readonly playerId: PlayerId; readonly blockerId: string }
   | { readonly type: "EQUIP"; readonly playerId: PlayerId; readonly itemId: string; readonly creatureId: string }
   | { readonly type: "ACTIVATE_ABILITY"; readonly playerId: PlayerId; readonly sourceId: string; readonly abilityId: string; readonly targets?: readonly string[] }
   | { readonly type: "PASS_PRIORITY"; readonly playerId: PlayerId }

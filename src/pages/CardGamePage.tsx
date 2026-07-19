@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BookOpen, Bot, ChevronLeft, Copy, Play, RotateCcw, Shield, Sparkles, Swords, Volume2, VolumeX, X } from 'lucide-react';
-import { RulesError, type GameCommand, type GameEvent, type GameState } from '@scon/rules';
+import { RulesError, cardStats, fontResources, type GameCommand, type GameEvent } from '@scon/rules';
 import type { CardDefinition } from '@scon/cards';
+import { GlossaryText, KeywordTooltip } from '@scon/ui';
+import '@scon/ui/styles.css';
 import { ProceduralAudioManager, eventSounds } from '@scon/audio';
 import { useAuth } from '../context/useAuth';
 import {
@@ -21,6 +23,7 @@ import {
 type View = 'home' | 'collection' | 'match';
 type MotionKind = 'summon' | 'attack' | 'impact' | 'channel';
 interface MotionCue { kind: MotionKind; id?: string }
+interface TargetChoice { id: string; label: string; detail: string }
 
 const totalCost = (card: CardDefinition) => card.cost.generic
   + (card.cost.arcane ?? 0)
@@ -51,20 +54,47 @@ function GameCard({ card, compact = false }: { card: CardDefinition; compact?: b
           <span className="ml-auto h-fit rounded-full bg-cyan-300 px-2 text-xs font-bold text-slate-950">{totalCost(card)}</span>
         </div>
         <p className="mt-1 text-[10px] uppercase tracking-wider text-amber-300">{card.type} · {card.traditions.join(' / ')}</p>
-        {!compact && <p className="mt-4 text-sm text-slate-300">{card.rulesText}</p>}
+        {!compact && <p className="mt-4 text-sm text-slate-300"><GlossaryText>{card.rulesText}</GlossaryText></p>}
+        {!compact && card.keywords.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{card.keywords.map((keyword) => <KeywordPill key={keyword} keyword={keyword}/>)}</div>}
         {card.type === 'creature' && <p className="mt-2 font-black text-slate-100">{card.power} / {card.health}</p>}
       </div>
     </div>
   );
 }
 
-function getTarget(state: GameState, card: CardDefinition): string | undefined {
-  if (card.type === 'magicItem' || card.type === 'consumable') return state.players[HUMAN_ID]!.zones.creatureField[0];
-  if (!card.targets.length) return undefined;
-  const effect = card.effects[0];
-  if (effect?.op === 'dealDamage') return state.players[AI_ID]!.zones.creatureField[0] ?? AI_ID;
-  if (effect?.op === 'heal') return HUMAN_ID;
-  return state.players[AI_ID]!.zones.creatureField[0] ?? state.players[HUMAN_ID]!.zones.creatureField[0];
+function KeywordPill({ keyword }: { keyword: string }) {
+  const descriptions: Record<string, string> = {
+    Swift: 'This creature may attack during the turn it is summoned.',
+    Guard: 'A ready creature with Guard must block before its controller can take an unblocked hit.',
+    Trample: 'Excess combat damage dealt to a blocker carries over to the defending player.',
+  };
+  return <span className="rounded-full border border-amber-300/35 px-2 py-1 text-xs"><KeywordTooltip keyword={keyword} description={descriptions[keyword] ?? `${keyword} is a game keyword.`}>{keyword}</KeywordTooltip></span>;
+}
+
+function legalTargets(match: LocalMatch, card: CardDefinition): TargetChoice[] {
+  const target = card.targets[0];
+  if (!target) return [];
+  const controllers = card.type === 'magicItem' || card.type === 'consumable'
+    ? [HUMAN_ID]
+    : target.controller === 'self' ? [HUMAN_ID] : target.controller === 'opponent' ? [AI_ID] : [HUMAN_ID, AI_ID];
+  const zones = Array.isArray(target.zone) ? target.zone : [target.zone];
+  const result: TargetChoice[] = [];
+  if (zones.includes('player')) {
+    for (const playerId of controllers) result.push({ id: playerId, label: playerId === HUMAN_ID ? 'You' : 'Rival', detail: `${match.state.players[playerId]!.life} life` });
+  }
+  if (zones.includes('creatureField')) {
+    for (const playerId of controllers) {
+      for (const id of match.state.players[playerId]!.zones.creatureField) {
+        const instance = match.state.cards[id]!;
+        if (target.filters.includes('ready') && instance.exhausted) continue;
+        if (target.filters.includes('damaged') && instance.damage === 0) continue;
+        const definition = contentCard(id, match.state);
+        const stats = definition.type === 'creature' ? cardStats(match.state, id) : undefined;
+        result.push({ id, label: definition.name, detail: `${playerId === HUMAN_ID ? 'Your' : "Rival's"} creature · ${stats ? `${stats.power}/${Math.max(0, stats.health - instance.damage)}` : definition.type}` });
+      }
+    }
+  }
+  return result;
 }
 
 function BattlefieldCard({
@@ -85,6 +115,7 @@ function BattlefieldCard({
   const instance = match.state.cards[id]!;
   const definition = contentCard(id, match.state);
   const wounded = definition.type === 'creature' ? instance.damage : 0;
+  const effectiveStats = definition.type === 'creature' ? cardStats(match.state, id) : undefined;
   return (
     <div className={motionClass}>
       <button
@@ -94,7 +125,7 @@ function BattlefieldCard({
       >
         <span className="block text-xs font-bold">{definition.name}</span>
         <span className="mt-1 block text-[10px] uppercase text-slate-400">{definition.type}</span>
-        {definition.type === 'creature' && <span className="mt-5 block font-black">{definition.power} / {Math.max(0, definition.health - wounded)}</span>}
+        {effectiveStats && <span className="mt-5 block font-black">{effectiveStats.power} / {Math.max(0, effectiveStats.health - wounded)}</span>}
         {instance.attachedTo && <span className="mt-2 block text-[10px] text-amber-200">Attached</span>}
       </button>
       {onAttack && <button onClick={onAttack} className="mt-1 w-full rounded-md bg-amber-300 px-2 py-1 text-xs font-bold text-slate-950">Attack rival</button>}
@@ -112,12 +143,19 @@ export default function CardGamePage() {
   const [error, setError] = useState<string>();
   const [copied, setCopied] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CardDefinition>();
+  const [pendingCardId, setPendingCardId] = useState<string>();
   const [motionCue, setMotionCue] = useState<MotionCue>();
   const [audio] = useState(() => new ProceduralAudioManager({ ...audioSettings }));
   const motionTimer = useRef<number>();
 
   const chosenDeck = decks.find((deck) => deck.id === deckId) ?? decks[0]!;
   const recentEvents = useMemo(() => match.events.slice(-12).reverse(), [match.events]);
+  const humanFonts = fontResources(match.state, HUMAN_ID);
+  const pendingAttack = match.state.stack.at(-1)?.kind === 'attack'
+    && match.state.stack.at(-1)?.targetId === HUMAN_ID
+    && match.state.priorityPlayer === HUMAN_ID
+    && !match.state.stack.at(-1)?.blockerId
+    ? match.state.stack.at(-1) : undefined;
 
   useEffect(() => {
     audio.settings = { ...audio.settings, muted: !sound };
@@ -148,7 +186,7 @@ export default function CardGamePage() {
     const newEvents = updated.events.slice(previousEventCount);
     newEvents.slice(-4).forEach((event) => playSound(event.type));
     if (reducedMotion) return;
-    const animated = [...newEvents].reverse().find((event) => ['CREATURE_SUMMONED', 'ATTACK_DECLARED', 'DAMAGE_DEALT', 'MANA_GENERATED'].includes(event.type));
+    const animated = [...newEvents].reverse().find((event) => ['CREATURE_SUMMONED', 'ATTACK_DECLARED', 'DAMAGE_DEALT', 'FONT_EXHAUSTED'].includes(event.type));
     if (!animated) return;
     const cue = motionFromEvent(animated);
     setMotionCue(cue);
@@ -165,6 +203,7 @@ export default function CardGamePage() {
     playSound('UI_CLICK');
     setMatch(createLocalMatch(deckId));
     setError(undefined);
+    setPendingCardId(undefined);
     setView('match');
   };
 
@@ -183,18 +222,41 @@ export default function CardGamePage() {
 
   const play = (id: string) => {
     const card = contentCard(id, match.state);
-    const target = getTarget(match.state, card);
-    if ((card.type === 'magicItem' || card.type === 'consumable') && !target) {
-      playSound('INVALID_ACTION');
-      setError('Summon a friendly creature before preparing an attachment.');
+    if (card.targets.length) {
+      if (!legalTargets(match, card).length) {
+        playSound('INVALID_ACTION');
+        setError('There is no legal target for this card.');
+        return;
+      }
+      playSound('UI_CLICK');
+      setPendingCardId(id);
+      setError(undefined);
       return;
     }
-    if (card.targets.length && !target) {
+    perform({ type: 'PLAY_CARD', playerId: HUMAN_ID, cardId: id });
+  };
+
+  const chooseTarget = (targetId: string) => {
+    if (!pendingCardId) return;
+    const cardId = pendingCardId;
+    setPendingCardId(undefined);
+    perform({ type: 'PLAY_CARD', playerId: HUMAN_ID, cardId, targets: [targetId] });
+  };
+
+  const defend = (blockerId?: string) => {
+    try {
+      const previousEventCount = match.events.length;
+      const decision: GameCommand = blockerId
+        ? { type: 'BLOCK', playerId: HUMAN_ID, blockerId }
+        : { type: 'PASS_PRIORITY', playerId: HUMAN_ID };
+      let updated = resolveAutomaticPriority(command(match, decision));
+      if (!updated.state.stack.length && updated.state.activePlayer === AI_ID && !updated.state.result) updated = takeAiTurn(updated);
+      updateMatch(updated, previousEventCount);
+      setError(undefined);
+    } catch (caught) {
       playSound('INVALID_ACTION');
-      setError('There is no legal target for this card.');
-      return;
+      setError(caught instanceof RulesError ? caught.message : 'The combat decision could not be completed.');
     }
-    perform({ type: 'PLAY_CARD', playerId: HUMAN_ID, cardId: id, ...(target ? { targets: [target] } : {}) });
   };
 
   const endTurn = () => {
@@ -249,7 +311,7 @@ export default function CardGamePage() {
           <h2 className="text-3xl font-bold">Card encyclopedia</h2>
           <p className="mt-2 text-slate-400">Select any card to inspect its complete rules text, traits, and attribution.</p>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {collection.map((card) => <button key={card.id} onClick={() => showCard(card)} className="rounded-xl text-left transition hover:-translate-y-1 focus:-translate-y-1" aria-label={`Inspect ${card.name}`}><GameCard card={card}/></button>)}
+            {collection.map((card) => <div key={card.id} className="rounded-xl transition hover:-translate-y-1"><GameCard card={card}/><button onClick={() => showCard(card)} className="mt-2 w-full rounded-lg border border-cyan-300/30 px-3 py-2 text-sm text-cyan-200">Enlarge and inspect</button></div>)}
           </div>
         </main>
       )}
@@ -264,13 +326,15 @@ export default function CardGamePage() {
             <section className="flex min-w-0 flex-col justify-between gap-5 p-4 lg:p-6">
               <PlayerHeader match={match} playerId={AI_ID} enemy animationClass={animationClass(AI_ID)} />
               <Zone title="Rival field">{match.state.players[AI_ID]!.zones.creatureField.map((id) => <BattlefieldCard key={id} id={id} match={match} enemy onInspect={() => showCard(contentCard(id, match.state))} motionClass={animationClass(id)} />)}</Zone>
+              {match.state.players[AI_ID]!.zones.supportField.length > 0 && <Zone title="Rival Auras & support">{match.state.players[AI_ID]!.zones.supportField.map((id) => <BattlefieldCard key={id} id={id} match={match} enemy onInspect={() => showCard(contentCard(id, match.state))} motionClass={animationClass(id)} />)}</Zone>}
+              {pendingAttack && <CombatDecision match={match} attackerId={pendingAttack.sourceId} defend={defend}/>}
               <Zone title="Your field">{match.state.players[HUMAN_ID]!.zones.creatureField.map((id) => <BattlefieldCard key={id} id={id} match={match} onInspect={() => showCard(contentCard(id, match.state))} motionClass={animationClass(id)} onAttack={!match.state.cards[id]!.exhausted && match.state.activePlayer === HUMAN_ID && !match.state.stack.length ? () => perform({ type: 'ATTACK', playerId: HUMAN_ID, attackerId: id, targetId: AI_ID }) : undefined}/>)}</Zone>
+              {match.state.players[HUMAN_ID]!.zones.supportField.length > 0 && <Zone title="Your Auras & support">{match.state.players[HUMAN_ID]!.zones.supportField.map((id) => <BattlefieldCard key={id} id={id} match={match} onInspect={() => showCard(contentCard(id, match.state))} motionClass={animationClass(id)} />)}</Zone>}
               <div>
                 <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                   <div className={animationClass(HUMAN_ID)}><p className="text-sm text-slate-400">You · {chosenDeck.name}</p><p className="text-3xl font-black text-cyan-300">{match.state.players[HUMAN_ID]!.life} life</p><p className="text-xs text-slate-500">{match.state.players[HUMAN_ID]!.zones.deck.length} deck · {match.state.players[HUMAN_ID]!.zones.boneyard.length} boneyard · {match.state.players[HUMAN_ID]!.zones.salvageField.length} salvage</p></div>
                   <div className="flex flex-wrap gap-2">
-                    <span className="rounded-lg border border-cyan-300/30 px-3 py-2">Mana {match.state.players[HUMAN_ID]!.mana.Generic}</span>
-                    {match.state.players[HUMAN_ID]!.zones.fontRow.map((id) => <button key={id} disabled={match.state.cards[id]!.exhausted || match.state.priorityPlayer !== HUMAN_ID} onClick={() => perform({ type: 'ACTIVATE_FONT', playerId: HUMAN_ID, fontId: id, manaType: 'Generic' }, false)} className={`rounded-lg border border-violet-300/30 px-3 py-2 text-xs disabled:opacity-40 ${animationClass(id) ?? ''}`}>{match.state.cards[id]!.exhausted ? 'Spent Font' : 'Channel Font'}</button>)}
+                    <span className={`rounded-lg border border-violet-300/30 px-3 py-2 ${animationClass(HUMAN_ID) ?? ''}`}><GlossaryText>Font</GlossaryText> <strong>{humanFonts.ready}/{humanFonts.total}</strong></span>
                     <button disabled={match.state.activePlayer !== HUMAN_ID || Boolean(match.state.result)} onClick={endTurn} className="rounded-lg bg-amber-300 px-4 py-2 font-bold text-slate-950 disabled:opacity-40">End turn</button>
                   </div>
                 </div>
@@ -283,6 +347,7 @@ export default function CardGamePage() {
       )}
 
       {selectedCard && <CardInspector card={selectedCard} close={() => setSelectedCard(undefined)} />}
+      {pendingCardId && <TargetChooser card={contentCard(pendingCardId, match.state)} choices={legalTargets(match, contentCard(pendingCardId, match.state))} choose={chooseTarget} close={() => setPendingCardId(undefined)} />}
     </div>
   );
 }
@@ -293,7 +358,8 @@ function HomeView({ deckId, setDeckId, start, browse, isAuthenticated, login }: 
 
 function PlayerHeader({ match, playerId, enemy, animationClass }: { match: LocalMatch; playerId: string; enemy?: boolean; animationClass?: string }) {
   const player = match.state.players[playerId]!;
-  return <div className="flex justify-between gap-4"><div className={animationClass}><p className="flex items-center gap-2 text-sm text-slate-400">{enemy && <Bot size={16}/>} {enemy ? 'Rival' : 'You'}</p><p className={`text-3xl font-black ${enemy ? 'text-rose-300' : 'text-cyan-300'}`}>{player.life} life</p><p className="text-xs text-slate-500">{player.zones.deck.length} deck · {player.zones.boneyard.length} boneyard</p></div>{enemy && <div className="flex gap-1" aria-label={`${player.zones.hand.length} hidden rival cards`}>{player.zones.hand.map((id) => <div key={id} className="h-20 w-12 rounded-md border border-violet-300/30 bg-violet-950 shadow-lg" />)}</div>}</div>;
+  const fonts = fontResources(match.state, playerId);
+  return <div className="flex justify-between gap-4"><div className={animationClass}><p className="flex items-center gap-2 text-sm text-slate-400">{enemy && <Bot size={16}/>} {enemy ? 'Rival' : 'You'}</p><p className={`text-3xl font-black ${enemy ? 'text-rose-300' : 'text-cyan-300'}`}>{player.life} life</p><p className="text-xs text-slate-500">{player.zones.deck.length} deck · {player.zones.boneyard.length} boneyard · Font {fonts.ready}/{fonts.total}</p></div>{enemy && <div className="flex gap-1" aria-label={`${player.zones.hand.length} hidden rival cards`}>{player.zones.hand.map((id) => <div key={id} className="h-20 w-12 rounded-md border border-violet-300/30 bg-violet-950 shadow-lg" />)}</div>}</div>;
 }
 
 function Hand({ match, play, perform, inspect }: { match: LocalMatch; play: (id: string) => void; perform: (command: GameCommand, settle?: boolean) => void; inspect: (card: CardDefinition) => void }) {
@@ -304,15 +370,27 @@ function MatchSidebar({ match, error, recentEvents, start }: { match: LocalMatch
   return <aside className="border-l border-white/10 bg-slate-950/70 p-5"><div className="flex items-center gap-2"><Shield className="text-cyan-300"/><h3 className="font-bold">Match inspector</h3></div><p className="mt-5 text-xs uppercase tracking-widest text-amber-300">Turn {match.state.turn} · {match.state.activePlayer === HUMAN_ID ? 'Your action' : 'Rival action'}</p>{error && <div role="alert" className="mt-4 rounded-lg border border-rose-300/30 bg-rose-950/40 p-3 text-sm text-rose-200">{error}</div>}{match.state.result && <div className="mt-4 rounded-xl border border-amber-300/30 bg-amber-300/10 p-4"><p className="text-xl font-black">{match.state.result.winnerId === HUMAN_ID ? 'Victory' : 'Defeat'}</p><p className="text-sm text-slate-300">Result: {match.state.result.reason}</p><button onClick={start} className="mt-3 flex items-center gap-1 rounded-lg bg-cyan-300 px-3 py-2 text-sm font-bold text-slate-950"><RotateCcw size={14}/> Rematch</button></div>}<div className="mt-5 space-y-3" aria-live="polite">{recentEvents.map((event, index) => <p key={`${match.events.length - index}-${event.type}`} className="border-l border-cyan-300/20 pl-3 text-sm text-slate-300">{describeEvent(event)}</p>)}</div><div className="mt-6 border-t border-white/10 pt-4 text-xs text-slate-500"><Swords className="mb-2" size={16}/><p>Select a card to inspect it. Use the action below a ready creature to attack.</p></div></aside>;
 }
 
+function CombatDecision({ match, attackerId, defend }: { match: LocalMatch; attackerId: string; defend: (blockerId?: string) => void }) {
+  const attacker = contentCard(attackerId, match.state);
+  const blockers = match.state.players[HUMAN_ID]!.zones.creatureField.filter((id) => !match.state.cards[id]!.exhausted);
+  const guards = blockers.filter((id) => contentCard(id, match.state).keywords.includes('Guard'));
+  const choices = guards.length ? guards : blockers;
+  return <section role="alert" className="rounded-2xl border-2 border-amber-300/60 bg-amber-300/10 p-4"><h3 className="text-lg font-black text-amber-200">Choose a blocker</h3><p className="mt-1 text-sm text-slate-300">{attacker.name} is attacking you. Creature damage is simultaneous; survivors recover after combat.</p><div className="mt-3 flex flex-wrap gap-2">{choices.map((id) => { const card = contentCard(id, match.state); const stats = cardStats(match.state, id); return <button key={id} onClick={() => defend(id)} className="rounded-lg bg-cyan-300 px-3 py-2 text-sm font-bold text-slate-950">Block with {card.name} ({stats.power}/{Math.max(0, stats.health - match.state.cards[id]!.damage)})</button>; })}<button disabled={guards.length > 0} onClick={() => defend()} className="rounded-lg border border-rose-300/40 px-3 py-2 text-sm text-rose-100 disabled:cursor-not-allowed disabled:opacity-40">{guards.length ? 'Guard must block' : 'Take the hit'}</button></div></section>;
+}
+
+function TargetChooser({ card, choices, choose, close }: { card: CardDefinition; choices: readonly TargetChoice[]; choose: (id: string) => void; close: () => void }) {
+  return <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onMouseDown={close}><section role="dialog" aria-modal="true" aria-labelledby="target-title" onMouseDown={(event) => event.stopPropagation()} className="w-full max-w-xl rounded-3xl border border-amber-300/35 bg-slate-950 p-6 shadow-2xl"><button onClick={close} className="float-right rounded-full border border-white/10 p-2" aria-label="Cancel target selection"><X/></button><p className="text-xs uppercase tracking-widest text-amber-300">Casting {card.name}</p><h2 id="target-title" className="mt-2 text-2xl font-black">Choose a target</h2><p className="mt-2 text-sm text-slate-400">Your Fonts are only spent after you confirm a legal target.</p><div className="mt-5 grid gap-2">{choices.map((choice) => <button key={choice.id} onClick={() => choose(choice.id)} className="rounded-xl border border-cyan-300/25 bg-cyan-950/30 p-4 text-left transition hover:border-cyan-300"><strong className="block">{choice.label}</strong><span className="text-sm text-slate-400">{choice.detail}</span></button>)}</div></section></div>;
+}
+
 function CardInspector({ card, close }: { card: CardDefinition; close: () => void }) {
-  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onMouseDown={close}><section role="dialog" aria-modal="true" aria-labelledby="card-inspector-title" onMouseDown={(event) => event.stopPropagation()} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-cyan-300/25 bg-slate-950 shadow-2xl shadow-cyan-950/70"><div className="grid md:grid-cols-[.8fr_1.2fr]"><div className="flex min-h-72 items-center justify-center bg-gradient-to-br from-violet-900 via-cyan-950 to-slate-950 p-8"><Sparkles size={96} className="text-cyan-200/60"/><span className="sr-only">Placeholder artwork for {card.name}</span></div><div className="relative p-7"><button autoFocus onClick={close} className="absolute right-4 top-4 rounded-full border border-white/10 p-2" aria-label="Close card details"><X/></button><p className="text-xs uppercase tracking-[.25em] text-amber-300">{card.setCode} · {card.type} · version {card.version}</p><h2 id="card-inspector-title" className="mt-3 pr-12 text-3xl font-black">{card.name}</h2><div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-cyan-300 px-3 py-1 text-sm font-bold text-slate-950">Cost {totalCost(card)}</span>{card.traditions.map((tradition) => <span key={tradition} className="rounded-full border border-violet-300/30 px-3 py-1 text-sm capitalize">{tradition}</span>)}{card.type === 'creature' && <span className="rounded-full border border-amber-300/30 px-3 py-1 text-sm font-bold">{card.power} power · {card.health} health</span>}</div><div className="mt-7 rounded-xl border border-white/10 bg-white/5 p-5"><h3 className="text-xs font-bold uppercase tracking-widest text-cyan-300">Rules</h3><p className="mt-3 text-lg leading-relaxed text-slate-100">{card.rulesText}</p></div>{card.traits.length > 0 && <p className="mt-5 text-sm"><strong>Traits:</strong> {card.traits.join(', ')}</p>}{card.keywords.length > 0 && <p className="mt-2 text-sm"><strong>Keywords:</strong> {card.keywords.join(', ')}</p>}{card.flavorText && <blockquote className="mt-5 border-l border-amber-300/30 pl-4 italic text-slate-400">{card.flavorText}</blockquote>}<div className="mt-7 border-t border-white/10 pt-4 text-xs text-slate-500"><p>{card.sourceMetadata.attribution}</p><p>License: {card.sourceMetadata.license}</p><p>Artwork: placeholder</p></div></div></div></section></div>;
+  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onMouseDown={close}><section role="dialog" aria-modal="true" aria-labelledby="card-inspector-title" onMouseDown={(event) => event.stopPropagation()} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-cyan-300/25 bg-slate-950 shadow-2xl shadow-cyan-950/70"><div className="grid md:grid-cols-[.8fr_1.2fr]"><div className="flex min-h-72 items-center justify-center bg-gradient-to-br from-violet-900 via-cyan-950 to-slate-950 p-8"><Sparkles size={96} className="text-cyan-200/60"/><span className="sr-only">Placeholder artwork for {card.name}</span></div><div className="relative p-7"><button autoFocus onClick={close} className="absolute right-4 top-4 rounded-full border border-white/10 p-2" aria-label="Close card details"><X/></button><p className="text-xs uppercase tracking-[.25em] text-amber-300">{card.setCode} · <GlossaryText>{card.type}</GlossaryText> · version {card.version}</p><h2 id="card-inspector-title" className="mt-3 pr-12 text-3xl font-black">{card.name}</h2><div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-cyan-300 px-3 py-1 text-sm font-bold text-slate-950">Cost {totalCost(card)}</span>{card.traditions.map((tradition) => <span key={tradition} className="rounded-full border border-violet-300/30 px-3 py-1 text-sm capitalize">{tradition}</span>)}{card.type === 'creature' && <span className="rounded-full border border-amber-300/30 px-3 py-1 text-sm font-bold"><GlossaryText>{`${card.power} power · ${card.health} health`}</GlossaryText></span>}{card.keywords.map((keyword) => <KeywordPill key={keyword} keyword={keyword}/>)}</div><div className="mt-7 rounded-xl border border-white/10 bg-white/5 p-5"><h3 className="text-xs font-bold uppercase tracking-widest text-cyan-300">Rules</h3><p className="mt-3 text-lg leading-relaxed text-slate-100"><GlossaryText>{card.rulesText}</GlossaryText></p></div>{card.traits.length > 0 && <p className="mt-5 text-sm"><strong>Traits:</strong> {card.traits.join(', ')}</p>}{card.flavorText && <blockquote className="mt-5 border-l border-amber-300/30 pl-4 italic text-slate-400">{card.flavorText}</blockquote>}<div className="mt-7 border-t border-white/10 pt-4 text-xs text-slate-500"><p>{card.sourceMetadata.attribution}</p><p>License: {card.sourceMetadata.license}</p><p>Artwork: placeholder</p></div></div></div></section></div>;
 }
 
 function motionFromEvent(event: GameEvent): MotionCue {
   if (event.type === 'CREATURE_SUMMONED') return { kind: 'summon', id: String(event.instanceId) };
   if (event.type === 'ATTACK_DECLARED') return { kind: 'attack', id: String(event.attackerId) };
   if (event.type === 'DAMAGE_DEALT') return { kind: 'impact', id: String(event.targetId) };
-  return { kind: 'channel', id: String(event.fontId) };
+  return { kind: 'channel', id: event.playerId ? String(event.playerId) : String(event.fontId) };
 }
 
 function Zone({ title, children }: { title: string; children: ReactNode }) {

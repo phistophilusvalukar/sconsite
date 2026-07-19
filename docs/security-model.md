@@ -2,7 +2,7 @@
 
 ## Trust boundaries
 
-Browsers, display names, deck names, commands, sequence numbers, targets, and claimed state are hostile. Only the match server holds canonical state and service credentials. Supabase anon credentials may ship to the browser; service-role credentials may not.
+Browsers, display names, deck names, commands, sequence numbers, targets, and claimed state are hostile. Only protected Supabase server-side processing may update canonical state or use service credentials. Supabase anon credentials may ship to the browser; service-role credentials may not.
 
 ## Controls
 

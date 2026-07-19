@@ -28,10 +28,11 @@ export const artManifestSchema = z.object({
   artist: z.string().min(1).optional(), license: assetLicenseSchema,
 }).strict();
 
+const zoneSchema = z.enum(["deck", "hand", "fontRow", "creatureField", "supportField", "salvageField", "actionStack", "boneyard", "exile", "player"]);
 export const targetSchema = z.object({
   id: z.string().regex(/^[a-z][a-zA-Z0-9]*$/),
   controller: z.enum(["self", "opponent", "any"]),
-  zone: z.enum(["deck", "hand", "fontRow", "creatureField", "supportField", "salvageField", "actionStack", "boneyard", "exile", "player"]),
+  zone: z.union([zoneSchema, z.array(zoneSchema).min(2)]),
   cardTypes: z.array(z.enum(["font", "creature", "spell", "aura", "magicItem", "consumable"])).min(1).optional(),
   min: z.number().int().nonnegative().default(1), max: z.number().int().positive().default(1), optional: z.boolean().default(false),
   filters: z.array(z.enum(["friendly", "enemy", "ready", "damaged", "attached", "unattached"])).default([]),
@@ -82,7 +83,13 @@ const spell = base.extend({ type: z.literal("spell"), speed: z.enum(["action", "
 const aura = base.extend({ type: z.literal("aura") }).strict();
 const magicItem = base.extend({ type: z.literal("magicItem"), slot: z.enum(["weapon", "armor", "accessory"]), equipCost: manaCostSchema }).strict();
 const consumable = base.extend({ type: z.literal("consumable"), subtype: z.enum(["potion", "bomb", "scroll", "talisman", "mutagen"]), charges: z.number().int().positive(), recoveryCost: manaCostSchema }).strict();
-export const cardDefinitionSchema = z.discriminatedUnion("type", [font, creature, spell, aura, magicItem, consumable]);
+export const persistentAuraEffectSchema = z.discriminatedUnion("kind", [
+  z.object({ id: z.string().min(1), kind: z.literal("statModifier"), scope: z.enum(["friendlyCreatures", "enemyCreatures"]), power: z.number().int(), health: z.number().int() }).strict(),
+  z.object({ id: z.string().min(1), kind: z.literal("costModifier"), scope: z.enum(["friendlyCards", "enemyCards"]), cardType: z.enum(["creature", "spell", "aura", "magicItem", "consumable"]), amount: z.number().int() }).strict(),
+  z.object({ id: z.string().min(1), kind: z.literal("trigger"), event: z.enum(["turnStart", "attackerDeclared"]), effects: z.array(effectSchema).min(1), limit: z.enum(["none", "oncePerTurn"]) }).strict(),
+]);
+const auraWithMetadata = aura.extend({ persistentEffects: z.array(persistentAuraEffectSchema).min(1) }).strict();
+export const cardDefinitionSchema = z.discriminatedUnion("type", [font, creature, spell, auraWithMetadata, magicItem, consumable]);
 export type CardDefinition = z.infer<typeof cardDefinitionSchema>;
 
 export const deckSchema = z.object({
@@ -90,3 +97,4 @@ export const deckSchema = z.object({
   format: z.literal("prototype-30"), cards: z.array(z.object({ cardId: z.string(), version: z.number().int().positive(), count: z.number().int().positive() }).strict()).min(1),
 }).strict();
 export type DeckDefinition = z.infer<typeof deckSchema>;
+export type PersistentAuraEffect = z.infer<typeof persistentAuraEffectSchema>;

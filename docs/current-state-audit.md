@@ -2,7 +2,7 @@
 
 ## Snapshot
 
-The repository is a working single-package React 18/Vite 5/TypeScript site using npm, Tailwind, React Router, Supabase Auth/Postgres/realtime, Vercel, and GitHub Actions. The root application has established community routes and a substantial migration history. There was no test runner, game engine, Colyseus server, Phaser dependency, monorepo workspace, or card-game code at audit time.
+The repository is a working single-package React 18/Vite 5/TypeScript site using npm, Tailwind, React Router, Supabase Auth/Postgres/Realtime, Vercel, and GitHub Actions. The root application has established community routes and a substantial migration history. There was no test runner, game engine, live match transport, Phaser dependency, monorepo workspace, or card-game code at audit time.
 
 ## Constraints and conflicts
 
@@ -13,7 +13,7 @@ The repository is a working single-package React 18/Vite 5/TypeScript site using
 
 ## Migration decision
 
-Keep the web app at repository root for the vertical slice. Add npm workspaces for `packages/*` and `apps/match-server`, with root aliases into packages. A later, separately tested move to `apps/web` is optional. Existing pages, auth, migrations, and deployment remain intact.
+Keep the web app at repository root for the vertical slice. Add npm workspaces for `packages/*`, with root aliases into packages. A later, separately tested move to `apps/web` is optional. Existing pages, auth, migrations, and deployment remain intact.
 
 ## Existing validation
 

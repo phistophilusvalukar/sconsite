@@ -22,7 +22,7 @@ const creatureData = [
   ["dawnshield-sentinel", "Dawnshield Sentinel", "divine", 3, 2, 6, "Guard"], ["memory-moth", "Memory Moth", "occult", 2, 2, 2, "On death, draw a card."],
   ["grave-orchid-keeper", "Grave-Orchid Keeper", "occult", 4, 4, 5, "Your healing effects restore 1 additional life."], ["haloed-stag", "Haloed Stag", "divine", 4, 4, 6, "When healed, this gets +1 power this turn."],
 ] as const;
-const creatures = creatureData.map(([id, name, tradition, generic, power, health, text]) => card({ ...base(id, name, [tradition], text), type: "creature", cost: cost(generic, tradition), power, health, equipmentSlots: ["weapon", "armor", "accessory"], consumableSlots: 1 }));
+const creatures = creatureData.map(([id, name, tradition, generic, power, health, text]) => card({ ...base(id, name, [tradition], text), type: "creature", cost: cost(generic, tradition), power, health, keywords: ["Swift", "Guard", "Trample"].filter((keyword) => text.includes(keyword)), equipmentSlots: ["weapon", "armor", "accessory"], consumableSlots: 1 }));
 
 const targetCreature = [{ id: "target", controller: "any", zone: "creatureField", cardTypes: ["creature"], min: 1, max: 1, optional: false, filters: [] }];
 const spellData = [
@@ -35,15 +35,27 @@ const spellData = [
   ["recall-the-fallen", "Recall the Fallen", "divine", 2, "Return a creature from your boneyard to your hand.", { op: "moveCard", target: "$target.0", to: "hand" }],
   ["deny-the-echo", "Deny the Echo", "occult", 2, "Counter a stack effect.", { op: "counterStackEffect", target: "$target.0" }],
 ] as const;
-const spells = spellData.map(([id, name, tradition, generic, text, effect], index) => card({ ...base(id, name, [tradition], text), type: "spell", speed: index === 7 ? "reaction" : "action", cost: cost(generic, tradition), targets: targetCreature, effects: [effect] }));
+const spellTargets = {
+  "spark-lance": [{ id: "target", controller: "any", zone: ["creatureField", "player"], min: 1, max: 1, optional: false, filters: [] }],
+  "gentle-radiance": [{ id: "target", controller: "self", zone: ["creatureField", "player"], min: 1, max: 1, optional: false, filters: [] }],
+  "recall-the-fallen": [{ id: "target", controller: "self", zone: "boneyard", cardTypes: ["creature"], min: 1, max: 1, optional: false, filters: ["friendly"] }],
+  "deny-the-echo": [{ id: "target", controller: "opponent", zone: "actionStack", min: 1, max: 1, optional: false, filters: [] }],
+} as const;
+const spells = spellData.map(([id, name, tradition, generic, text, effect], index) => card({ ...base(id, name, [tradition], text), type: "spell", speed: index === 7 ? "reaction" : "action", cost: cost(generic, tradition), targets: spellTargets[id as keyof typeof spellTargets] ?? targetCreature, effects: [effect] }));
 
 const auras = [
-  ["canopy-fury", "Canopy Fury", "primal", "Your creatures have +1 power.", { op: "runRegisteredEffect", handler: "prototype.canopyFury" }],
-  ["season-of-thorns", "Season of Thorns", "primal", "The first enemy attacker each turn takes 1 damage.", { op: "runRegisteredEffect", handler: "prototype.seasonOfThorns" }],
-  ["hymn-of-returning-light", "Hymn of Returning Light", "divine", "At turn start, heal your player 1.", { op: "heal", target: "$controller", amount: 1 }],
-  ["quieting-veil", "Quieting Veil", "occult", "The opponent's first spell each turn costs 1 more.", { op: "runRegisteredEffect", handler: "prototype.quietingVeil" }],
+  ["canopy-fury", "Canopy Fury", "primal", "Your creatures have +1 power."],
+  ["season-of-thorns", "Season of Thorns", "primal", "The first enemy attacker each turn takes 1 damage."],
+  ["hymn-of-returning-light", "Hymn of Returning Light", "divine", "At turn start, heal your player 1."],
+  ["quieting-veil", "Quieting Veil", "occult", "The opponent's first spell each turn costs 1 more."],
 ] as const;
-const auraCards = auras.map(([id, name, tradition, text, effect]) => card({ ...base(id, name, [tradition], text), type: "aura", cost: cost(2, tradition), abilities: [{ id: "presence", kind: "continuous", timing: "static", targets: [], effects: [effect], limit: "none" }] }));
+const auraMetadata = {
+  "canopy-fury": [{ id: "canopy-fury-power", kind: "statModifier", scope: "friendlyCreatures", power: 1, health: 0 }],
+  "season-of-thorns": [{ id: "season-thorns-retaliation", kind: "trigger", event: "attackerDeclared", effects: [{ op: "dealDamage", source: "$source", target: "$target.0", amount: 1 }], limit: "oncePerTurn" }],
+  "hymn-of-returning-light": [{ id: "hymn-turn-heal", kind: "trigger", event: "turnStart", effects: [{ op: "heal", target: "$controller", amount: 1 }], limit: "none" }],
+  "quieting-veil": [{ id: "quieting-veil-cost", kind: "costModifier", scope: "enemyCards", cardType: "spell", amount: 1 }],
+} as const;
+const auraCards = auras.map(([id, name, tradition, text]) => card({ ...base(id, name, [tradition], text), type: "aura", cost: cost(2, tradition), persistentEffects: auraMetadata[id] }));
 
 const itemData = [
   ["emberedge", "Emberedge", "primal", "weapon", 2, 0, "+2 power while attached."], ["barkplate", "Barkplate", "primal", "armor", 0, 3, "+3 health while attached."],

@@ -2,6 +2,7 @@ export * from "./ManaCost";
 export * from "./GameCard";
 export * from "./DeckList";
 export * from "./KeywordTooltip";
+export * from "./GlossaryText";
 export * from "./Modal";
 export * from "./MatchLog";
 export * from "./MatchInspector";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardDefinitionSchema, effectSchema, findCardVersion, findLatestCardVersion, prototypeCards, prototypeDecks, validateCardSet, validateDeck, type CardDefinition, type DeckDefinition } from "../src/index";
+import { cardDefinitionSchema, effectSchema, findCardVersion, findLatestCardVersion, GAME_GLOSSARY, prototypeCards, prototypeDecks, validateCardSet, validateDeck, type CardDefinition, type DeckDefinition } from "../src/index";
 
 describe("prototype content", () => {
   it("contains the required 40-card distribution", () => {
@@ -16,6 +16,16 @@ describe("prototype content", () => {
   it("resolves pinned and latest versions", () => {
     expect(findCardVersion(prototypeCards, "spark-lance", 1)?.name).toBe("Spark Lance");
     expect(findLatestCardVersion(prototypeCards, "spark-lance")?.version).toBe(1);
+  });
+  it("defines every printed prototype keyword in the canonical glossary", () => {
+    const terms = new Set(Object.values(GAME_GLOSSARY).map((entry) => entry.term.toLowerCase()));
+    for (const card of prototypeCards) for (const keyword of card.keywords) expect(terms.has(keyword.toLowerCase())).toBe(true);
+  });
+  it("uses mixed target domains only for creature-or-player spells", () => {
+    for (const id of ["spark-lance", "gentle-radiance"]) expect(prototypeCards.find((card) => card.id === id)?.targets[0]?.zone).toEqual(["creatureField", "player"]);
+  });
+  it("provides validated persistent metadata for every Aura", () => {
+    for (const aura of prototypeCards.filter((card) => card.type === "aura")) expect(aura.persistentEffects.length).toBeGreaterThan(0);
   });
 });
 
