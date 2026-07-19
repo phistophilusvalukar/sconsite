@@ -8,6 +8,8 @@ The multiplayer service is now a runnable Colyseus WebSocket server with `/healt
 
 New `packages/protocol` contracts validate commands, matchmaking, reconnect, snapshots, events, acknowledgements and errors, including hidden-information projection. New `packages/ui` supplies accessible reusable cards, mana/deck displays, modal, match inspector/log and state components.
 
+The presentation milestone now includes browser-unlocked procedural sound cues for UI, Fonts, mana, cards, summoning, attacks, damage, attachments, errors, and results. Event-driven CSS sequences animate channeling, summoning, attack lunges, and impacts; both the explicit reduced-motion setting and the operating-system preference suppress them. Cards in the encyclopedia, hand, and battlefield open an accessible enlarged inspector with complete rules, cost, stats, traditions, traits, keywords, attribution, license, and placeholder-art disclosure.
+
 ## Outcome
 
 This run preserves the existing Westmarch site and adds a runnable card-game foundation and local presentation slice at `/arcana`. The headless rules engine is fully deterministic and covers Fonts/mana, creatures/combat, spells/priority, Auras, equipment salvage/recovery, consumables, victory, command/event logs, and replay. Card content is declarative and validated. The server package supplies an authoritative room adapter with hidden-information projection, sequencing/idempotency, rate/payload limits, reconnect, JWT and persistence seams. A Supabase migration supplies the persistent schema and RLS.

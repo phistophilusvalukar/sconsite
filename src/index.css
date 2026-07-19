@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes arcana-summon {
+  0% { opacity: 0; transform: translateY(38px) scale(.72); filter: brightness(2); }
+  55% { opacity: 1; transform: translateY(-8px) scale(1.12); filter: brightness(1.6); }
+  100% { transform: translateY(0) scale(1); filter: brightness(1); }
+}
+
+@keyframes arcana-attack {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  45% { transform: translateX(42px) rotate(3deg) scale(1.08); }
+  60% { transform: translateX(34px) rotate(-2deg) scale(.98); }
+}
+
+@keyframes arcana-impact {
+  0%, 100% { transform: translateX(0); filter: brightness(1); }
+  25% { transform: translateX(-8px); filter: brightness(1.8) saturate(1.8); }
+  50% { transform: translateX(7px); }
+  75% { transform: translateX(-3px); }
+}
+
+@keyframes arcana-channel {
+  0% { box-shadow: 0 0 0 0 rgb(103 232 249 / .75); }
+  100% { box-shadow: 0 0 0 24px rgb(103 232 249 / 0); }
+}
+
+.arcana-summon { animation: arcana-summon 520ms cubic-bezier(.2,.9,.2,1); }
+.arcana-attack { animation: arcana-attack 420ms ease-in-out; }
+.arcana-impact { animation: arcana-impact 360ms ease-in-out; }
+.arcana-channel { animation: arcana-channel 460ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .arcana-summon, .arcana-attack, .arcana-impact, .arcana-channel { animation: none; }
+}
