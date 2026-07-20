@@ -4,6 +4,7 @@ import {
   BookOpen,
   Check,
   EyeOff,
+  Dices,
   Lock,
   Pause,
   Play,
@@ -11,21 +12,24 @@ import {
   ShieldAlert,
   Sparkles,
   Square,
+  Settings,
   Users
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useArcaneSession } from '../hooks/useArcaneSession';
 import {
   createArcaneSession,
+  listArcaneCharacters,
   listArcaneSessions,
   respondToArcaneInvitation,
   searchArcaneInviteCandidates,
   type ArcaneInviteCandidate,
+  type ArcaneCharacterOption,
   type ArcaneLockSummary,
   type ArcaneParticipant,
   type ArcaneSessionSummary
 } from '../api/arcaneLocksService';
-import type { GlyphDefinition, LockAccessState, LockRuntimeState, PuzzleDefinition, PuzzleSessionStatus, RingDefinition } from '../engine/types';
+import type { ArcaneKnowledgeState, GlyphDefinition, LockAccessState, LockRuntimeState, PuzzleDefinition, PuzzleSessionStatus, RingDefinition } from '../engine/types';
 import { ringSockets, socketSlotForRing } from '../engine/puzzleEngine';
 import { isEmptyGlyphId } from '../engine/constants';
 import { getPuzzleTemplate } from '../data/puzzleTemplates';
@@ -54,9 +58,12 @@ function ArcaneSessionRoom({
 }) {
   const {
     view,
+    knowledge,
+    lastArcanaResult,
     isLoading,
     message,
     submitAction,
+    rollKnowledge,
     setSessionStatus,
     setProvider,
     setPlayerAccess,
@@ -66,6 +73,14 @@ function ArcaneSessionRoom({
     removeUser
   } = useArcaneSession(sessionId, selectedLockId);
   const [localNotice, setLocalNotice] = useState('');
+  const [showGmControls, setShowGmControls] = useState(false);
+  const [characters, setCharacters] = useState<ArcaneCharacterOption[]>([]);
+
+  useEffect(() => {
+    let ignore = false;
+    listArcaneCharacters().then(items => { if (!ignore) setCharacters(items); }).catch(() => { if (!ignore) setCharacters([]); });
+    return () => { ignore = true; };
+  }, []);
 
   if (isLoading && !view) {
     return (
@@ -95,6 +110,7 @@ function ArcaneSessionRoom({
     <div className="arcane-page">
       <section className="arcane-shell">
         <SessionHeader name={view.session.name} status={view.session.status} message={localNotice || message} />
+        {isGm && <button type="button" className="gm-launch-button" onClick={() => setShowGmControls(true)}><Settings className="h-4 w-4" /> GM controls</button>}
 
         <LockTabs
           locks={view.locks}
@@ -110,13 +126,15 @@ function ArcaneSessionRoom({
         <div className="arcane-layout">
           <main className="arcane-board-column">
             <InscriptionPanel
-              canRead={view.canReadInstructions}
-              inscription={view.inscription}
-              hint={view.translatedHint}
+              canRead={isGm || Boolean(knowledge?.translationText)}
+              inscription={isGm ? view.inscription : knowledge?.translationText ?? 'The inscription is written in an unknown arcane cipher.'}
+              hint={isGm ? view.translatedHint : null}
+              attempted={isGm || knowledge?.translationAttempted}
             />
             <ArcaneLockBoard
               definition={activeDefinition}
               state={view.activeLock.currentState}
+              knownGlyphIds={isGm ? undefined : knowledge?.revealedGlyphIds ?? []}
               disabled={!canAct}
               onRotate={(ringId, direction) => submitAction({ type: 'rotate_ring', ringId, direction, steps: 1 })}
               onPowerGlyph={(ringId, glyphId, socketId) => submitAction({ type: 'power_glyph', ringId, glyphId, socketId })}
@@ -125,27 +143,12 @@ function ArcaneSessionRoom({
             />
             <div className="below-play-panels">
               <PresencePanel participants={view.participants} activeLockId={view.activeLock.id} />
-              {isGm && (
-                <GmControlPanel
-                  lock={view.activeLock}
-                  participants={view.participants}
-                  access={view.access}
-                  providerType={view.session.accessProviderType}
-                  actionHistory={view.actionHistory}
-                  onSetStatus={setSessionStatus}
-                  onSetProvider={setProvider}
-                  onSetPlayerAccess={setPlayerAccess}
-                  onResetLock={resetActiveLock}
-                  onResetAll={resetEveryLock}
-                  onInviteUser={inviteUser}
-                  onRemoveUser={removeUser}
-                />
-              )}
             </div>
           </main>
 
           <aside className="arcane-side">
-            <GlyphBook definition={activeDefinition} />
+            {!isGm && <ArcanaStudyPanel characters={characters} knowledge={knowledge} lastResult={lastArcanaResult} onRoll={rollKnowledge} />}
+            <GlyphBook definition={activeDefinition} revealedGlyphIds={isGm ? undefined : knowledge?.revealedGlyphIds ?? []} />
             <PlayerStatusPanel
               canInteract={view.canInteract}
               canRead={view.canReadInstructions}
@@ -154,6 +157,14 @@ function ArcaneSessionRoom({
             />
           </aside>
         </div>
+        {isGm && showGmControls && (
+          <div className="arcane-modal-backdrop" role="presentation" onMouseDown={() => setShowGmControls(false)}>
+            <div className="arcane-modal" role="dialog" aria-modal="true" aria-label="GM controls" onMouseDown={event => event.stopPropagation()}>
+              <button type="button" className="modal-close" onClick={() => setShowGmControls(false)}>Close</button>
+              <GmControlPanel lock={view.activeLock} participants={view.participants} access={view.access} providerType={view.session.accessProviderType} actionHistory={view.actionHistory} onSetStatus={setSessionStatus} onSetProvider={setProvider} onSetPlayerAccess={setPlayerAccess} onResetLock={resetActiveLock} onResetAll={resetEveryLock} onInviteUser={inviteUser} onRemoveUser={removeUser} />
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -273,7 +284,7 @@ function LockTabs({ locks, activeLockId, onSelect }: { locks: ArcaneLockSummary[
   );
 }
 
-function InscriptionPanel({ canRead, inscription, hint }: { canRead: boolean; inscription: string; hint: string | null }) {
+function InscriptionPanel({ canRead, inscription, hint, attempted }: { canRead: boolean; inscription: string; hint: string | null; attempted?: boolean }) {
   return (
     <section className="inscription-panel" aria-live="polite">
       <div className="panel-title">
@@ -281,6 +292,7 @@ function InscriptionPanel({ canRead, inscription, hint }: { canRead: boolean; in
         <h2>Inscription</h2>
       </div>
       <p className={canRead ? 'inscription-text' : 'inscription-redacted'}>{inscription}</p>
+      {!canRead && attempted && <p className="warn-text">Your single translation attempt revealed nothing.</p>}
       {hint && <p className="inscription-hint">{hint}</p>}
     </section>
   );
@@ -289,6 +301,7 @@ function InscriptionPanel({ canRead, inscription, hint }: { canRead: boolean; in
 function ArcaneLockBoard({
   definition,
   state,
+  knownGlyphIds,
   disabled,
   onRotate,
   onPowerGlyph,
@@ -297,6 +310,7 @@ function ArcaneLockBoard({
 }: {
   definition: PuzzleDefinition;
   state: LockRuntimeState;
+  knownGlyphIds?: string[];
   disabled: boolean;
   onRotate: (ringId: string, direction: 1 | -1) => void;
   onPowerGlyph: (ringId: string, glyphId: string, socketId?: string) => void;
@@ -363,6 +377,7 @@ function ArcaneLockBoard({
             ring={ring}
             state={state}
             glyphMap={glyphMap}
+            knownGlyphIds={knownGlyphIds}
             disabled={disabled}
             visualRotationDegrees={visualRingRotations[ring.id] ?? ((state.ringRotations[ring.id] ?? 0) * 360) / Math.max(1, ringSockets(ring).length)}
             onPowerGlyph={guard(onPowerGlyph)}
@@ -423,6 +438,7 @@ function ArcaneRing({
   ring,
   state,
   glyphMap,
+  knownGlyphIds,
   disabled,
   visualRotationDegrees,
   onPowerGlyph
@@ -430,6 +446,7 @@ function ArcaneRing({
   ring: RingDefinition;
   state: LockRuntimeState;
   glyphMap: Map<string, GlyphDefinition>;
+  knownGlyphIds?: string[];
   disabled: boolean;
   visualRotationDegrees: number;
   onPowerGlyph: (ringId: string, glyphId: string, socketId?: string) => void;
@@ -448,6 +465,7 @@ function ArcaneRing({
       <circle className="ring-track" r={ring.radius} />
       {ringSockets(ring).map(socket => {
         const glyph = glyphMap.get(socket.glyphId);
+        const glyphKnown = knownGlyphIds === undefined || knownGlyphIds.includes(socket.glyphId);
         const slot = socketSlotForRing(ring, socket.id, 0);
         const point = polar(slot, ringSockets(ring).length, ring.radius);
         const isEmpty = isEmptyGlyphId(socket.glyphId);
@@ -463,13 +481,13 @@ function ArcaneRing({
             {!isEmpty && (
               <>
                 <path d={glyph?.symbol} transform={`scale(${glyphScale}) translate(-12 -12)`} />
-                <title>{glyph?.accessibleDescription ?? socket.glyphId}</title>
+                <title>{glyphKnown ? glyph?.accessibleDescription ?? socket.glyphId : 'Unknown arcane glyph'}</title>
                 <foreignObject x="-22" y="-22" width="44" height="44">
                   <button
                     className="glyph-hit"
                     type="button"
                     disabled={disabled}
-                    aria-label={`Power ${glyph?.label ?? socket.glyphId} on ${ring.name}`}
+                    aria-label={`Power ${glyphKnown ? glyph?.label ?? socket.glyphId : 'unknown glyph'} on ${ring.name}`}
                     onClick={() => onPowerGlyph(ring.id, socket.glyphId, socket.id)}
                   />
                 </foreignObject>
@@ -495,7 +513,7 @@ function PlayerStatusPanel({ canInteract, canRead, role, status }: { canInteract
   );
 }
 
-function GlyphBook({ definition }: { definition: PuzzleDefinition }) {
+function GlyphBook({ definition, revealedGlyphIds }: { definition: PuzzleDefinition; revealedGlyphIds?: string[] }) {
   const usedGlyphIds = useMemo(() => {
     const ids = new Set<string>();
     for (const ring of definition.rings) {
@@ -506,6 +524,7 @@ function GlyphBook({ definition }: { definition: PuzzleDefinition }) {
     return ids;
   }, [definition.rings]);
   const glyphs = definition.glyphDictionary.filter(glyph => usedGlyphIds.has(glyph.id));
+  const revealed = new Set(revealedGlyphIds);
 
   return (
     <section className="arcane-panel glyph-book">
@@ -514,19 +533,50 @@ function GlyphBook({ definition }: { definition: PuzzleDefinition }) {
         <h2>Glyph Book</h2>
       </div>
       <div className="glyph-book-list">
-        {glyphs.map(glyph => (
+        {glyphs.map(glyph => {
+          const known = revealedGlyphIds === undefined || revealed.has(glyph.id);
+          return (
           <article className="glyph-book-row" key={glyph.id}>
             <svg className="glyph-book-icon" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
               <path d={glyph.symbol} />
             </svg>
             <div>
-              <h3>{glyph.label}</h3>
-              <p>{glyph.accessibleDescription}</p>
+              <h3>{known ? glyph.label : 'Unknown glyph'}</h3>
+              <p>{known ? glyph.accessibleDescription : 'Its meaning has not been deciphered.'}</p>
             </div>
           </article>
-        ))}
+        )})}
       </div>
+    </section>
+  );
+}
+
+function ArcanaStudyPanel({ characters, knowledge, lastResult, onRoll }: {
+  characters: ArcaneCharacterOption[];
+  knowledge: ArcaneKnowledgeState | null;
+  lastResult: { dieRoll: number; total: number; degree: string } | null;
+  onRoll: (characterId: string, kind: 'translation' | 'glyphs') => Promise<void>;
+}) {
+  const [characterId, setCharacterId] = useState('');
+  const selectedId = knowledge?.characterId ?? characterId;
+  const selected = characters.find(character => character.id === selectedId);
+  return (
+    <section className="arcane-panel arcana-study">
+      <div className="panel-title"><Dices className="h-5 w-5" /><h2>Arcana Study</h2></div>
+      <label>Character
+        <select value={selectedId} disabled={Boolean(knowledge?.characterId)} onChange={event => setCharacterId(event.target.value)}>
+          <option value="">Choose a character</option>
+          {characters.map(character => <option key={character.id} value={character.id}>{character.name} (Arcana {character.arcanaModifier >= 0 ? '+' : ''}{character.arcanaModifier})</option>)}
+        </select>
+      </label>
+      <p>DC <strong>{knowledge?.dc ?? '—'}</strong>. Your first roll binds this lock to that character.</p>
+      <div className="gm-buttons">
+        <button type="button" disabled={!selectedId || Boolean(knowledge?.translationAttempted)} onClick={() => void onRoll(selectedId, 'translation')}>Translate ({knowledge?.translationAttempted ? 'used' : '1 try'})</button>
+        <button type="button" disabled={!selectedId || (knowledge?.glyphRollsRemaining ?? 3) <= 0} onClick={() => void onRoll(selectedId, 'glyphs')}>Study glyphs ({knowledge?.glyphRollsRemaining ?? 3} left)</button>
+      </div>
+      {selected && <p className="arcana-character-note">Rolling as {selected.name} with Arcana {selected.arcanaModifier >= 0 ? '+' : ''}{selected.arcanaModifier}.</p>}
+      {lastResult && <p className="arcana-result">Last roll: <strong>{lastResult.total}</strong> ({lastResult.dieRoll} on the die), {lastResult.degree.replace('_', ' ')}.</p>}
     </section>
   );
 }

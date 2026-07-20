@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../config/database';
-import type { LockAction } from '../engine/types';
+import type { ArcanaCheckKind, ArcanaCheckResult, ArcaneKnowledgeState, LockAction } from '../engine/types';
 import {
+  getArcaneKnowledge,
   getLockViewForCurrentUser,
   inviteArcaneSessionUser,
   performLockAction,
   removeArcaneSessionMember,
+  rollArcaneKnowledge,
   resetAllLocks,
   resetLock,
   updateAccessProvider,
@@ -19,12 +21,15 @@ export function useArcaneSession(sessionId: string, selectedLockId?: string) {
   const [view, setView] = useState<LockView | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState('Connecting to the seal chamber...');
+  const [knowledge, setKnowledge] = useState<ArcaneKnowledgeState | null>(null);
+  const [lastArcanaResult, setLastArcanaResult] = useState<ArcanaCheckResult | null>(null);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
       const next = await getLockViewForCurrentUser(sessionId, selectedLockId);
       setView(next);
+      setKnowledge(next.session.currentUserRole === 'gm' ? null : await getArcaneKnowledge(next.activeLock.id));
       setMessage('Synchronized with the canonical lock state.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to load the lock session.');
@@ -78,6 +83,19 @@ export function useArcaneSession(sessionId: string, selectedLockId?: string) {
       await refresh();
     }
   }, [refresh, view]);
+
+  const rollKnowledge = useCallback(async (characterId: string, kind: ArcanaCheckKind) => {
+    if (!view) return;
+    setMessage(`Rolling Arcana for ${kind}...`);
+    try {
+      const result = await rollArcaneKnowledge(view.activeLock.id, characterId, kind);
+      setKnowledge(result);
+      setLastArcanaResult(result);
+      setMessage(`Arcana ${result.degree.replace('_', ' ')}: ${result.total} (${result.dieRoll} + ${result.arcanaModifier ?? 0}) vs DC ${result.dc}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'The Arcana check failed.');
+    }
+  }, [view]);
 
   const runGmAction = useCallback(async (label: string, action: () => Promise<void>) => {
     setMessage(label);
@@ -136,10 +154,13 @@ export function useArcaneSession(sessionId: string, selectedLockId?: string) {
 
   return useMemo(() => ({
     view,
+    knowledge,
+    lastArcanaResult,
     isLoading,
     message,
     refresh,
     submitAction,
+    rollKnowledge,
     setSessionStatus,
     setProvider,
     setPlayerAccess,
@@ -147,5 +168,5 @@ export function useArcaneSession(sessionId: string, selectedLockId?: string) {
     resetEveryLock,
     inviteUser,
     removeUser
-  }), [inviteUser, isLoading, message, refresh, removeUser, resetActiveLock, resetEveryLock, setPlayerAccess, setProvider, setSessionStatus, submitAction, view]);
+  }), [inviteUser, isLoading, knowledge, lastArcanaResult, message, refresh, removeUser, resetActiveLock, resetEveryLock, rollKnowledge, setPlayerAccess, setProvider, setSessionStatus, submitAction, view]);
 }

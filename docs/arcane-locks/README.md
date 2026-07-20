@@ -48,6 +48,10 @@ The migration supports session statuses: `draft`, `active`, `paused`, `completed
 
 Players must be accepted session members. Spectators can view allowed state but cannot manipulate locks. Movement denial keeps the lock visible but blocks actions and displays a reason. Instruction denial returns redacted text instead of plaintext.
 
+Players choose one of their active characters before making Arcana knowledge checks. The first check binds that character to the current lock generation. Puzzle DC is `14 + (difficulty * 2)`, using the character's imported Arcana modifier. Checks use Pathfinder-style degrees of success: totals ten above/below the DC shift the degree, and natural 20/1 improve or reduce it one step.
+
+Each player gets one translation check. A critical success reveals the whole inscription, a success reveals intermittent words, and a failure or critical failure reveals none. Each player also gets three glyph checks; critical success, success, failure, and critical failure reveal 5, 3, 2, and 1 previously unknown glyphs respectively. Results are stored per player, lock, and reset generation. Resetting a lock gives players a fresh knowledge record for the new generation.
+
 ## Realtime
 
 The client subscribes to `arcane-session:{sessionId}` and refreshes canonical state when sessions, lock instances, or access rows change. Clients re-fetch after rejected actions rather than replaying missed events.

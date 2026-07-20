@@ -130,6 +130,30 @@ export type PuzzleDefinition = {
   conduitRevealMode: 'always' | 'hover' | 'powered';
 };
 
+export type ArcanaCheckKind = 'translation' | 'glyphs';
+export type ArcanaDegree = 'critical_success' | 'success' | 'failure' | 'critical_failure';
+
+export type ArcaneKnowledgeState = {
+  characterId: string | null;
+  characterName: string | null;
+  arcanaModifier: number | null;
+  dc: number;
+  translationAttempted: boolean;
+  translationDegree: ArcanaDegree | null;
+  translationText: string | null;
+  glyphRollsUsed: number;
+  glyphRollsRemaining: number;
+  revealedGlyphIds: string[];
+};
+
+export type ArcanaCheckResult = ArcaneKnowledgeState & {
+  kind: ArcanaCheckKind;
+  dieRoll: number;
+  total: number;
+  degree: ArcanaDegree;
+  newlyRevealedGlyphIds: string[];
+};
+
 export type LockAction =
   | {
       type: 'rotate_ring';

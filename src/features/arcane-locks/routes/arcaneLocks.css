@@ -83,6 +83,75 @@
   min-height: 38px;
 }
 
+.gm-launch-button {
+  margin: 14px 0 0 auto;
+  border: 1px solid rgba(229, 190, 112, 0.35);
+  background: rgba(27, 29, 36, 0.9);
+  color: #f6ead2;
+  border-radius: 7px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arcane-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 5, 8, 0.82);
+}
+
+.arcane-modal {
+  width: min(1100px, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid rgba(240, 200, 107, 0.55);
+  border-radius: 10px;
+  background: #11151c;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
+  padding: 14px;
+}
+
+.modal-close {
+  display: block;
+  margin: 0 0 10px auto;
+  border: 1px solid rgba(229, 190, 112, 0.35);
+  border-radius: 7px;
+  background: rgba(27, 29, 36, 0.9);
+  color: #f6ead2;
+  padding: 8px 12px;
+}
+
+.arcana-study label {
+  display: grid;
+  gap: 6px;
+  color: #ddcda5;
+}
+
+.arcana-study select {
+  min-height: 40px;
+  border: 1px solid rgba(229, 190, 112, 0.35);
+  border-radius: 7px;
+  background: rgba(15, 17, 22, 0.92);
+  color: #f6ead2;
+  padding: 8px 10px;
+}
+
+.arcana-study button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.arcana-result {
+  border-left: 3px solid #e6bd6a;
+  padding-left: 10px;
+  color: #fff4d8;
+}
+
 .primary-action {
   background: #6f3f19 !important;
   border-color: #f0c86b !important;
