@@ -74,6 +74,7 @@ function ArcaneSessionRoom({
   } = useArcaneSession(sessionId, selectedLockId);
   const [localNotice, setLocalNotice] = useState('');
   const [showGmControls, setShowGmControls] = useState(false);
+  const [showGmAnswers, setShowGmAnswers] = useState(false);
   const [characters, setCharacters] = useState<ArcaneCharacterOption[]>([]);
 
   useEffect(() => {
@@ -110,7 +111,15 @@ function ArcaneSessionRoom({
     <div className="arcane-page">
       <section className="arcane-shell">
         <SessionHeader name={view.session.name} status={view.session.status} message={localNotice || message} />
-        {isGm && <button type="button" className="gm-launch-button" onClick={() => setShowGmControls(true)}><Settings className="h-4 w-4" /> GM controls</button>}
+        {isGm && (
+          <div className="gm-launch-row">
+            <button type="button" className="gm-launch-button" aria-pressed={showGmAnswers} onClick={() => setShowGmAnswers(value => !value)}>
+              {showGmAnswers ? <EyeOff className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
+              {showGmAnswers ? 'Hide GM answers' : 'Reveal GM answers'}
+            </button>
+            <button type="button" className="gm-launch-button" onClick={() => setShowGmControls(true)}><Settings className="h-4 w-4" /> GM controls</button>
+          </div>
+        )}
 
         <LockTabs
           locks={view.locks}
@@ -126,15 +135,15 @@ function ArcaneSessionRoom({
         <div className="arcane-layout">
           <main className="arcane-board-column">
             <InscriptionPanel
-              canRead={isGm || Boolean(knowledge?.translationText)}
-              inscription={isGm ? view.inscription : knowledge?.translationText ?? 'The inscription is written in an unknown arcane cipher.'}
-              hint={isGm ? view.translatedHint : null}
-              attempted={isGm || knowledge?.translationAttempted}
+              canRead={showGmAnswers || Boolean(knowledge?.translationText)}
+              inscription={showGmAnswers ? view.inscription : knowledge?.translationText ?? 'The inscription is written in an unknown arcane cipher.'}
+              hint={showGmAnswers ? view.translatedHint : null}
+              attempted={showGmAnswers || knowledge?.translationAttempted}
             />
             <ArcaneLockBoard
               definition={activeDefinition}
               state={view.activeLock.currentState}
-              knownGlyphIds={isGm ? undefined : knowledge?.revealedGlyphIds ?? []}
+              knownGlyphIds={showGmAnswers ? undefined : knowledge?.revealedGlyphIds ?? []}
               disabled={!canAct}
               onRotate={(ringId, direction) => submitAction({ type: 'rotate_ring', ringId, direction, steps: 1 })}
               onPowerGlyph={(ringId, glyphId, socketId) => submitAction({ type: 'power_glyph', ringId, glyphId, socketId })}
@@ -147,8 +156,8 @@ function ArcaneSessionRoom({
           </main>
 
           <aside className="arcane-side">
-            {!isGm && <ArcanaStudyPanel characters={characters} knowledge={knowledge} lastResult={lastArcanaResult} onRoll={rollKnowledge} />}
-            <GlyphBook definition={activeDefinition} revealedGlyphIds={isGm ? undefined : knowledge?.revealedGlyphIds ?? []} />
+            <ArcanaStudyPanel characters={characters} knowledge={knowledge} lastResult={lastArcanaResult} onRoll={rollKnowledge} />
+            <GlyphBook definition={activeDefinition} revealedGlyphIds={showGmAnswers ? undefined : knowledge?.revealedGlyphIds ?? []} />
             <PlayerStatusPanel
               canInteract={view.canInteract}
               canRead={view.canReadInstructions}

@@ -29,7 +29,7 @@ export function useArcaneSession(sessionId: string, selectedLockId?: string) {
     try {
       const next = await getLockViewForCurrentUser(sessionId, selectedLockId);
       setView(next);
-      setKnowledge(next.session.currentUserRole === 'gm' ? null : await getArcaneKnowledge(next.activeLock.id));
+      setKnowledge(await getArcaneKnowledge(next.activeLock.id));
       setMessage('Synchronized with the canonical lock state.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to load the lock session.');
