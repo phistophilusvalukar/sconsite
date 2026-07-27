@@ -26,6 +26,7 @@ export type SitePageKey =
   | 'arcana'
   | 'underhaul-contracts'
   | 'arcane-locks'
+  | 'broken-seals'
   | 'event'
   | 'skill-checks'
   | 'news';
@@ -119,6 +120,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Collaborative magical lock puzzle sessions.',
     icon: Sparkles,
     routePrefixes: ['/arcane-locks']
+  },
+  {
+    key: 'broken-seals',
+    name: 'Broken Seals',
+    href: '/broken-seals',
+    description: 'Word puzzle minigame for repairing damaged magical seals.',
+    icon: Shield,
+    routePrefixes: ['/broken-seals']
   },
   {
     key: 'event',

@@ -6,7 +6,7 @@ import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
 import GoogleLogin from './GoogleLogin';
 
-type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
+type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -19,6 +19,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/arcana': () => import('../pages/CardGamePage'),
   '/underhaul/contracts': () => import('../features/contracts/routes/ContractsOfficePage'),
   '/arcane-locks': () => import('../features/arcane-locks/routes/ArcaneLocksPage'),
+  '/broken-seals': () => import('../features/broken-seals/routes/BrokenSealsPage'),
   '/event': () => import('../pages/EventPage'),
   '/skill-checks': () => import('../pages/SkillChecksPage'),
   '/news': () => import('../pages/NewsPage'),

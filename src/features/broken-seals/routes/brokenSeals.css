@@ -1,0 +1,323 @@
+.broken-seals-page {
+  min-height: 100vh;
+  padding: 2rem 1rem 4rem;
+  color: #f8fafc;
+}
+
+.broken-seals-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.broken-seals-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.broken-seals-kicker,
+.seal-inscription-panel p {
+  margin: 0 0 0.35rem;
+  color: #facc15;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.broken-seals-header h1 {
+  margin: 0;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(2.2rem, 5vw, 4.3rem);
+  line-height: 1;
+}
+
+.seal-select-label {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 220px;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.seal-select-label select {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #f8fafc;
+  padding: 0.7rem 0.8rem;
+}
+
+.broken-seals-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.seal-workbench,
+.seal-side-panel {
+  border: 1px solid rgba(250, 204, 21, 0.18);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.78);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+}
+
+.seal-workbench {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem;
+}
+
+.seal-workbench::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(34, 197, 94, 0.08), transparent 34%, rgba(239, 68, 68, 0.08)),
+    repeating-linear-gradient(0deg, rgba(250, 204, 21, 0.06), rgba(250, 204, 21, 0.06) 1px, transparent 1px, transparent 42px);
+}
+
+.seal-workbench > * {
+  position: relative;
+}
+
+.seal-inscription-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.56);
+}
+
+.seal-inscription-panel h2 {
+  margin: 0;
+  color: #ffffff;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(1.3rem, 2.4vw, 2rem);
+  line-height: 1.15;
+}
+
+.seal-attempt-counter {
+  flex: 0 0 auto;
+  border: 1px solid rgba(250, 204, 21, 0.36);
+  border-radius: 999px;
+  color: #fef3c7;
+  padding: 0.4rem 0.75rem;
+  font-weight: 800;
+}
+
+.seal-status-band,
+.seal-threat {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.seal-status-band {
+  margin: 1rem 0;
+  min-height: 46px;
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.62);
+  color: #dbeafe;
+  padding: 0.75rem 0.85rem;
+}
+
+.seal-workbench.solved .seal-status-band {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #bbf7d0;
+}
+
+.seal-workbench.failed .seal-status-band {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+}
+
+.word-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: stretch;
+  min-height: 150px;
+  padding: 1rem;
+  border: 1px dashed rgba(250, 204, 21, 0.32);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.42);
+}
+
+.seal-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 50px;
+  max-width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 7px;
+  background: rgba(30, 41, 59, 0.92);
+  color: #f8fafc;
+  padding: 0.65rem 0.5rem 0.65rem 0.8rem;
+  cursor: grab;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.seal-word.correct,
+.attempt span.correct,
+.seal-target-row span.filled {
+  border-color: rgba(34, 197, 94, 0.72);
+  background: rgba(22, 101, 52, 0.74);
+  color: #dcfce7;
+}
+
+.seal-word.dragging {
+  opacity: 0.42;
+}
+
+.seal-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(250, 204, 21, 0.28);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #f8fafc;
+  min-height: 34px;
+  padding: 0.45rem 0.65rem;
+  font-weight: 800;
+}
+
+.seal-actions button:hover {
+  border-color: rgba(250, 204, 21, 0.7);
+  background: rgba(113, 63, 18, 0.62);
+}
+
+.seal-target-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.85rem 0;
+}
+
+.seal-target-row span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.seal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.seal-actions {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.invoke-seal-button {
+  background: rgba(202, 138, 4, 0.86) !important;
+  color: #111827 !important;
+}
+
+.seal-side-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.seal-side-panel h2 {
+  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+}
+
+.broken-reading,
+.empty-history {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.seal-threat {
+  margin: 0.85rem 0 0;
+  color: #fecaca;
+  font-size: 0.9rem;
+}
+
+.attempt-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.attempt {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.42);
+  padding: 0.75rem;
+}
+
+.attempt.solved {
+  border-color: rgba(34, 197, 94, 0.55);
+}
+
+.attempt header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.55rem;
+  color: #fef3c7;
+  font-weight: 800;
+}
+
+.attempt div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.attempt span {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.72);
+  color: #e2e8f0;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+@media (max-width: 900px) {
+  .broken-seals-header,
+  .seal-inscription-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .broken-seals-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .seal-select-label {
+    min-width: 0;
+  }
+}
