@@ -125,9 +125,11 @@ class CampaignService {
         this.dbService.getClient().from(DATABASE_TABLES.CAMPAIGN_JOURNAL_ENTRIES).select('*').eq('campaign_id', campaignId).order('created_at', { ascending: false })
       ]);
 
-      const firstError = [objectivesResult, commentsResult, partiesResult, membersResult, runsResult, runObjectivesResult, achievementsResult, runCommentsResult, journalsResult]
+      const runCommentsMissing = isMissingTableError(runCommentsResult.error, DATABASE_TABLES.CAMPAIGN_RUN_COMMENTS);
+      const firstError = [objectivesResult, commentsResult, partiesResult, membersResult, runsResult, runObjectivesResult, achievementsResult, journalsResult]
         .find(result => result.error)?.error;
       if (firstError) return { success: false, error: firstError.message };
+      if (runCommentsResult.error && !runCommentsMissing) return { success: false, error: runCommentsResult.error.message };
 
       const commentsByObjective = groupBy(commentsResult.data || [], row => String(row.objective_id));
       const childIdsByParent = groupBy(objectivesResult.data || [], row => String(row.parent_id || ''));
@@ -136,7 +138,7 @@ class CampaignService {
       const parties = (partiesResult.data || []).map(row => this.transformParty(row, membersByParty.get(String(row.id)) || []));
       const objectiveIdsByRun = groupBy(runObjectivesResult.data || [], row => String(row.run_id));
       const achievementsByRun = groupBy(achievementsResult.data || [], row => String(row.run_id));
-      const commentsByRun = groupBy(runCommentsResult.data || [], row => String(row.run_id));
+      const commentsByRun = groupBy(runCommentsMissing ? [] : runCommentsResult.data || [], row => String(row.run_id));
       const runs = (runsResult.data || []).map(row => this.transformRun(row, objectiveIdsByRun.get(String(row.id)) || [], achievementsByRun.get(String(row.id)) || [], commentsByRun.get(String(row.id)) || []));
       const journals = (journalsResult.data || []).map(row => this.transformJournal(row));
 
@@ -164,6 +166,9 @@ class CampaignService {
       .select()
       .single();
 
+    if (isMissingTableError(error, DATABASE_TABLES.CAMPAIGN_RUN_COMMENTS)) {
+      return { success: false, error: 'Run comments are not available until the latest campaign database migration is applied.' };
+    }
     if (error) return { success: false, error: error.message };
     return { success: true, data: this.transformCampaign(data), message: 'Campaign created.' };
   }
@@ -555,6 +560,11 @@ function groupBy<T>(rows: T[], getKey: (row: T) => string) {
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/['"]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `campaign-${Date.now()}`;
+}
+
+function isMissingTableError(error: { message?: string; code?: string } | null, tableName: string) {
+  if (!error) return false;
+  return error.code === 'PGRST205' || error.message?.includes(`'public.${tableName}'`) || error.message?.includes(`'${tableName}'`);
 }
 
 export default CampaignService;
