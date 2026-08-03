@@ -544,6 +544,18 @@ function JournalForm({ campaignSlug, journals, runs, parties, eligibleCharacters
   );
 }
 
+function JournalLinks({ campaignSlug, journals }: { campaignSlug: string; journals: JournalEntry[] }) {
+  return (
+    <section className="detail-panel">
+      <SectionTitle icon={<ScrollText />} title="Journal Entries" compact />
+      <div className="journal-links">
+        {journals.map(entry => <Link key={entry.id} to={`/campaign-objectives/${campaignSlug}/journals/${entry.id}`}>{entry.title}</Link>)}
+        {journals.length === 0 && <p className="empty-copy">No journal entries yet.</p>}
+      </div>
+    </section>
+  );
+}
+
 function PartyPage({ details, partyId, service, refresh, isAdmin, isAuthenticated, currentUserId, userCharacters }: { details: CampaignDetails; partyId: string; service: CampaignService; refresh: () => Promise<void>; isAdmin: boolean; isAuthenticated: boolean; currentUserId?: string; userCharacters: Character[] }) {
   const { campaign, parties, runs, journals } = details;
   const party = parties.find(item => item.id === partyId);
