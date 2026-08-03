@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
-import { adminPage, sitePages } from '../config/sitePages';
+import { ChevronDown, Menu, X } from 'lucide-react';
+import { adminPage, sitePages, type SitePageDefinition, type SitePageKey } from '../config/sitePages';
 import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
 import GoogleLogin from './GoogleLogin';
@@ -38,6 +38,21 @@ function preloadRoute(href: PreloadableRoute) {
   });
 }
 
+type NavigationGroup = {
+  name: string;
+  pageKeys: SitePageKey[];
+};
+
+type NavigationItem = Pick<SitePageDefinition, 'name' | 'href' | 'icon'>;
+
+const navigationGroups: NavigationGroup[] = [
+  { name: 'Discover', pageKeys: ['home', 'about', 'news'] },
+  { name: 'People', pageKeys: ['characters', 'guilds', 'citizens'] },
+  { name: 'Play', pageKeys: ['schedule', 'games'] },
+  { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals'] },
+  { name: 'Tools', pageKeys: ['skill-checks', 'campaign-objectives', 'event'] }
+];
+
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
@@ -47,7 +62,16 @@ const Header: React.FC = () => {
   const BrandIcon = adminPage.icon;
 
   const navigation = sitePages.filter(page => isAdmin || isPageEnabled(page.key));
-  const fullNavigation = isAdmin ? [...navigation, adminPage] : navigation;
+  const navigationByKey = new Map(navigation.map(page => [page.key, page]));
+  const groupedNavigation = navigationGroups
+    .map(group => ({
+      ...group,
+      items: group.pageKeys
+        .map(pageKey => navigationByKey.get(pageKey))
+        .filter((page): page is SitePageDefinition => Boolean(page))
+    }))
+    .filter(group => group.items.length > 0);
+  const adminNavigation: NavigationItem[] = isAdmin ? [adminPage] : [];
 
   return (
     <header className="bg-midnight-900/90 backdrop-blur-sm border-b border-fantasy-800/50 sticky top-0 z-50">
@@ -64,7 +88,42 @@ const Header: React.FC = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden 2xl:flex items-center space-x-1">
-            {fullNavigation.map((item) => {
+            {groupedNavigation.map((group) => {
+              const isActiveGroup = group.items.some(item => isNavigationActive(item.href, location.pathname));
+              return (
+                <div
+                  className="relative group"
+                  key={group.name}
+                  onFocus={() => preloadRoutes(group.items)}
+                  onMouseEnter={() => preloadRoutes(group.items)}
+                  onTouchStart={() => preloadRoutes(group.items)}
+                >
+                  <button
+                    type="button"
+                    className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActiveGroup
+                        ? 'text-yellow-400 bg-fantasy-800/30'
+                        : 'text-gray-300 hover:text-yellow-400 hover:bg-fantasy-800/20'
+                    }`}
+                    aria-haspopup="menu"
+                  >
+                    <span>{group.name}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                  <div className="invisible absolute left-0 top-full z-50 mt-2 min-w-56 rounded-md border border-fantasy-700/70 bg-midnight-900/95 p-2 opacity-0 shadow-xl shadow-black/30 backdrop-blur-sm transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                    {group.items.map((item) => (
+                      <NavigationMenuLink
+                        key={item.name}
+                        item={item}
+                        pathname={location.pathname}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {adminNavigation.map((item) => {
               const Icon = item.icon;
               const isActive = isNavigationActive(item.href, location.pathname);
               return (
@@ -121,7 +180,39 @@ const Header: React.FC = () => {
         {isMenuOpen && (
           <div className="2xl:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 border-t border-fantasy-800/50">
-              {fullNavigation.map((item) => {
+              {groupedNavigation.map((group) => {
+                return (
+                  <div key={group.name} className="py-2">
+                    <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      {group.name}
+                    </div>
+                    <div className="space-y-1">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = isNavigationActive(item.href, location.pathname);
+                        return (
+                          <Link
+                            key={item.name}
+                            to={item.href}
+                            onFocus={() => preloadRoute(item.href as PreloadableRoute)}
+                            onTouchStart={() => preloadRoute(item.href as PreloadableRoute)}
+                            className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                              isActive
+                                ? 'text-yellow-400 bg-fantasy-800/30'
+                                : 'text-gray-300 hover:text-yellow-400 hover:bg-fantasy-800/20'
+                            }`}
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            <Icon className="w-5 h-5" />
+                            <span>{item.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              {adminNavigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = isNavigationActive(item.href, location.pathname);
                 return (
@@ -171,6 +262,33 @@ const Header: React.FC = () => {
     </header>
   );
 };
+
+function preloadRoutes(items: NavigationItem[]) {
+  items.forEach(item => preloadRoute(item.href as PreloadableRoute));
+}
+
+function NavigationMenuLink({ item, pathname }: { item: NavigationItem; pathname: string }) {
+  const Icon = item.icon;
+  const isActive = isNavigationActive(item.href, pathname);
+
+  return (
+    <Link
+      to={item.href}
+      onFocus={() => preloadRoute(item.href as PreloadableRoute)}
+      onMouseEnter={() => preloadRoute(item.href as PreloadableRoute)}
+      onTouchStart={() => preloadRoute(item.href as PreloadableRoute)}
+      className={`flex items-center space-x-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+        isActive
+          ? 'text-yellow-400 bg-fantasy-800/40'
+          : 'text-gray-300 hover:text-yellow-400 hover:bg-fantasy-800/25'
+      }`}
+      role="menuitem"
+    >
+      <Icon className="w-4 h-4" />
+      <span>{item.name}</span>
+    </Link>
+  );
+}
 
 function isNavigationActive(href: string, pathname: string) {
   if (href === '/') return pathname === '/';
