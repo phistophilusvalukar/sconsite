@@ -18,9 +18,7 @@ export const PageVisibilityContext = createContext<PageVisibilityContextValue | 
 
 export const PageVisibilityProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const visibilityService = useMemo(() => PageVisibilityService.getInstance(), []);
-  const [settings, setSettings] = useState<PageVisibilitySetting[]>(() =>
-    sitePages.map(page => ({ pageKey: page.key, isEnabled: true }))
-  );
+  const [settings, setSettings] = useState<PageVisibilitySetting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,14 +48,14 @@ export const PageVisibilityProvider: React.FC<{ children: ReactNode }> = ({ chil
     sitePages.forEach(page => {
       nextSettings[page.key] = settings.find(setting => setting.pageKey === page.key) || {
         pageKey: page.key,
-        isEnabled: true
+        isEnabled: false
       };
     });
     return nextSettings;
   }, [settings]);
 
   const isPageEnabled = useCallback((pageKey: SitePageKey) => {
-    return settingsByKey[pageKey]?.isEnabled ?? true;
+    return settingsByKey[pageKey]?.isEnabled ?? false;
   }, [settingsByKey]);
 
   const setPageEnabled = useCallback(async (pageKey: SitePageKey, isEnabled: boolean, updatedBy: string) => {
