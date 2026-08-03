@@ -13,6 +13,7 @@ import {
   type ObjectiveStatus,
   type Party,
   type PartyMember,
+  type RunComment,
   type RunSummary
 } from '../data/campaignObjectives';
 
@@ -43,6 +44,8 @@ export interface SavePartyMemberInput {
   characterName: string;
   profileHref: string;
   artUrl: string;
+  userId?: string;
+  characterId?: string;
 }
 
 export interface SaveRunInput {
@@ -59,10 +62,19 @@ export interface SaveJournalInput {
   partyId: string;
   runId: string;
   authorId: string;
+  characterId: string;
   playerName: string;
   title: string;
   text: string;
   achievementIds: string[];
+}
+
+export interface SaveRunCommentInput {
+  runId: string;
+  authorId: string;
+  characterId: string;
+  characterName: string;
+  text: string;
 }
 
 class CampaignService {
@@ -101,7 +113,7 @@ class CampaignService {
       const campaign = this.transformCampaign(campaignRow);
       const campaignId = campaign.id;
 
-      const [objectivesResult, commentsResult, partiesResult, membersResult, runsResult, runObjectivesResult, achievementsResult, journalsResult] = await Promise.all([
+      const [objectivesResult, commentsResult, partiesResult, membersResult, runsResult, runObjectivesResult, achievementsResult, runCommentsResult, journalsResult] = await Promise.all([
         this.dbService.getClient().from(DATABASE_TABLES.CAMPAIGN_OBJECTIVES).select('*').eq('campaign_id', campaignId).order('sort_order'),
         this.dbService.getClient().from(DATABASE_TABLES.CAMPAIGN_OBJECTIVE_COMMENTS).select('*').order('created_at'),
         this.dbService.getClient().from(DATABASE_TABLES.CAMPAIGN_PARTIES).select('*').eq('campaign_id', campaignId).order('sort_order'),
@@ -109,10 +121,11 @@ class CampaignService {
         this.dbService.getClient().from(DATABASE_TABLES.CAMPAIGN_RUNS).select('*').eq('campaign_id', campaignId).order('run_number'),
         this.dbService.getClient().from(DATABASE_TABLES.CAMPAIGN_RUN_OBJECTIVES).select('*'),
         this.dbService.getClient().from(DATABASE_TABLES.CAMPAIGN_ACHIEVEMENTS).select('*').order('created_at'),
+        this.dbService.getClient().from(DATABASE_TABLES.CAMPAIGN_RUN_COMMENTS).select('*').order('created_at'),
         this.dbService.getClient().from(DATABASE_TABLES.CAMPAIGN_JOURNAL_ENTRIES).select('*').eq('campaign_id', campaignId).order('created_at', { ascending: false })
       ]);
 
-      const firstError = [objectivesResult, commentsResult, partiesResult, membersResult, runsResult, runObjectivesResult, achievementsResult, journalsResult]
+      const firstError = [objectivesResult, commentsResult, partiesResult, membersResult, runsResult, runObjectivesResult, achievementsResult, runCommentsResult, journalsResult]
         .find(result => result.error)?.error;
       if (firstError) return { success: false, error: firstError.message };
 
@@ -123,7 +136,8 @@ class CampaignService {
       const parties = (partiesResult.data || []).map(row => this.transformParty(row, membersByParty.get(String(row.id)) || []));
       const objectiveIdsByRun = groupBy(runObjectivesResult.data || [], row => String(row.run_id));
       const achievementsByRun = groupBy(achievementsResult.data || [], row => String(row.run_id));
-      const runs = (runsResult.data || []).map(row => this.transformRun(row, objectiveIdsByRun.get(String(row.id)) || [], achievementsByRun.get(String(row.id)) || []));
+      const commentsByRun = groupBy(runCommentsResult.data || [], row => String(row.run_id));
+      const runs = (runsResult.data || []).map(row => this.transformRun(row, objectiveIdsByRun.get(String(row.id)) || [], achievementsByRun.get(String(row.id)) || [], commentsByRun.get(String(row.id)) || []));
       const journals = (journalsResult.data || []).map(row => this.transformJournal(row));
 
       return { success: true, data: { campaign, objectives, parties, runs, journals } };
@@ -243,6 +257,8 @@ class CampaignService {
         character_name: input.characterName.trim(),
         profile_href: input.profileHref.trim(),
         art_url: input.artUrl.trim(),
+        user_id: input.userId || null,
+        character_id: input.characterId || null,
         sort_order: maxOrder + 1
       });
     if (error) return { success: false, error: error.message };
@@ -257,6 +273,8 @@ class CampaignService {
         character_name: input.characterName.trim(),
         profile_href: input.profileHref.trim(),
         art_url: input.artUrl.trim(),
+        user_id: input.userId || null,
+        character_id: input.characterId || null,
         updated_at: new Date().toISOString()
       })
       .eq('id', memberId);
@@ -327,10 +345,25 @@ class CampaignService {
         party_id: input.partyId,
         run_id: input.runId,
         author_id: input.authorId,
+        character_id: input.characterId,
         player_name: input.playerName.trim(),
         title: input.title.trim(),
         body: input.text.trim(),
         achievement_ids: input.achievementIds
+      });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: true };
+  }
+
+  async addRunComment(input: SaveRunCommentInput): Promise<ApiResponse<boolean>> {
+    const { error } = await this.dbService.getClient()
+      .from(DATABASE_TABLES.CAMPAIGN_RUN_COMMENTS)
+      .insert({
+        run_id: input.runId,
+        author_id: input.authorId,
+        character_id: input.characterId,
+        character_name: input.characterName,
+        body: input.text.trim()
       });
     if (error) return { success: false, error: error.message };
     return { success: true, data: true };
@@ -443,6 +476,8 @@ class CampaignService {
     return {
       id: String(row.id),
       partyId: String(row.party_id),
+      userId: row.user_id ? String(row.user_id) : undefined,
+      characterId: row.character_id ? String(row.character_id) : undefined,
       name: String(row.player_name || ''),
       characterName,
       profileHref: String(row.profile_href || `/characters?search=${encodeURIComponent(characterName)}`),
@@ -451,7 +486,7 @@ class CampaignService {
     };
   }
 
-  private transformRun(row: Record<string, unknown>, objectiveRows: Record<string, unknown>[], achievementRows: Record<string, unknown>[]): RunSummary {
+  private transformRun(row: Record<string, unknown>, objectiveRows: Record<string, unknown>[], achievementRows: Record<string, unknown>[], commentRows: Record<string, unknown>[]): RunSummary {
     return {
       id: String(row.id),
       campaignId: String(row.campaign_id),
@@ -461,7 +496,21 @@ class CampaignService {
       ranAt: new Date(String(row.ran_at)),
       memberIds: Array.isArray(row.member_ids) ? row.member_ids.map(String) : [],
       objectiveIds: objectiveRows.map(item => String(item.objective_id)),
-      achievements: achievementRows.map(achievement => this.transformAchievement(achievement))
+      achievements: achievementRows.map(achievement => this.transformAchievement(achievement)),
+      comments: commentRows.map(comment => this.transformRunComment(comment))
+    };
+  }
+
+  private transformRunComment(row: Record<string, unknown>): RunComment {
+    return {
+      id: String(row.id),
+      runId: String(row.run_id),
+      authorId: String(row.author_id),
+      characterId: String(row.character_id),
+      characterName: String(row.character_name || 'Character'),
+      text: String(row.body || ''),
+      createdAt: new Date(String(row.created_at)),
+      updatedAt: new Date(String(row.updated_at))
     };
   }
 
@@ -484,6 +533,7 @@ class CampaignService {
       partyId: String(row.party_id),
       runId: String(row.run_id),
       authorId: row.author_id ? String(row.author_id) : undefined,
+      characterId: row.character_id ? String(row.character_id) : undefined,
       playerName: String(row.player_name || ''),
       title: String(row.title || ''),
       text: String(row.body || ''),

@@ -46,6 +46,8 @@ export interface Party {
 export interface PartyMember {
   id: string;
   partyId: string;
+  userId?: string;
+  characterId?: string;
   name: string;
   characterName: string;
   profileHref: string;
@@ -73,6 +75,18 @@ export interface RunSummary {
   memberIds: string[];
   objectiveIds: string[];
   achievements: Achievement[];
+  comments: RunComment[];
+}
+
+export interface RunComment {
+  id: string;
+  runId: string;
+  authorId: string;
+  characterId: string;
+  characterName: string;
+  text: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface JournalEntry {
@@ -83,6 +97,7 @@ export interface JournalEntry {
   partyId: string;
   runId: string;
   authorId?: string;
+  characterId?: string;
   createdAt: Date;
   updatedAt: Date;
   text: string;

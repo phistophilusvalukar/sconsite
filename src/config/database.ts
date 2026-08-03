@@ -53,5 +53,6 @@ export const DATABASE_TABLES = {
   CAMPAIGN_RUNS: 'campaign_runs',
   CAMPAIGN_RUN_OBJECTIVES: 'campaign_run_objectives',
   CAMPAIGN_ACHIEVEMENTS: 'campaign_achievements',
+  CAMPAIGN_RUN_COMMENTS: 'campaign_run_comments',
   CAMPAIGN_JOURNAL_ENTRIES: 'campaign_journal_entries',
 };

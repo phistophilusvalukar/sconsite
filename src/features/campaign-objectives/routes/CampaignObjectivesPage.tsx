@@ -16,6 +16,8 @@ import {
   Users
 } from 'lucide-react';
 import { useAuth } from '../../../context/useAuth';
+import CharacterService from '../../../services/characterService';
+import type { Character } from '../../../types/database';
 import CampaignService from '../api/campaignService';
 import {
   type Campaign,
@@ -46,8 +48,10 @@ export default function CampaignObjectivesPage() {
   const { user, isAuthenticated } = useAuth();
   const isAdmin = Boolean(user?.isAdmin || user?.profile?.isAdmin);
   const service = useMemo(() => CampaignService.getInstance(), []);
+  const characterService = useMemo(() => CharacterService.getInstance(), []);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [details, setDetails] = useState<CampaignDetails | null>(null);
+  const [userCharacters, setUserCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,6 +85,17 @@ export default function CampaignObjectivesPage() {
     else void loadCampaigns();
   }, [campaignSlug, loadCampaigns, loadDetails]);
 
+  useEffect(() => {
+    if (!user?.id) {
+      setUserCharacters([]);
+      return;
+    }
+
+    void characterService.getUserCharacters(user.id).then(response => {
+      setUserCharacters(response.success && response.data ? response.data.filter(character => character.isActive) : []);
+    });
+  }, [characterService, user?.id]);
+
   async function refreshDetails() {
     if (campaignSlug) await loadDetails(campaignSlug);
   }
@@ -108,7 +123,7 @@ export default function CampaignObjectivesPage() {
   }
 
   if (partyId) {
-    return <PartyPage details={details} partyId={partyId} service={service} refresh={refreshDetails} isAdmin={isAdmin} />;
+    return <PartyPage details={details} partyId={partyId} service={service} refresh={refreshDetails} isAdmin={isAdmin} isAuthenticated={isAuthenticated} currentUserId={user?.id} userCharacters={userCharacters} />;
   }
 
   return (
@@ -119,7 +134,7 @@ export default function CampaignObjectivesPage() {
       isAdmin={isAdmin}
       isAuthenticated={isAuthenticated}
       currentUserId={user?.id}
-      currentUserName={user?.username}
+      userCharacters={userCharacters}
     />
   );
 }
@@ -175,7 +190,7 @@ function CampaignDashboard({
   isAdmin,
   isAuthenticated,
   currentUserId,
-  currentUserName
+  userCharacters
 }: {
   details: CampaignDetails;
   service: CampaignService;
@@ -183,26 +198,26 @@ function CampaignDashboard({
   isAdmin: boolean;
   isAuthenticated: boolean;
   currentUserId?: string;
-  currentUserName?: string;
+  userCharacters: Character[];
 }) {
   const { campaign, objectives, parties, runs, journals } = details;
   const [selectedObjectiveId, setSelectedObjectiveId] = useState(objectives.find(objective => objective.status !== 'unknown')?.id || objectives[0]?.id || '');
-  const [commentName, setCommentName] = useState(currentUserName || '');
-  const [commentText, setCommentText] = useState('');
+  const [runCommentDrafts, setRunCommentDrafts] = useState<Record<string, { characterId: string; text: string }>>({});
   const [campaignDraft, setCampaignDraft] = useState({ name: campaign.name, summary: campaign.summary, status: campaign.status });
   const [objectiveDraft, setObjectiveDraft] = useState({ title: '', description: '', kind: 'main' as ObjectiveKind, status: 'unknown' as ObjectiveStatus, parentId: '' });
   const [partyDraft, setPartyDraft] = useState('');
   const [runDraft, setRunDraft] = useState({ partyId: parties[0]?.id || '', title: '', objectiveIds: [] as string[] });
-  const [journalDraft, setJournalDraft] = useState({ runId: runs[0]?.id || '', playerName: '', title: '', text: '' });
+  const [journalDraft, setJournalDraft] = useState({ runId: runs[0]?.id || '', characterId: '', title: '', text: '' });
 
   const objectivesById = useMemo(() => new Map(objectives.map(objective => [objective.id, objective])), [objectives]);
   const selectedObjective = objectivesById.get(selectedObjectiveId) || null;
   const mainObjectives = objectives.filter(objective => objective.kind === 'main');
   const specialObjectives = objectives.filter(objective => objective.kind === 'special');
-  const selectedRun = runs.find(run => run.id === journalDraft.runId);
-  const eligiblePlayers = parties.find(party => party.id === selectedRun?.partyId)?.members
-    .filter(member => selectedRun?.memberIds.includes(member.id))
-    .map(member => member.name) || [];
+  const eligibleJournalRuns = runs.filter(run => canJournalForRun(run, parties, userCharacters, currentUserId));
+  const selectedRun = eligibleJournalRuns.find(run => run.id === journalDraft.runId);
+  const eligibleCharacters = selectedRun
+    ? getUserRunCharacters(selectedRun, parties, userCharacters, currentUserId)
+    : [];
   const eligibleObjectives = selectedRun ? objectives.filter(objective => selectedRun.objectiveIds.includes(objective.id)) : [];
   const revealedObjectives = objectives.filter(objective => objective.status !== 'unknown');
 
@@ -239,12 +254,21 @@ function CampaignDashboard({
     }
   }
 
-  async function addComment(event: FormEvent) {
+  async function addRunComment(runId: string, event: FormEvent) {
     event.preventDefault();
-    if (!selectedObjective || !commentName.trim() || !commentText.trim()) return;
-    const response = await service.addObjectiveComment(selectedObjective.id, commentName, commentText, currentUserId);
+    if (!isAuthenticated || !currentUserId) return;
+    const draft = runCommentDrafts[runId];
+    const character = userCharacters.find(item => item._id === draft?.characterId);
+    if (!character?._id || !draft?.text.trim()) return;
+    const response = await service.addRunComment({
+      runId,
+      authorId: currentUserId,
+      characterId: character._id,
+      characterName: character.name,
+      text: draft.text
+    });
     if (response.success) {
-      setCommentText('');
+      setRunCommentDrafts(current => ({ ...current, [runId]: { characterId: character._id || '', text: '' } }));
       await refresh();
     } else {
       alert(response.error || 'Failed to add comment.');
@@ -289,21 +313,23 @@ function CampaignDashboard({
       alert('Log in to publish a journal entry.');
       return;
     }
-    const run = runs.find(item => item.id === journalDraft.runId);
-    if (!run || !journalDraft.playerName || !journalDraft.title.trim() || !journalDraft.text.trim()) return;
+    const run = eligibleJournalRuns.find(item => item.id === journalDraft.runId);
+    const character = eligibleCharacters.find(item => item._id === journalDraft.characterId);
+    if (!run || !character?._id || !journalDraft.title.trim() || !journalDraft.text.trim()) return;
     const response = await service.createJournal({
       campaignId: campaign.id,
       partyId: run.partyId,
       runId: run.id,
       authorId: currentUserId,
-      playerName: journalDraft.playerName,
+      characterId: character._id,
+      playerName: character.name,
       title: journalDraft.title,
       text: journalDraft.text,
       achievementIds: run.achievements.map(achievement => achievement.id)
     });
     if (response.success) {
       await refresh();
-      setJournalDraft({ runId: run.id, playerName: '', title: '', text: '' });
+      setJournalDraft({ runId: run.id, characterId: '', title: '', text: '' });
     } else {
       alert(response.error || 'Failed to create journal entry.');
     }
@@ -348,7 +374,7 @@ function CampaignDashboard({
 
           <aside className="campaign-side">
             {selectedObjective && (
-              <ObjectiveDetails objective={selectedObjective} childObjectives={(selectedObjective.subObjectiveIds || []).map(id => objectivesById.get(id)).filter(Boolean) as Objective[]} onSelectObjective={setSelectedObjectiveId} onStatusChange={updateObjectiveStatus} commentName={commentName} commentText={commentText} onCommentNameChange={setCommentName} onCommentTextChange={setCommentText} onAddComment={addComment} canEdit={isAdmin} />
+              <ObjectiveDetails objective={selectedObjective} childObjectives={(selectedObjective.subObjectiveIds || []).map(id => objectivesById.get(id)).filter(Boolean) as Objective[]} onSelectObjective={setSelectedObjectiveId} onStatusChange={updateObjectiveStatus} canEdit={isAdmin} />
             )}
             {isAdmin && (
               <>
@@ -369,7 +395,16 @@ function CampaignDashboard({
                 <RunSummaryForm parties={parties} objectives={revealedObjectives} draft={runDraft} onDraftChange={setRunDraft} onSubmit={createRun} />
               </>
             )}
-            <JournalForm campaignSlug={campaign.slug} journals={journals} runs={runs} parties={parties} eligiblePlayers={eligiblePlayers} eligibleObjectives={eligibleObjectives} draft={journalDraft} onDraftChange={setJournalDraft} onSubmit={createJournal} />
+            {isAuthenticated && <JournalForm campaignSlug={campaign.slug} journals={journals} runs={eligibleJournalRuns} parties={parties} eligibleCharacters={eligibleCharacters} eligibleObjectives={eligibleObjectives} draft={journalDraft} onDraftChange={setJournalDraft} onSubmit={createJournal} />}
+            {!isAuthenticated && <JournalLinks campaignSlug={campaign.slug} journals={journals} />}
+            <RunList
+              runs={runs}
+              isAuthenticated={isAuthenticated}
+              userCharacters={userCharacters}
+              commentDrafts={runCommentDrafts}
+              onCommentDraftChange={(runId, draft) => setRunCommentDrafts(current => ({ ...current, [runId]: draft }))}
+              onAddRunComment={addRunComment}
+            />
           </aside>
         </div>
       </section>
@@ -398,18 +433,13 @@ function ObjectiveRow({ objective, onSelect }: { objective: Objective; onSelect:
   return <button type="button" className={`objective-row ${isUnknown ? 'unknown' : ''}`} onClick={() => !isUnknown && onSelect(objective.id)} disabled={isUnknown}><span className={`status-chip ${objective.status}`}>{statusLabels[objective.status]}</span><span>{objective.title}</span></button>;
 }
 
-function ObjectiveDetails({ objective, childObjectives, onSelectObjective, onStatusChange, commentName, commentText, onCommentNameChange, onCommentTextChange, onAddComment, canEdit }: { objective: Objective; childObjectives: Objective[]; onSelectObjective: (id: string) => void; onStatusChange: (id: string, status: ObjectiveStatus) => void; commentName: string; commentText: string; onCommentNameChange: (value: string) => void; onCommentTextChange: (value: string) => void; onAddComment: (event: FormEvent) => void; canEdit: boolean }) {
+function ObjectiveDetails({ objective, childObjectives, onSelectObjective, onStatusChange, canEdit }: { objective: Objective; childObjectives: Objective[]; onSelectObjective: (id: string) => void; onStatusChange: (id: string, status: ObjectiveStatus) => void; canEdit: boolean }) {
   return (
     <section className="detail-panel">
       <div className="detail-heading"><span className={`status-chip ${objective.status}`}>{statusLabels[objective.status]}</span><h2>{objective.title}</h2>{objective.description && <p>{objective.description}</p>}</div>
       {canEdit && <label className="field-label">Status<select value={objective.status} onChange={event => onStatusChange(objective.id, event.target.value as ObjectiveStatus)}>{statusOptions.map(status => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></label>}
       {childObjectives.length > 0 && <div className="detail-sub-list">{childObjectives.map(child => <button key={child.id} type="button" onClick={() => child.status !== 'unknown' && onSelectObjective(child.id)} disabled={child.status === 'unknown'}><span className={`status-chip ${child.status}`}>{statusLabels[child.status]}</span><span>{child.title}</span></button>)}</div>}
-      <form className="comment-form" onSubmit={onAddComment}>
-        <SectionTitle icon={<MessageSquare />} title="Comments" compact />
-        <input value={commentName} onChange={event => onCommentNameChange(event.target.value)} placeholder="Name" />
-        <textarea value={commentText} onChange={event => onCommentTextChange(event.target.value)} rows={3} placeholder="Add a note or comment" />
-        <button type="submit"><Plus className="h-4 w-4" /> Comment</button>
-      </form>
+      <SectionTitle icon={<MessageSquare />} title="Objective Comments" compact />
       <div className="comment-list">{objective.comments.map(comment => <article key={comment.id}><strong>{comment.authorName}</strong><time>{formatDate(comment.createdAt)}</time><p>{comment.text}</p></article>)}{objective.comments.length === 0 && <p className="empty-copy">No comments yet.</p>}</div>
     </section>
   );
@@ -498,13 +528,13 @@ function RunSummaryForm({ parties, objectives, draft, onDraftChange, onSubmit }:
   );
 }
 
-function JournalForm({ campaignSlug, journals, runs, parties, eligiblePlayers, eligibleObjectives, draft, onDraftChange, onSubmit }: { campaignSlug: string; journals: JournalEntry[]; runs: RunSummary[]; parties: Party[]; eligiblePlayers: string[]; eligibleObjectives: Objective[]; draft: { title: string; playerName: string; runId: string; text: string }; onDraftChange: (draft: { title: string; playerName: string; runId: string; text: string }) => void; onSubmit: (event: FormEvent) => void }) {
+function JournalForm({ campaignSlug, journals, runs, parties, eligibleCharacters, eligibleObjectives, draft, onDraftChange, onSubmit }: { campaignSlug: string; journals: JournalEntry[]; runs: RunSummary[]; parties: Party[]; eligibleCharacters: Character[]; eligibleObjectives: Objective[]; draft: { title: string; characterId: string; runId: string; text: string }; onDraftChange: (draft: { title: string; characterId: string; runId: string; text: string }) => void; onSubmit: (event: FormEvent) => void }) {
   return (
     <section className="detail-panel">
       <form className="journal-form" onSubmit={onSubmit}>
         <SectionTitle icon={<ScrollText />} title="Journal Entry" compact />
-        <label className="field-label">Run<select value={draft.runId} onChange={event => onDraftChange({ ...draft, runId: event.target.value, playerName: '' })}><option value="">Choose run</option>{runs.map(run => <option key={run.id} value={run.id}>{partyName(parties, run.partyId)}: {run.title}</option>)}</select></label>
-        <label className="field-label">Player<select value={draft.playerName} onChange={event => onDraftChange({ ...draft, playerName: event.target.value })}><option value="">Choose player</option>{eligiblePlayers.map(player => <option key={player} value={player}>{player}</option>)}</select></label>
+        <label className="field-label">Run<select value={draft.runId} onChange={event => onDraftChange({ ...draft, runId: event.target.value, characterId: '' })}><option value="">Choose run</option>{runs.map(run => <option key={run.id} value={run.id}>{partyName(parties, run.partyId)}: {run.title}</option>)}</select></label>
+        <label className="field-label">Character<select value={draft.characterId} onChange={event => onDraftChange({ ...draft, characterId: event.target.value })}><option value="">Choose character</option>{eligibleCharacters.map(character => <option key={character._id} value={character._id}>{character.name}</option>)}</select></label>
         <label className="field-label">Title<input value={draft.title} onChange={event => onDraftChange({ ...draft, title: event.target.value })} /></label>
         <textarea value={draft.text} onChange={event => onDraftChange({ ...draft, text: event.target.value })} rows={5} placeholder={eligibleObjectives.length > 0 ? `Write about ${eligibleObjectives.map(item => item.title).slice(0, 2).join(', ')}` : 'Write a formal account'} />
         <button type="submit"><BookOpen className="h-4 w-4" /> Publish</button>
@@ -514,12 +544,13 @@ function JournalForm({ campaignSlug, journals, runs, parties, eligiblePlayers, e
   );
 }
 
-function PartyPage({ details, partyId, service, refresh, isAdmin }: { details: CampaignDetails; partyId: string; service: CampaignService; refresh: () => Promise<void>; isAdmin: boolean }) {
+function PartyPage({ details, partyId, service, refresh, isAdmin, isAuthenticated, currentUserId, userCharacters }: { details: CampaignDetails; partyId: string; service: CampaignService; refresh: () => Promise<void>; isAdmin: boolean; isAuthenticated: boolean; currentUserId?: string; userCharacters: Character[] }) {
   const { campaign, parties, runs, journals } = details;
   const party = parties.find(item => item.id === partyId);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [editingPartyName, setEditingPartyName] = useState(party?.name || '');
   const [memberDraft, setMemberDraft] = useState({ name: '', characterName: '', profileHref: '', artUrl: '' });
+  const [runCommentDrafts, setRunCommentDrafts] = useState<Record<string, { characterId: string; text: string }>>({});
   if (!party) return <MessageShell title="Party not found" message="No party exists for this route." />;
   const partyRuns = runs.filter(run => run.partyId === party.id).sort((a, b) => a.runNumber - b.runNumber);
   const activeMemberIds = new Set(partyRuns.at(-1)?.memberIds || party.members.map(member => member.id));
@@ -556,12 +587,44 @@ function PartyPage({ details, partyId, service, refresh, isAdmin }: { details: C
     }
   }
 
+  async function addRunComment(runId: string, event: FormEvent) {
+    event.preventDefault();
+    if (!isAuthenticated || !currentUserId) return;
+    const draft = runCommentDrafts[runId];
+    const character = userCharacters.find(item => item._id === draft?.characterId);
+    if (!character?._id || !draft?.text.trim()) return;
+    const response = await service.addRunComment({
+      runId,
+      authorId: currentUserId,
+      characterId: character._id,
+      characterName: character.name,
+      text: draft.text
+    });
+    if (response.success) {
+      setRunCommentDrafts(current => ({ ...current, [runId]: { characterId: character._id || '', text: '' } }));
+      await refresh();
+    } else {
+      alert(response.error || 'Failed to add comment.');
+    }
+  }
+
   return (
     <div className="campaign-page">
       <section className="campaign-shell">
         <header className="campaign-header"><div><Link to={`/campaign-objectives/${campaign.slug}`} className="back-link">Back to {campaign.name}</Link><p className="campaign-kicker">Party Record</p><h1>{party.name}</h1></div><div className="campaign-header-stats"><Stat label="Members" value={party.members.length} /><Stat label="Runs" value={partyRuns.length} /><Stat label="Achievements" value={partyRuns.reduce((total, run) => total + run.achievements.length, 0)} /></div></header>
         <div className="party-page-layout">
-          <main className="objective-column"><PartyComposition party={party} activeMemberIds={activeMemberIds} selectedMemberId={selectedMember?.id} onSelectMember={setSelectedMemberId} /><PartyTimeline party={party} runs={partyRuns} /><RunList runs={partyRuns} /></main>
+          <main className="objective-column">
+            <PartyComposition party={party} activeMemberIds={activeMemberIds} selectedMemberId={selectedMember?.id} onSelectMember={setSelectedMemberId} />
+            <PartyTimeline party={party} runs={partyRuns} />
+            <RunList
+              runs={partyRuns}
+              isAuthenticated={isAuthenticated}
+              userCharacters={userCharacters}
+              commentDrafts={runCommentDrafts}
+              onCommentDraftChange={(runId, draft) => setRunCommentDrafts(current => ({ ...current, [runId]: draft }))}
+              onAddRunComment={addRunComment}
+            />
+          </main>
           <aside className="campaign-side">
             {isAdmin && <section className="detail-panel"><SectionTitle icon={<Edit3 />} title="Edit Party" compact /><form className="journal-form" onSubmit={savePartyName}><label className="field-label">Party name<input value={editingPartyName} onChange={event => setEditingPartyName(event.target.value)} /></label><button type="submit">Save Party</button></form><form className="journal-form" onSubmit={addMember}><label className="field-label">Player name<input value={memberDraft.name} onChange={event => setMemberDraft({ ...memberDraft, name: event.target.value })} /></label><label className="field-label">Character name<input value={memberDraft.characterName} onChange={event => setMemberDraft({ ...memberDraft, characterName: event.target.value })} /></label><label className="field-label">Profile URL<input value={memberDraft.profileHref} onChange={event => setMemberDraft({ ...memberDraft, profileHref: event.target.value })} /></label><label className="field-label">Art URL<input value={memberDraft.artUrl} onChange={event => setMemberDraft({ ...memberDraft, artUrl: event.target.value })} /></label><button type="submit"><UserPlus className="h-4 w-4" /> Add Member</button></form></section>}
             {isAdmin && <RunRosterEditor party={party} runs={partyRuns} onUpdateRunMembers={updateRunMembers} />}
@@ -582,8 +645,49 @@ function PartyTimeline({ party, runs }: { party: Party; runs: RunSummary[] }) {
   return <section className="detail-panel"><SectionTitle icon={<GitBranch />} title="Run Timeline" compact /><div className="party-detail-timeline">{runs.map((run, index) => { const previous = index > 0 ? new Set(runs[index - 1].memberIds) : new Set<string>(); const current = new Set(run.memberIds); const joined = run.memberIds.filter(memberId => !previous.has(memberId)); const left = index === 0 ? [] : runs[index - 1].memberIds.filter(memberId => !current.has(memberId)); return <article key={run.id} className={`timeline-run run-count-${Math.min(runs.length, 4)}`}><div className="timeline-rail"><span /></div><div className="timeline-run-body"><header><span>Run {run.runNumber}</span><h3>{run.title}</h3><time>{formatDate(run.ranAt)}</time></header><div className="timeline-members">{run.memberIds.map(memberId => <span key={memberId}>{memberName(party, memberId)}</span>)}</div><div className="membership-events">{joined.map(memberId => <span key={`join-${memberId}`} className="joined"><UserPlus className="h-3.5 w-3.5" /> {memberName(party, memberId)} joined</span>)}{left.map(memberId => <span key={`left-${memberId}`} className="left"><UserMinus className="h-3.5 w-3.5" /> {memberName(party, memberId)} left</span>)}</div><div className="timeline-achievements">{run.achievements.map(achievement => <span key={achievement.id} className={`achievement-badge ${achievement.status} ${achievement.objectiveKind}`} title={`${statusLabels[achievement.status]}: ${achievement.objectiveTitle}`}>{achievement.objectiveTitle}</span>)}</div></div></article>; })}{runs.length === 0 && <p className="empty-copy">No runs have been recorded.</p>}</div></section>;
 }
 
-function RunList({ runs }: { runs: RunSummary[] }) {
-  return <section className="detail-panel"><SectionTitle icon={<Milestone />} title="Runs & Achievements" compact /><div className="run-list">{runs.map(run => <article key={run.id}><header><h3>Run {run.runNumber}: {run.title}</h3><time>{formatDate(run.ranAt)}</time></header><div className="journal-badges">{run.achievements.map(achievement => <span key={achievement.id} className={`achievement-badge ${achievement.status} ${achievement.objectiveKind}`} title={`${statusLabels[achievement.status]}: ${achievement.objectiveTitle}`}>{achievement.objectiveTitle}</span>)}</div></article>)}{runs.length === 0 && <p className="empty-copy">No runs have been recorded.</p>}</div></section>;
+function RunList({
+  runs,
+  isAuthenticated,
+  userCharacters,
+  commentDrafts,
+  onCommentDraftChange,
+  onAddRunComment
+}: {
+  runs: RunSummary[];
+  isAuthenticated: boolean;
+  userCharacters: Character[];
+  commentDrafts: Record<string, { characterId: string; text: string }>;
+  onCommentDraftChange: (runId: string, draft: { characterId: string; text: string }) => void;
+  onAddRunComment: (runId: string, event: FormEvent) => void;
+}) {
+  return (
+    <section className="detail-panel">
+      <SectionTitle icon={<Milestone />} title="Runs & Achievements" compact />
+      <div className="run-list">
+        {runs.map(run => {
+          const draft = commentDrafts[run.id] || { characterId: userCharacters[0]?._id || '', text: '' };
+          return (
+            <article key={run.id}>
+              <header><h3>Run {run.runNumber}: {run.title}</h3><time>{formatDate(run.ranAt)}</time></header>
+              <div className="journal-badges">{run.achievements.map(achievement => <span key={achievement.id} className={`achievement-badge ${achievement.status} ${achievement.objectiveKind}`} title={`${statusLabels[achievement.status]}: ${achievement.objectiveTitle}`}>{achievement.objectiveTitle}</span>)}</div>
+              <div className="comment-list run-comments">
+                {run.comments.map(comment => <article key={comment.id}><strong>{comment.characterName}</strong><time>{formatDate(comment.createdAt)}</time><p>{comment.text}</p></article>)}
+                {run.comments.length === 0 && <p className="empty-copy">No run comments yet.</p>}
+              </div>
+              {isAuthenticated && userCharacters.length > 0 && (
+                <form className="comment-form" onSubmit={event => onAddRunComment(run.id, event)}>
+                  <label className="field-label">Voice<select value={draft.characterId} onChange={event => onCommentDraftChange(run.id, { ...draft, characterId: event.target.value })}>{userCharacters.map(character => <option key={character._id} value={character._id}>{character.name}</option>)}</select></label>
+                  <textarea value={draft.text} onChange={event => onCommentDraftChange(run.id, { ...draft, text: event.target.value })} rows={3} placeholder="Add a run comment" />
+                  <button type="submit"><MessageSquare className="h-4 w-4" /> Comment</button>
+                </form>
+              )}
+            </article>
+          );
+        })}
+        {runs.length === 0 && <p className="empty-copy">No runs have been recorded.</p>}
+      </div>
+    </section>
+  );
 }
 
 function RunRosterEditor({ party, runs, onUpdateRunMembers }: { party: Party; runs: RunSummary[]; onUpdateRunMembers: (runId: string, memberIds: string[]) => void }) {
@@ -664,6 +768,29 @@ function partyName(parties: Party[], partyId: string) {
 
 function memberName(party: Party, memberId: string) {
   return party.members.find(member => member.id === memberId)?.name || memberId;
+}
+
+function canJournalForRun(run: RunSummary, parties: Party[], userCharacters: Character[], userId?: string) {
+  return getUserRunCharacters(run, parties, userCharacters, userId).length > 0;
+}
+
+function getUserRunCharacters(run: RunSummary, parties: Party[], userCharacters: Character[], userId?: string) {
+  const userCharacterIds = new Set(userCharacters.map(character => character._id).filter(Boolean));
+  const party = parties.find(item => item.id === run.partyId);
+  if (!party) return [];
+
+  return party.members
+    .filter(member => run.memberIds.includes(member.id))
+    .filter(member =>
+      (member.characterId && userCharacterIds.has(member.characterId)) ||
+      (userId && member.userId === userId) ||
+      userCharacters.some(character => character.name === member.characterName)
+    )
+    .map(member => {
+      return userCharacters.find(character => character._id === member.characterId) ||
+        userCharacters.find(character => character.name === member.characterName);
+    })
+    .filter((character): character is Character => Boolean(character));
 }
 
 function formatDate(value: Date) {
