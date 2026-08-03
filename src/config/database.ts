@@ -45,4 +45,13 @@ export const DATABASE_TABLES = {
   LOCK_CHALLENGES: 'lock_challenges',
   PERFORMANCE_CHALLENGES: 'performance_challenges',
   PERFORMANCE_ATTEMPTS: 'performance_attempts',
+  CAMPAIGNS: 'campaigns',
+  CAMPAIGN_OBJECTIVES: 'campaign_objectives',
+  CAMPAIGN_OBJECTIVE_COMMENTS: 'campaign_objective_comments',
+  CAMPAIGN_PARTIES: 'campaign_parties',
+  CAMPAIGN_PARTY_MEMBERS: 'campaign_party_members',
+  CAMPAIGN_RUNS: 'campaign_runs',
+  CAMPAIGN_RUN_OBJECTIVES: 'campaign_run_objectives',
+  CAMPAIGN_ACHIEVEMENTS: 'campaign_achievements',
+  CAMPAIGN_JOURNAL_ENTRIES: 'campaign_journal_entries',
 };

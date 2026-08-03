@@ -27,6 +27,7 @@ const ContractsOfficePage = lazy(() => import('./features/contracts/routes/Contr
 const ArcaneLocksPage = lazy(() => import('./features/arcane-locks/routes/ArcaneLocksPage'));
 const CardGamePage = lazy(() => import('./pages/CardGamePage'));
 const BrokenSealsPage = lazy(() => import('./features/broken-seals/routes/BrokenSealsPage'));
+const CampaignObjectivesPage = lazy(() => import('./features/campaign-objectives/routes/CampaignObjectivesPage'));
 
 function RouteFallback() {
   return (
@@ -66,6 +67,10 @@ function AppRoutes() {
         <Route path="/arcane-locks" element={<PageGate pageKey="arcane-locks"><ArcaneLocksPage /></PageGate>} />
         <Route path="/arcane-locks/:sessionId" element={<PageGate pageKey="arcane-locks"><ArcaneLocksPage /></PageGate>} />
         <Route path="/broken-seals" element={<PageGate pageKey="broken-seals"><BrokenSealsPage /></PageGate>} />
+        <Route path="/campaign-objectives" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
+        <Route path="/campaign-objectives/:campaignSlug" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
+        <Route path="/campaign-objectives/:campaignSlug/parties/:partyId" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
+        <Route path="/campaign-objectives/:campaignSlug/journals/:journalId" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
         <Route path="/event" element={<PageGate pageKey="event"><EventPage /></PageGate>} />
         <Route path="/skill-checks" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />
         <Route path="/skill-checks/challenges" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />

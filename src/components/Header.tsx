@@ -6,7 +6,7 @@ import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
 import GoogleLogin from './GoogleLogin';
 
-type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
+type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/campaign-objectives' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -20,6 +20,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/underhaul/contracts': () => import('../features/contracts/routes/ContractsOfficePage'),
   '/arcane-locks': () => import('../features/arcane-locks/routes/ArcaneLocksPage'),
   '/broken-seals': () => import('../features/broken-seals/routes/BrokenSealsPage'),
+  '/campaign-objectives': () => import('../features/campaign-objectives/routes/CampaignObjectivesPage'),
   '/event': () => import('../pages/EventPage'),
   '/skill-checks': () => import('../pages/SkillChecksPage'),
   '/news': () => import('../pages/NewsPage'),
@@ -62,7 +63,7 @@ const Header: React.FC = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden 2xl:flex items-center space-x-1">
             {fullNavigation.map((item) => {
               const Icon = item.icon;
               const isActive = isNavigationActive(item.href, location.pathname);
@@ -106,7 +107,7 @@ const Header: React.FC = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
+          <div className="2xl:hidden flex items-center">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="text-gray-300 hover:text-white p-2"
@@ -118,7 +119,7 @@ const Header: React.FC = () => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden">
+          <div className="2xl:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 border-t border-fantasy-800/50">
               {fullNavigation.map((item) => {
                 const Icon = item.icon;

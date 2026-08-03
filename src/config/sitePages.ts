@@ -3,6 +3,7 @@ import {
   Briefcase,
   CalendarDays,
   ClipboardList,
+  GitBranch,
   Home,
   Newspaper,
   Scroll,
@@ -27,6 +28,7 @@ export type SitePageKey =
   | 'underhaul-contracts'
   | 'arcane-locks'
   | 'broken-seals'
+  | 'campaign-objectives'
   | 'event'
   | 'skill-checks'
   | 'news';
@@ -128,6 +130,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Word puzzle minigame for repairing damaged magical seals.',
     icon: Shield,
     routePrefixes: ['/broken-seals']
+  },
+  {
+    key: 'campaign-objectives',
+    name: 'Campaign',
+    href: '/campaign-objectives',
+    description: 'Objective status board, party run timelines, and journal entries.',
+    icon: GitBranch,
+    routePrefixes: ['/campaign-objectives']
   },
   {
     key: 'event',
