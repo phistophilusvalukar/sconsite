@@ -4,22 +4,29 @@ import path from 'node:path';
 
 const sourceDir = path.resolve(process.argv[2] || 'public/ticket-log-archive-data/source');
 const outputDir = path.resolve(process.argv[3] || 'public/ticket-log-archive-data');
+const supportOutputDir = path.resolve(process.argv[4] || 'public/ticket-log-support-data');
 const filesDir = path.join(outputDir, 'files');
+const supportFilesDir = path.join(supportOutputDir, 'files');
 const indexPath = path.join(outputDir, 'index.json');
+const supportIndexPath = path.join(supportOutputDir, 'index.json');
 
 if (!existsSync(sourceDir)) {
   throw new Error(`Ticket log source directory not found: ${sourceDir}`);
 }
 
 await rm(filesDir, { force: true, recursive: true });
+await rm(supportFilesDir, { force: true, recursive: true });
 await mkdir(filesDir, { recursive: true });
+await mkdir(supportFilesDir, { recursive: true });
 
 const sourceFiles = (await walk(sourceDir))
   .filter(filePath => filePath.toLowerCase().endsWith('.html'))
   .sort((left, right) => left.localeCompare(right));
 
 const tickets = [];
+const supportTickets = [];
 const typeCounts = {};
+const supportTypeCounts = {};
 
 for (const [index, filePath] of sourceFiles.entries()) {
   const html = await readFile(filePath, 'utf8');
@@ -29,13 +36,14 @@ for (const [index, filePath] of sourceFiles.entries()) {
   const fileName = path.basename(filePath);
   const id = extractId(fileName) || `ticket-${String(index + 1).padStart(4, '0')}`;
   const safeName = `${String(index + 1).padStart(4, '0')}-${id}.html`;
-  const targetPath = path.join(filesDir, safeName);
-  await copyFile(filePath, targetPath);
 
   const preamble = extractPreamble(html);
   const channelLabel = preamble[1] || stripExtension(fileName);
   const channelName = channelLabel.includes('/') ? channelLabel.split('/').pop()?.trim() || channelLabel : channelLabel;
   const ticketType = inferTicketType(sourceFolder, channelName);
+  const isSupportTicket = ticketType === 'Support';
+  const targetPath = path.join(isSupportTicket ? supportFilesDir : filesDir, safeName);
+  await copyFile(filePath, targetPath);
   const title = decodeHtml(matchText(html, /<title>([\s\S]*?)<\/title>/i) || channelName);
   const ticketNumber = matchText(channelName, /(closed-\d+)/i) || matchText(fileName, /(closed-\d+)/i) || '';
   const authors = extractAuthors(html);
@@ -56,8 +64,7 @@ for (const [index, filePath] of sourceFiles.entries()) {
     bodyText
   ].join(' ')).slice(0, 80000);
 
-  typeCounts[ticketType] = (typeCounts[ticketType] || 0) + 1;
-  tickets.push({
+  const ticket = {
     id,
     title,
     channelName,
@@ -65,7 +72,7 @@ for (const [index, filePath] of sourceFiles.entries()) {
     ticketType,
     sourceFolder,
     sourcePath: relativeSourcePath,
-    fileUrl: `/ticket-log-archive-data/files/${safeName}`,
+    fileUrl: `/${isSupportTicket ? 'ticket-log-support-data' : 'ticket-log-archive-data'}/files/${safeName}`,
     messageCount,
     firstMessageAt,
     lastMessageAt,
@@ -73,27 +80,42 @@ for (const [index, filePath] of sourceFiles.entries()) {
     mentionedUsers,
     preview: bodyText.slice(0, 420),
     searchableText
-  });
+  };
+
+  if (isSupportTicket) {
+    supportTypeCounts[ticketType] = (supportTypeCounts[ticketType] || 0) + 1;
+    supportTickets.push(ticket);
+  } else {
+    typeCounts[ticketType] = (typeCounts[ticketType] || 0) + 1;
+    tickets.push(ticket);
+  }
 }
 
 const generatedAt = new Date().toISOString();
-const firstDates = tickets.map(ticket => ticket.firstMessageAt).filter(Boolean).sort();
-const lastDates = tickets.map(ticket => ticket.lastMessageAt).filter(Boolean).sort();
 
-await writeFile(
-  indexPath,
-  `${JSON.stringify({
-    generatedAt,
-    ticketCount: tickets.length,
-    typeCounts,
-    firstMessageAt: firstDates[0] || null,
-    lastMessageAt: lastDates[lastDates.length - 1] || null,
-    tickets
-  }, null, 2)}\n`,
-  'utf8'
-);
+await writeIndex(indexPath, tickets, typeCounts, generatedAt);
+await writeIndex(supportIndexPath, supportTickets, supportTypeCounts, generatedAt);
 
-console.log(`Indexed ${tickets.length} ticket logs into ${indexPath}`);
+console.log(`Indexed ${tickets.length} public ticket logs into ${indexPath}`);
+console.log(`Indexed ${supportTickets.length} support ticket logs into ${supportIndexPath}`);
+
+async function writeIndex(targetPath, indexTickets, indexTypeCounts, indexGeneratedAt) {
+  const indexFirstDates = indexTickets.map(ticket => ticket.firstMessageAt).filter(Boolean).sort();
+  const indexLastDates = indexTickets.map(ticket => ticket.lastMessageAt).filter(Boolean).sort();
+
+  await writeFile(
+    targetPath,
+    `${JSON.stringify({
+      generatedAt: indexGeneratedAt,
+      ticketCount: indexTickets.length,
+      typeCounts: indexTypeCounts,
+      firstMessageAt: indexFirstDates[0] || null,
+      lastMessageAt: indexLastDates[indexLastDates.length - 1] || null,
+      tickets: indexTickets
+    }, null, 2)}\n`,
+    'utf8'
+  );
+}
 
 async function walk(directory) {
   const entries = await import('node:fs/promises').then(fs => fs.readdir(directory, { withFileTypes: true }));

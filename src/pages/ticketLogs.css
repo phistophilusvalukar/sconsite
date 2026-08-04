@@ -47,6 +47,60 @@
   font-size: 0.88rem;
 }
 
+.ticket-logs-support-toggle,
+.ticket-logs-support-login button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(250 204 21 / 0.35);
+  border-radius: 6px;
+  background: rgb(250 204 21 / 0.12);
+  color: #fef9c3;
+  padding: 0 12px;
+  font-weight: 800;
+}
+
+.ticket-logs-support-login {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid rgb(250 204 21 / 0.22);
+  border-radius: 8px;
+  background: rgb(15 23 42 / 0.72);
+}
+
+.ticket-logs-support-login label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ticket-logs-support-login input {
+  min-height: 42px;
+  border: 1px solid rgb(148 163 184 / 0.22);
+  border-radius: 6px;
+  background: rgb(2 6 23 / 0.82);
+  color: #f8fafc;
+  padding: 0 10px;
+}
+
+.ticket-logs-alert {
+  margin-bottom: 18px;
+  border: 1px solid rgb(248 113 113 / 0.3);
+  border-radius: 8px;
+  background: rgb(127 29 29 / 0.35);
+  color: #fecaca;
+  padding: 12px 14px;
+}
+
 .ticket-logs-summary span,
 .ticket-logs-count,
 .ticket-log-viewer__details span {
@@ -117,7 +171,7 @@
 
 .ticket-logs-clear,
 .ticket-logs-load-more,
-.ticket-log-viewer__header a {
+.ticket-log-viewer__header button {
   display: inline-flex;
   min-height: 42px;
   align-items: center;
@@ -137,7 +191,7 @@
 
 .ticket-logs-clear:hover,
 .ticket-logs-load-more:hover,
-.ticket-log-viewer__header a:hover {
+.ticket-log-viewer__header button:hover {
   border-color: rgb(250 204 21 / 0.7);
   background: rgb(250 204 21 / 0.2);
 }
@@ -256,7 +310,7 @@
   font-size: 0.88rem;
 }
 
-.ticket-log-viewer__header a {
+.ticket-log-viewer__header button {
   align-self: flex-start;
   padding: 0 12px;
 }
@@ -301,6 +355,10 @@
 
   .ticket-logs-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ticket-logs-support-login {
+    grid-template-columns: 1fr;
   }
 
   .ticket-logs-search {

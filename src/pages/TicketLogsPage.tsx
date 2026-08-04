@@ -34,8 +34,15 @@ type SortMode = 'newest' | 'oldest' | 'messages';
 const PAGE_SIZE = 40;
 
 const TicketLogsPage: React.FC = () => {
-  const [archive, setArchive] = useState<TicketLogIndex | null>(null);
+  const [publicArchive, setPublicArchive] = useState<TicketLogIndex | null>(null);
+  const [supportArchive, setSupportArchive] = useState<TicketLogIndex | null>(null);
   const [loadError, setLoadError] = useState('');
+  const [supportError, setSupportError] = useState('');
+  const [isSupportLoginOpen, setIsSupportLoginOpen] = useState(false);
+  const [supportUsername, setSupportUsername] = useState('');
+  const [supportPassword, setSupportPassword] = useState('');
+  const [supportAuthHeader, setSupportAuthHeader] = useState('');
+  const [supportTranscriptHtmlByUrl, setSupportTranscriptHtmlByUrl] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [username, setUsername] = useState('');
   const [ticketType, setTicketType] = useState('all');
@@ -51,7 +58,7 @@ const TicketLogsPage: React.FC = () => {
         if (!response.ok) throw new Error(`Archive index returned ${response.status}`);
         return response.json() as Promise<TicketLogIndex>;
       })
-      .then(setArchive)
+      .then(setPublicArchive)
       .catch(error => {
         console.error('Unable to load ticket archive:', error);
         setLoadError('Ticket archive index could not be loaded.');
@@ -62,6 +69,7 @@ const TicketLogsPage: React.FC = () => {
     setVisibleCount(PAGE_SIZE);
   }, [query, username, ticketType, startDate, endDate, sortMode]);
 
+  const archive = useMemo(() => mergeArchives(publicArchive, supportArchive), [publicArchive, supportArchive]);
   const ticketTypes = useMemo(() => Object.keys(archive?.typeCounts || {}).sort(), [archive]);
   const usernameOptions = useMemo(() => {
     const names = new Set<string>();
@@ -103,8 +111,69 @@ const TicketLogsPage: React.FC = () => {
     || archive?.tickets.find(ticket => ticket.id === selectedTicketId)
     || filteredTickets[0]
     || null;
+  const isSelectedSupportTicket = selectedTicket?.ticketType === 'Support';
+  const selectedSupportTranscriptHtml = selectedTicket ? supportTranscriptHtmlByUrl[selectedTicket.fileUrl] : undefined;
 
   const visibleTickets = filteredTickets.slice(0, visibleCount);
+
+  useEffect(() => {
+    if (!selectedTicket || !isSelectedSupportTicket || !supportAuthHeader || supportTranscriptHtmlByUrl[selectedTicket.fileUrl]) return;
+
+    fetch(selectedTicket.fileUrl, {
+      headers: {
+        Authorization: supportAuthHeader
+      }
+    })
+      .then(response => {
+        if (!response.ok) throw new Error(`Support transcript returned ${response.status}`);
+        return response.text();
+      })
+      .then(html => {
+        setSupportTranscriptHtmlByUrl(current => ({
+          ...current,
+          [selectedTicket.fileUrl]: html
+        }));
+      })
+      .catch(error => {
+        console.error('Unable to load support transcript:', error);
+        setSupportError('Support transcript could not be loaded.');
+      });
+  }, [isSelectedSupportTicket, selectedTicket, supportAuthHeader, supportTranscriptHtmlByUrl]);
+
+  async function handleSupportLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const header = buildBasicAuthHeader(supportUsername, supportPassword);
+    setSupportError('');
+
+    try {
+      const response = await fetch('/ticket-log-support-data/index.json', {
+        headers: {
+          Authorization: header
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Support archive returned ${response.status}`);
+      }
+
+      const nextSupportArchive = await response.json() as TicketLogIndex;
+      setSupportArchive(nextSupportArchive);
+      setSupportAuthHeader(header);
+      setIsSupportLoginOpen(false);
+      setSupportUsername('');
+      setSupportPassword('');
+    } catch (error) {
+      console.error('Unable to unlock support tickets:', error);
+      setSupportArchive(null);
+      setSupportAuthHeader('');
+      setSupportError('Support ticket login failed.');
+    }
+  }
+
+  function handleOpenSelectedTicket() {
+    if (!selectedTicket) return;
+    window.open(selectedTicket.fileUrl, '_blank', 'noopener,noreferrer');
+  }
 
   return (
     <div className="ticket-logs-page">
@@ -120,8 +189,31 @@ const TicketLogsPage: React.FC = () => {
           <div className="ticket-logs-summary" aria-label="Archive summary">
             <span><Archive aria-hidden />{archive?.ticketCount ?? 0} tickets</span>
             <span><CalendarDays aria-hidden />{formatDateRange(archive?.firstMessageAt, archive?.lastMessageAt)}</span>
+            {supportArchive ? (
+              <span>Support unlocked</span>
+            ) : (
+              <button type="button" className="ticket-logs-support-toggle" onClick={() => setIsSupportLoginOpen(open => !open)}>
+                View Supp tickets
+              </button>
+            )}
           </div>
         </div>
+
+        {isSupportLoginOpen && !supportArchive && (
+          <form className="ticket-logs-support-login" onSubmit={handleSupportLogin}>
+            <label>
+              <span>Username</span>
+              <input value={supportUsername} onChange={event => setSupportUsername(event.target.value)} autoComplete="username" />
+            </label>
+            <label>
+              <span>Password</span>
+              <input value={supportPassword} onChange={event => setSupportPassword(event.target.value)} type="password" autoComplete="current-password" />
+            </label>
+            <button type="submit">Unlock Support</button>
+          </form>
+        )}
+
+        {supportError && <div className="ticket-logs-alert">{supportError}</div>}
 
         <div className="ticket-logs-filters">
           <label className="ticket-logs-search">
@@ -245,10 +337,10 @@ const TicketLogsPage: React.FC = () => {
                       <h2>{selectedTicket.channelName}</h2>
                       <span>{formatDateRange(selectedTicket.firstMessageAt, selectedTicket.lastMessageAt)} · {selectedTicket.messageCount} messages</span>
                     </div>
-                    <a href={selectedTicket.fileUrl} target="_blank" rel="noreferrer">
+                    <button type="button" onClick={handleOpenSelectedTicket}>
                       <ExternalLink aria-hidden />
                       Open
-                    </a>
+                    </button>
                   </div>
 
                   <div className="ticket-log-viewer__details">
@@ -256,12 +348,25 @@ const TicketLogsPage: React.FC = () => {
                     <span>{selectedTicket.sourceFolder}</span>
                   </div>
 
-                  <iframe
-                    key={selectedTicket.fileUrl}
-                    title={`Transcript for ${selectedTicket.channelName}`}
-                    src={selectedTicket.fileUrl}
-                    sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-                  />
+                  {isSelectedSupportTicket ? (
+                    selectedSupportTranscriptHtml ? (
+                      <iframe
+                        key={selectedTicket.fileUrl}
+                        title={`Transcript for ${selectedTicket.channelName}`}
+                        srcDoc={selectedSupportTranscriptHtml}
+                        sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                      />
+                    ) : (
+                      <div className="ticket-logs-empty">Loading support transcript...</div>
+                    )
+                  ) : (
+                    <iframe
+                      key={selectedTicket.fileUrl}
+                      title={`Transcript for ${selectedTicket.channelName}`}
+                      src={selectedTicket.fileUrl}
+                      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                    />
+                  )}
                 </>
               ) : (
                 <div className="ticket-logs-empty">Loading ticket archive...</div>
@@ -276,6 +381,31 @@ const TicketLogsPage: React.FC = () => {
 
 function tokenize(value: string) {
   return value.toLowerCase().split(/\s+/).map(term => term.trim()).filter(Boolean);
+}
+
+function mergeArchives(publicArchive: TicketLogIndex | null, supportArchive: TicketLogIndex | null): TicketLogIndex | null {
+  if (!publicArchive) return supportArchive;
+  if (!supportArchive) return publicArchive;
+
+  const tickets = [...publicArchive.tickets, ...supportArchive.tickets];
+  const firstDates = tickets.map(ticket => ticket.firstMessageAt).filter(Boolean).sort();
+  const lastDates = tickets.map(ticket => ticket.lastMessageAt).filter(Boolean).sort();
+
+  return {
+    generatedAt: publicArchive.generatedAt,
+    ticketCount: tickets.length,
+    typeCounts: {
+      ...publicArchive.typeCounts,
+      ...supportArchive.typeCounts
+    },
+    firstMessageAt: firstDates[0] || null,
+    lastMessageAt: lastDates[lastDates.length - 1] || null,
+    tickets
+  };
+}
+
+function buildBasicAuthHeader(username: string, password: string) {
+  return `Basic ${btoa(`${username}:${password}`)}`;
 }
 
 function buildSnippet(ticket: TicketLogEntry, query: string) {
