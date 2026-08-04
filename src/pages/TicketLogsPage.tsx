@@ -260,7 +260,7 @@ const TicketLogsPage: React.FC = () => {
                     key={selectedTicket.fileUrl}
                     title={`Transcript for ${selectedTicket.channelName}`}
                     src={selectedTicket.fileUrl}
-                    sandbox="allow-popups allow-popups-to-escape-sandbox"
+                    sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
                   />
                 </>
               ) : (
