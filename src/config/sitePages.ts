@@ -8,6 +8,7 @@ import {
   Newspaper,
   Scroll,
   Shield,
+  Swords,
   Sparkles,
   Sun,
   Ticket,
@@ -28,6 +29,7 @@ export type SitePageKey =
   | 'underhaul-contracts'
   | 'arcane-locks'
   | 'broken-seals'
+  | 'citadel-tactics'
   | 'campaign-objectives'
   | 'event'
   | 'skill-checks'
@@ -130,6 +132,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Word puzzle minigame for repairing damaged magical seals.',
     icon: Shield,
     routePrefixes: ['/broken-seals']
+  },
+  {
+    key: 'citadel-tactics',
+    name: 'Citadel Tactics',
+    href: '/citadel-tactics',
+    description: 'Hellknight-themed PF2e class auto battler prototype.',
+    icon: Swords,
+    routePrefixes: ['/citadel-tactics']
   },
   {
     key: 'campaign-objectives',

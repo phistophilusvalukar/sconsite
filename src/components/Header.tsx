@@ -6,7 +6,7 @@ import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
 import GoogleLogin from './GoogleLogin';
 
-type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/campaign-objectives' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
+type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/citadel-tactics' | '/campaign-objectives' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -20,6 +20,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/underhaul/contracts': () => import('../features/contracts/routes/ContractsOfficePage'),
   '/arcane-locks': () => import('../features/arcane-locks/routes/ArcaneLocksPage'),
   '/broken-seals': () => import('../features/broken-seals/routes/BrokenSealsPage'),
+  '/citadel-tactics': () => import('../features/hellknight-autobattler/routes/HellknightAutobattlerPage'),
   '/campaign-objectives': () => import('../features/campaign-objectives/routes/CampaignObjectivesPage'),
   '/event': () => import('../pages/EventPage'),
   '/skill-checks': () => import('../pages/SkillChecksPage'),
@@ -49,7 +50,7 @@ const navigationGroups: NavigationGroup[] = [
   { name: 'Discover', pageKeys: ['home', 'about', 'news'] },
   { name: 'People', pageKeys: ['characters', 'guilds', 'citizens'] },
   { name: 'Play', pageKeys: ['schedule', 'games'] },
-  { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals'] },
+  { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals', 'citadel-tactics'] },
   { name: 'Tools', pageKeys: ['skill-checks', 'campaign-objectives', 'event'] }
 ];
 
