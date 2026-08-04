@@ -2,8 +2,8 @@ import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
-const sourceDir = path.resolve(process.argv[2] || 'public/ticket-logs/source');
-const outputDir = path.resolve(process.argv[3] || 'public/ticket-logs');
+const sourceDir = path.resolve(process.argv[2] || 'public/ticket-log-archive-data/source');
+const outputDir = path.resolve(process.argv[3] || 'public/ticket-log-archive-data');
 const filesDir = path.join(outputDir, 'files');
 const indexPath = path.join(outputDir, 'index.json');
 
@@ -65,7 +65,7 @@ for (const [index, filePath] of sourceFiles.entries()) {
     ticketType,
     sourceFolder,
     sourcePath: relativeSourcePath,
-    fileUrl: `/ticket-logs/files/${safeName}`,
+    fileUrl: `/ticket-log-archive-data/files/${safeName}`,
     messageCount,
     firstMessageAt,
     lastMessageAt,

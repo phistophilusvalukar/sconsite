@@ -46,7 +46,7 @@ const TicketLogsPage: React.FC = () => {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
-    fetch('/ticket-logs/index.json')
+    fetch('/ticket-log-archive-data/index.json')
       .then(response => {
         if (!response.ok) throw new Error(`Archive index returned ${response.status}`);
         return response.json() as Promise<TicketLogIndex>;

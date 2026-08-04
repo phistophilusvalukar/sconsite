@@ -4,6 +4,18 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/ticket-log",
+      "permanent": false
+    },
+    {
+      "source": "/ticket-logs",
+      "destination": "/ticket-log",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!api/).*)",
