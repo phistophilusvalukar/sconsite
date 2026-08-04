@@ -22,6 +22,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SchedulePage = lazy(() => import('./pages/SchedulePage'));
 const GamesPage = lazy(() => import('./pages/GamesPage'));
 const SkillChecksPage = lazy(() => import('./pages/SkillChecksPage'));
+const TicketLogsPage = lazy(() => import('./pages/TicketLogsPage'));
 const EventPage = lazy(() => import('./pages/EventPage'));
 const ContractsOfficePage = lazy(() => import('./features/contracts/routes/ContractsOfficePage'));
 const ArcaneLocksPage = lazy(() => import('./features/arcane-locks/routes/ArcaneLocksPage'));
@@ -61,6 +62,7 @@ function AppRoutes() {
         <Route path="/schedule" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/schedule/:pollId" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/games" element={<PageGate pageKey="games"><GamesPage /></PageGate>} />
+        <Route path="/ticket-logs" element={<TicketLogsPage />} />
         <Route path="/arcana" element={<PageGate pageKey="arcana"><CardGamePage /></PageGate>} />
         <Route path="/underhaul/contracts" element={<PageGate pageKey="underhaul-contracts"><ContractsOfficePage /></PageGate>} />
         <Route path="/underhaul/contracts/:slug" element={<PageGate pageKey="underhaul-contracts"><ContractsOfficePage /></PageGate>} />
@@ -102,7 +104,18 @@ function App() {
 
 function AppLayout() {
   const location = useLocation();
+  const isStandaloneTicketArchive = location.pathname.startsWith('/ticket-logs');
   const hideFooter = location.pathname === '/';
+
+  if (isStandaloneTicketArchive) {
+    return (
+      <div className="min-h-screen bg-fantasy-gradient">
+        <main>
+          <AppRoutes />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-fantasy-gradient">

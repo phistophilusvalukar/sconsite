@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run && npm run test --workspaces --if-present",
+    "build:ticket-logs": "node scripts/build-ticket-log-archive.mjs",
     "validate:cards": "npm run validate -w @scon/cards",
     "simulate:foundry-access": "node scripts/simulate-foundry-access.mjs",
     "preview": "vite preview",

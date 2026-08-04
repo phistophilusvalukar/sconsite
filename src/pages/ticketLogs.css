@@ -1,0 +1,336 @@
+.ticket-logs-page {
+  min-height: calc(100vh - 4rem);
+  color: #f8fafc;
+}
+
+.ticket-logs-shell {
+  width: min(1500px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+}
+
+.ticket-logs-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.ticket-logs-kicker {
+  margin: 0 0 6px;
+  color: #facc15;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ticket-logs-heading h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1;
+}
+
+.ticket-logs-heading p {
+  max-width: 760px;
+  margin: 10px 0 0;
+  color: #cbd5e1;
+}
+
+.ticket-logs-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  color: #e2e8f0;
+  font-size: 0.88rem;
+}
+
+.ticket-logs-summary span,
+.ticket-logs-count,
+.ticket-log-viewer__details span {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ticket-logs-summary svg,
+.ticket-logs-count svg,
+.ticket-log-viewer__details svg {
+  width: 16px;
+  height: 16px;
+  color: #facc15;
+}
+
+.ticket-logs-filters {
+  display: grid;
+  grid-template-columns: minmax(280px, 2fr) minmax(160px, 1fr) minmax(140px, 0.8fr) repeat(2, minmax(140px, 0.75fr)) minmax(150px, 0.75fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid rgb(148 163 184 / 0.18);
+  border-radius: 8px;
+  background: rgb(15 23 42 / 0.7);
+}
+
+.ticket-logs-filters label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ticket-logs-filters input,
+.ticket-logs-filters select {
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid rgb(148 163 184 / 0.22);
+  border-radius: 6px;
+  background: rgb(2 6 23 / 0.82);
+  color: #f8fafc;
+  padding: 0 10px;
+  text-transform: none;
+}
+
+.ticket-logs-search {
+  position: relative;
+}
+
+.ticket-logs-search svg {
+  position: absolute;
+  bottom: 12px;
+  left: 10px;
+  width: 18px;
+  height: 18px;
+  color: #facc15;
+}
+
+.ticket-logs-search input {
+  padding-left: 36px;
+}
+
+.ticket-logs-clear,
+.ticket-logs-load-more,
+.ticket-log-viewer__header a {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgb(250 204 21 / 0.35);
+  border-radius: 6px;
+  background: rgb(250 204 21 / 0.12);
+  color: #fef9c3;
+  font-weight: 700;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.ticket-logs-clear {
+  padding: 0 14px;
+}
+
+.ticket-logs-clear:hover,
+.ticket-logs-load-more:hover,
+.ticket-log-viewer__header a:hover {
+  border-color: rgb(250 204 21 / 0.7);
+  background: rgb(250 204 21 / 0.2);
+}
+
+.ticket-logs-clear svg,
+.ticket-log-viewer__header svg {
+  width: 17px;
+  height: 17px;
+}
+
+.ticket-logs-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.ticket-logs-results,
+.ticket-log-viewer {
+  border: 1px solid rgb(148 163 184 / 0.18);
+  border-radius: 8px;
+  background: rgb(15 23 42 / 0.7);
+}
+
+.ticket-logs-results {
+  max-height: calc(100vh - 190px);
+  overflow: auto;
+  padding: 10px;
+}
+
+.ticket-logs-count {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: -10px -10px 10px;
+  padding: 12px;
+  border-bottom: 1px solid rgb(148 163 184 / 0.14);
+  background: rgb(15 23 42 / 0.96);
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.ticket-log-result {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 12px;
+  border: 1px solid rgb(148 163 184 / 0.14);
+  border-radius: 7px;
+  background: rgb(2 6 23 / 0.42);
+  color: #cbd5e1;
+  text-align: left;
+}
+
+.ticket-log-result:hover,
+.ticket-log-result--active {
+  border-color: rgb(250 204 21 / 0.45);
+  background: rgb(51 65 85 / 0.55);
+}
+
+.ticket-log-result strong {
+  display: block;
+  margin: 6px 0;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.ticket-log-result__meta,
+.ticket-log-result__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.ticket-log-result__footer {
+  margin-top: 8px;
+}
+
+.ticket-log-viewer {
+  overflow: hidden;
+}
+
+.ticket-log-viewer__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-bottom: 1px solid rgb(148 163 184 / 0.16);
+}
+
+.ticket-log-viewer__header p,
+.ticket-log-viewer__header h2,
+.ticket-log-viewer__header span {
+  margin: 0;
+}
+
+.ticket-log-viewer__header p {
+  color: #facc15;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ticket-log-viewer__header h2 {
+  margin: 4px 0;
+  color: #fff;
+  font-size: 1.35rem;
+}
+
+.ticket-log-viewer__header span,
+.ticket-log-viewer__details {
+  color: #94a3b8;
+  font-size: 0.88rem;
+}
+
+.ticket-log-viewer__header a {
+  align-self: flex-start;
+  padding: 0 12px;
+}
+
+.ticket-log-viewer__details {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgb(148 163 184 / 0.12);
+}
+
+.ticket-log-viewer iframe {
+  display: block;
+  width: 100%;
+  height: min(860px, calc(100vh - 260px));
+  border: 0;
+  background: #36393e;
+}
+
+.ticket-logs-empty {
+  padding: 28px;
+  color: #cbd5e1;
+  text-align: center;
+}
+
+.ticket-logs-load-more {
+  width: 100%;
+  margin-top: 4px;
+}
+
+@media (max-width: 1180px) {
+  .ticket-logs-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ticket-logs-summary {
+    justify-content: flex-start;
+  }
+
+  .ticket-logs-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ticket-logs-search {
+    grid-column: 1 / -1;
+  }
+
+  .ticket-logs-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-logs-results {
+    max-height: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .ticket-logs-shell {
+    width: min(100% - 20px, 1500px);
+    padding-top: 20px;
+  }
+
+  .ticket-logs-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-log-viewer__header {
+    flex-direction: column;
+  }
+
+  .ticket-log-viewer iframe {
+    height: 72vh;
+  }
+}
