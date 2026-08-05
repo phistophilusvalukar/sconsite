@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { MouseEvent } from 'react';
+import type { DragEvent, MouseEvent } from 'react';
 import { Coins, Crosshair, Dices, Hourglass, Package, Play, RefreshCw, Shield, ShoppingBag, Sparkles, Swords } from 'lucide-react';
 import {
   boardSlots as initialBoardSlots,
@@ -65,6 +65,7 @@ export default function HellknightAutobattlerPage() {
   const [board, setBoard] = useState<BoardSlot[]>(initialBoardSlots);
   const [inventory, setInventory] = useState<string[]>(['sturdy-shield']);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [draggedUnitId, setDraggedUnitId] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<CombatResult | null>(null);
   const [playbackFrameIndex, setPlaybackFrameIndex] = useState(0);
   const [hoveredUnit, setHoveredUnit] = useState<HoveredUnit | null>(null);
@@ -138,16 +139,22 @@ export default function HellknightAutobattlerPage() {
   }
 
   function placeUnit(unitId: string, slotIndex: number) {
-    setBoard(current => {
-      const originIndex = current.findIndex(slot => slot.unitId === unitId);
-      const targetUnitId = current[slotIndex].unitId;
-      return current.map((slot, index) => {
-        if (index === slotIndex) return { ...slot, unitId };
-        if (index === originIndex) return { ...slot, unitId: targetUnitId };
-        return slot;
-      });
-    });
+    setBoard(current => moveUnitOnBoard(current, unitId, slotIndex));
     setSelectedUnitId(null);
+  }
+
+  function startUnitDrag(unitId: string, event: DragEvent<HTMLElement>) {
+    setDraggedUnitId(unitId);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', unitId);
+  }
+
+  function dropUnit(slotIndex: number, event: DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    const unitId = draggedUnitId ?? event.dataTransfer.getData('text/plain');
+    if (!bench.some(unit => unit.instanceId === unitId)) return;
+    placeUnit(unitId, slotIndex);
+    setDraggedUnitId(null);
   }
 
   function recallUnit(unitId: string) {
@@ -350,13 +357,25 @@ export default function HellknightAutobattlerPage() {
                         key={`${slot.q}:${slot.r}`}
                         type="button"
                         className={`hex-cell ${unit ? 'occupied' : ''} ${selected ? 'selected' : ''}`}
+                        draggable={Boolean(unit)}
+                        onDragStart={(event) => {
+                          if (unit) startUnitDrag(unit.instanceId, event);
+                        }}
+                        onDragEnd={() => setDraggedUnitId(null)}
+                        onDragOver={(event) => {
+                          if (draggedUnitId) {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = 'move';
+                          }
+                        }}
+                        onDrop={(event) => dropUnit(index, event)}
                         onMouseEnter={(event) => {
                           if (unit) showUnitTooltip(unit, event);
                         }}
                         onMouseMove={moveTooltip}
                         onMouseLeave={() => setHoveredUnit(null)}
                         onClick={() => {
-                          if (selectedUnitId && selectedUnitId !== unit?.instanceId) {
+                          if (!unit && selectedUnitId) {
                             placeUnit(selectedUnitId, index);
                             return;
                           }
@@ -389,6 +408,8 @@ export default function HellknightAutobattlerPage() {
                     unit={unit}
                     selected={selectedUnitId === unit.instanceId}
                     onSelect={() => setSelectedUnitId(unit.instanceId)}
+                    onDragStart={(event) => startUnitDrag(unit.instanceId, event)}
+                    onDragEnd={() => setDraggedUnitId(null)}
                     onRecall={() => recallUnit(unit.instanceId)}
                     onHoverUnit={showUnitTooltip}
                     onMoveTooltip={moveTooltip}
@@ -749,6 +770,8 @@ function UnitChip({
   unit,
   selected,
   onSelect,
+  onDragStart,
+  onDragEnd,
   onRecall,
   onHoverUnit,
   onMoveTooltip,
@@ -757,6 +780,8 @@ function UnitChip({
   unit: OwnedUnit;
   selected: boolean;
   onSelect: () => void;
+  onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
+  onDragEnd: () => void;
   onRecall: () => void;
   onHoverUnit: (unit: OwnedUnit, event: MouseEvent<HTMLElement>) => void;
   onMoveTooltip: (event: MouseEvent<HTMLElement>) => void;
@@ -766,6 +791,9 @@ function UnitChip({
     <article className={`unit-chip ${selected ? 'selected' : ''}`}>
       <button
         type="button"
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
         onMouseEnter={(event) => onHoverUnit(unit, event)}
         onMouseMove={onMoveTooltip}
         onMouseLeave={onLeaveTooltip}
@@ -1027,6 +1055,18 @@ function calculateArmyPower(army: OwnedUnit[], activeSynergies: Array<{ trait: U
   }, 0);
   const synergyPower = activeSynergies.reduce((total, synergy) => total + synergy.tier * 85 + synergy.count * 12, 0);
   return Math.round(unitPower + synergyPower);
+}
+
+function moveUnitOnBoard(board: BoardSlot[], unitId: string, slotIndex: number): BoardSlot[] {
+  if (!board[slotIndex]) return board;
+  const originIndex = board.findIndex(slot => slot.unitId === unitId);
+  const targetUnitId = board[slotIndex].unitId;
+  if (originIndex === slotIndex) return board;
+  return board.map((slot, index) => {
+    if (index === slotIndex) return { ...slot, unitId };
+    if (index === originIndex) return { ...slot, unitId: targetUnitId };
+    return slot;
+  });
 }
 
 function getDisplayedHealth(
