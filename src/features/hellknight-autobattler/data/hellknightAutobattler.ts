@@ -89,7 +89,7 @@ export const units: UnitDefinition[] = [
     spellSlots: 0,
     health: 860,
     feat: 'Rage',
-    featText: 'Opens combat with bonus damage and reduced incoming chip damage.'
+    featText: 'Opens combat with 28% bonus attack damage and a temporary ward worth 12% maximum health.'
   },
   {
     id: 'champion',
@@ -169,7 +169,7 @@ export const units: UnitDefinition[] = [
     spellSlots: 4,
     health: 470,
     feat: 'Sorcerous Potency',
-    featText: 'Spells grow stronger for each Signifer in your army.'
+    featText: 'Spells grow stronger with active Signifer Edict tiers.'
   },
   {
     id: 'cleric',
@@ -397,20 +397,20 @@ export const items: ItemDefinition[] = [
 ];
 
 export const synergies: Record<UnitTrait, { thresholds: number[]; text: string }> = {
-  Rack: { thresholds: [2, 4], text: 'Rack units suppress enemy spell damage.' },
-  Scourge: { thresholds: [2, 4], text: 'Scourge units expose high-health enemies.' },
-  Nail: { thresholds: [2, 3], text: 'Nail units gain opening pursuit speed.' },
-  Godclaw: { thresholds: [2, 4], text: 'Godclaw units grant lawful front-line armor.' },
-  Chain: { thresholds: [2, 3], text: 'Chain units briefly pin enemies they focus.' },
-  Gate: { thresholds: [2, 4], text: 'Gate units gain bonus spell slots and summon pressure.' },
-  Pyre: { thresholds: [2, 3], text: 'Pyre units add burning damage over time.' },
-  Torrent: { thresholds: [2, 3], text: 'Torrent units heal and cleanse between volleys.' },
-  Vanguard: { thresholds: [2, 4, 6], text: 'Vanguards gain health for holding the line.' },
-  Signifer: { thresholds: [2, 4, 6], text: 'Signifers gain spell damage and extra slots.' },
-  Executioner: { thresholds: [2, 4], text: 'Executioners finish wounded enemies.' },
-  Duelist: { thresholds: [2, 4], text: 'Duelists gain attack speed while isolated.' },
-  Mender: { thresholds: [2, 3], text: 'Menders restore allies after each round.' },
-  Artillery: { thresholds: [2, 4], text: 'Artillery reaches back-line units sooner.' }
+  Rack: { thresholds: [2, 4], text: 'Rack units take 12% less spell damage per tier.' },
+  Scourge: { thresholds: [2, 4], text: 'Scourge units deal 10% more damage per tier to enemies above 70% health.' },
+  Nail: { thresholds: [2, 3], text: 'Nail units move 90ms faster per tier while pursuing enemies.' },
+  Godclaw: { thresholds: [2, 4], text: 'Godclaw units take 8% less non-true damage per tier.' },
+  Chain: { thresholds: [2, 3], text: 'Every third Chain-unit attack pins its target, longer at higher tiers.' },
+  Gate: { thresholds: [2, 4], text: 'Gate units gain one bonus spell slot per tier.' },
+  Pyre: { thresholds: [2, 3], text: 'Pyre-unit hits apply persistent fire damage per tier.' },
+  Torrent: { thresholds: [2, 3], text: 'Torrent units periodically heal allies and cleanse hexes and fire.' },
+  Vanguard: { thresholds: [2, 4, 6], text: 'Vanguards gain 110 maximum health per tier.' },
+  Signifer: { thresholds: [2, 4, 6], text: 'Signifers gain 14 magic damage per tier and one spell slot.' },
+  Executioner: { thresholds: [2, 4], text: 'Executioners deal 18% more damage per tier to enemies below 35% health.' },
+  Duelist: { thresholds: [2, 4], text: 'Isolated Duelists gain 0.12 attack speed per tier.' },
+  Mender: { thresholds: [2, 3], text: 'Each Mender periodically restores 25 health per tier to the most wounded ally.' },
+  Artillery: { thresholds: [2, 4], text: 'Artillery units gain one hex of attack range.' }
 };
 
 export const lobbyNames = ['Sable Verdict', 'Ashen Writ', 'Iron Docket', 'Citadel Vraid', 'Godclaw Bench', 'Chain Ledger', 'Signifer Choir'];
