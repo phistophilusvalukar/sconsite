@@ -24,7 +24,7 @@ import './hellknightAutobattler.css';
 
 type Phase = 'lobby' | 'shop' | 'combat' | 'item-shop';
 type HoveredUnit =
-  | { kind: 'unit'; unit: UnitDefinition | OwnedUnit; x: number; y: number }
+  | { kind: 'unit'; unit: UnitDefinition | OwnedUnit; displayedHealth: number; x: number; y: number }
   | { kind: 'combat'; unit: CombatFrameUnit; x: number; y: number };
 
 interface PlayerRecord {
@@ -271,7 +271,14 @@ export default function HellknightAutobattlerPage() {
   }
 
   function showUnitTooltip(unit: UnitDefinition | OwnedUnit, event: MouseEvent<HTMLElement>) {
-    setHoveredUnit({ kind: 'unit', unit, x: event.clientX, y: event.clientY });
+    const isDeployed = 'instanceId' in unit && board.some(slot => slot.unitId === unit.instanceId);
+    setHoveredUnit({
+      kind: 'unit',
+      unit,
+      displayedHealth: getDisplayedHealth(unit, activeSynergies, isDeployed),
+      x: event.clientX,
+      y: event.clientY
+    });
   }
 
   function showCombatTooltip(unit: CombatFrameUnit, event: MouseEvent<HTMLElement>) {
@@ -337,6 +344,7 @@ export default function HellknightAutobattlerPage() {
                   {board.map((slot, index) => {
                     const unit = bench.find(candidate => candidate.instanceId === slot.unitId);
                     const selected = Boolean(unit && selectedUnitId === unit.instanceId);
+                    const displayedHealth = unit ? getDisplayedHealth(unit, activeSynergies, true) : 0;
                     return (
                       <button
                         key={`${slot.q}:${slot.r}`}
@@ -361,7 +369,7 @@ export default function HellknightAutobattlerPage() {
                         {unit ? (
                           <>
                             <strong>{unit.pf2Class}</strong>
-                            <span>Tier {unit.tier}</span>
+                            <span>Tier {unit.tier} / HP {displayedHealth}</span>
                           </>
                         ) : (
                           <span>{selectedUnitId ? 'Place' : `${slot.q},${slot.r}`}</span>
@@ -395,6 +403,7 @@ export default function HellknightAutobattlerPage() {
                 onRecall={recallUnit}
                 onCombine={combineSelectedUnit}
                 onSell={sellUnit}
+                activeSynergies={activeSynergies}
               />
             </main>
 
@@ -510,7 +519,8 @@ function UnitDetailPanel({
   combineCopies,
   onRecall,
   onCombine,
-  onSell
+  onSell,
+  activeSynergies
 }: {
   unit: OwnedUnit | null;
   isDeployed: boolean;
@@ -518,6 +528,7 @@ function UnitDetailPanel({
   onRecall: (unitId: string) => void;
   onCombine: () => void;
   onSell: (unitId: string) => void;
+  activeSynergies: Array<{ trait: UnitTrait; count: number; tier: number }>;
 }) {
   if (!unit) {
     return (
@@ -531,7 +542,7 @@ function UnitDetailPanel({
   const itemDetails = unit.items.map(getItem);
   const refund = Math.max(1, Math.floor(unit.cost / 2));
   const tierMultiplier = unit.tier === 1 ? 1 : unit.tier === 2 ? 1.85 : 3.2;
-  const effectiveHealth = Math.round(unit.health * tierMultiplier);
+  const effectiveHealth = getDisplayedHealth(unit, activeSynergies, isDeployed);
   const effectiveAttack = Math.round(unit.attackDamage * tierMultiplier);
   const effectiveMagic = Math.round(unit.magicDamage * tierMultiplier);
   const spells = getUnitSpells(unit);
@@ -628,7 +639,7 @@ function FloatingUnitTooltip({ target }: { target: HoveredUnit | null }) {
     <aside className="unit-tooltip floating-unit-tooltip" style={style} role="tooltip">
       <strong>{target.unit.name}</strong>
       <span>{target.unit.pf2Class} / {target.unit.role}</span>
-      <span>HP {target.unit.health} / AD {target.unit.attackDamage} / MD {target.unit.magicDamage}</span>
+      <span>HP {target.displayedHealth} / AD {target.unit.attackDamage} / MD {target.unit.magicDamage}</span>
       <span>AS {target.unit.attackSpeed.toFixed(2)} / Range {target.unit.range} / Slots {target.unit.spellSlots}</span>
       <span>{target.unit.traits.join(' - ')}</span>
     </aside>
@@ -1011,8 +1022,27 @@ function calculateArmyPower(army: OwnedUnit[], activeSynergies: Array<{ trait: U
     const itemPower = unit.items.reduce((sum, itemId) => sum + getItem(itemId).cost * 18, 0);
     const spellPower = unit.spellSlots * unit.magicDamage * 0.6;
     const tierMultiplier = unit.tier === 1 ? 1 : unit.tier === 2 ? 1.85 : 3.2;
-    return total + Math.round((unit.health * 0.26 + unit.attackDamage * unit.attackSpeed * 8 + spellPower + itemPower) * tierMultiplier);
+    const effectiveHealth = getDisplayedHealth(unit, activeSynergies, true);
+    return total + Math.round(effectiveHealth * 0.26 + (unit.attackDamage * unit.attackSpeed * 8 + spellPower + itemPower) * tierMultiplier);
   }, 0);
   const synergyPower = activeSynergies.reduce((total, synergy) => total + synergy.tier * 85 + synergy.count * 12, 0);
   return Math.round(unitPower + synergyPower);
+}
+
+function getDisplayedHealth(
+  unit: UnitDefinition | OwnedUnit,
+  activeSynergies: Array<{ trait: UnitTrait; count: number; tier: number }>,
+  edictsApply: boolean
+) {
+  const tierMultiplier = 'tier' in unit ? unit.tier === 1 ? 1 : unit.tier === 2 ? 1.85 : 3.2 : 1;
+  const itemHealth = 'items' in unit ? unit.items.reduce((total, itemId) => {
+    if (itemId === 'sturdy-shield') return total + 150;
+    if (itemId === 'resilient-rune') return total + 120;
+    if (itemId === 'elixir-life') return total + 80;
+    return total;
+  }, 0) : 0;
+  const vanguardTier = edictsApply && unit.traits.includes('Vanguard')
+    ? activeSynergies.find(synergy => synergy.trait === 'Vanguard')?.tier ?? 0
+    : 0;
+  return Math.round((unit.health + itemHealth + vanguardTier * 110) * tierMultiplier);
 }
