@@ -46,11 +46,10 @@ interface Combatant extends CombatFrameUnit {
   attackDamage: number;
   magicDamage: number;
   attackSpeed: number;
-  attackCooldownMs: number;
-  moveCooldownMs: number;
+  abilityAttackSpeedBonus: number;
   spellSlots: number;
-  abilityCooldownMs: number;
   hasOpened: boolean;
+  abilityUsed: boolean;
   fearGemUsed: boolean;
   fleeingUntilMs: number;
   fleeingFrom: { q: number; r: number } | null;
@@ -82,16 +81,22 @@ interface Combatant extends CombatFrameUnit {
   menderTier: number;
 }
 
-const tickMs = 250;
+export const COMBAT_TICK_MS = 1000;
+const tickMs = COMBAT_TICK_MS;
 const maxDurationMs = 45000;
-const moveCooldownMs = 650;
+const combatMinQ = -4;
+const combatMaxQ = 4;
+const combatMinR = -5;
+const combatMaxR = 3;
 const neighbors = [
   { q: 1, r: 0 },
   { q: 1, r: -1 },
   { q: 0, r: -1 },
+  { q: -1, r: -1 },
   { q: -1, r: 0 },
   { q: -1, r: 1 },
-  { q: 0, r: 1 }
+  { q: 0, r: 1 },
+  { q: 1, r: 1 }
 ];
 
 export function simulateCombat({
@@ -119,75 +124,67 @@ export function simulateCombat({
     const livingEnemy = combatants.filter(unit => unit.alive && unit.team === 'enemy');
     if (livingPlayer.length === 0 || livingEnemy.length === 0) break;
 
+    const actedUnitIds = new Set<string>();
     for (const unit of combatants.filter(candidate => candidate.alive).sort((a, b) => a.id.localeCompare(b.id))) {
+      if (actedUnitIds.has(unit.id)) continue;
       unit.attacking = false;
       unit.casting = false;
-      unit.attackCooldownMs = Math.max(0, unit.attackCooldownMs - tickMs);
-      unit.moveCooldownMs = Math.max(0, unit.moveCooldownMs - tickMs);
-      unit.abilityCooldownMs = Math.max(0, unit.abilityCooldownMs - tickMs);
-
       applyPeriodicEffects(unit, combatants, timeMs, ledger);
       if (!unit.alive) continue;
-
       if (unit.fleeingUntilMs > timeMs && unit.fleeingFrom) {
-        if (unit.moveCooldownMs === 0) {
-          moveAwayFrom(unit, unit.fleeingFrom, combatants);
-          unit.moveCooldownMs = moveCooldownMs;
-          latestMessage = `${unit.name} is Fleeing.`;
-        }
+        moveAwayFrom(unit, unit.fleeingFrom, combatants);
+        actedUnitIds.add(unit.id);
+        latestMessage = `${unit.name} is Fleeing.`;
         continue;
       }
-
       if (unit.pinnedUntilMs > timeMs) continue;
-
-      const target = chooseTarget(unit, combatants, seed + timeMs);
+      const enemiesInRange = combatants.filter(candidate => candidate.alive && candidate.team !== unit.team && gridDistance(unit, candidate) <= unit.range);
+      const target = chooseTarget(unit, enemiesInRange.length > 0 ? enemiesInRange : combatants, seed + timeMs);
       if (!target) continue;
-
-      if (hexDistance(unit, target) > unit.range) {
-        if (unit.moveCooldownMs === 0) {
-          moveToward(unit, target, combatants);
-          const pursuitReduction = unit.nailTier * 90;
-          unit.moveCooldownMs = Math.max(300, (unit.items.includes('boots-bounding') ? 450 : moveCooldownMs) - pursuitReduction);
-          latestMessage = `${unit.name} advances on ${target.name}.`;
-          const reaction = triggerReactiveStrike(unit, combatants, timeMs);
-          if (reaction) {
-            latestMessage = reaction;
-            ledger.unshift(reaction);
-          }
+      if (unit.pf2Class === 'Rogue' && gridDistance(unit, target) <= unit.range && !isBehindTarget(unit, target)) {
+        if (moveToward(unit, target, combatants, 'behind')) {
+          actedUnitIds.add(unit.id);
+          latestMessage = `${unit.name} slips toward ${target.name}'s flank.`;
+          continue;
         }
+      }
+      if (gridDistance(unit, target) > unit.range) {
+        if (moveToward(unit, target, combatants)) latestMessage = `${unit.name} advances on ${target.name}.`;
+        actedUnitIds.add(unit.id);
+        const reaction = triggerReactiveStrike(unit, combatants, timeMs, actedUnitIds);
+        if (reaction) { latestMessage = reaction; ledger.unshift(reaction); }
         continue;
       }
-
-      const action = tryAbility(unit, combatants, timeMs);
+      const action = trySpell(unit, combatants, timeMs) ?? tryAbility(unit, combatants, timeMs);
       if (action) {
+        actedUnitIds.add(unit.id);
         latestMessage = action;
         ledger.unshift(action);
-        const reaction = triggerReactiveStrike(unit, combatants, timeMs);
-        if (reaction) {
-          latestMessage = reaction;
-          ledger.unshift(reaction);
-        }
+        const reaction = triggerReactiveStrike(unit, combatants, timeMs, actedUnitIds);
+        if (reaction) { latestMessage = reaction; ledger.unshift(reaction); }
         continue;
       }
-
-      if (unit.attackCooldownMs === 0) {
+      const attacks = getBasicAttackCount(unit, combatants);
+      let landedAttacks = 0;
+      let totalDamage = 0;
+      let namedAttackMessage: string | null = null;
+      for (let attackIndex = 0; attackIndex < attacks && target.alive; attackIndex += 1) {
         const { damage, message } = calculateAttackDamage(unit, target, combatants, timeMs);
         applyDamage(target, damage, unit, combatants, timeMs, 'physical');
         applyOnHitEffects(unit, target, timeMs);
         const fearMessage = applyFearGem(unit, target, timeMs);
         unit.attacking = true;
         unit.attackCount += 1;
-        const isolatedSpeed = unit.duelistTier > 0 && !hasAdjacentAlly(unit, combatants) ? unit.duelistTier * 0.12 : 0;
-        unit.attackCooldownMs = Math.round(1000 / Math.max(0.25, unit.attackSpeed + isolatedSpeed));
+        landedAttacks += 1;
+        totalDamage += damage;
+        namedAttackMessage = fearMessage ?? message ?? namedAttackMessage;
         latestMessage = fearMessage ?? message ?? `${unit.name} strikes ${target.name} for ${damage}.`;
-        ledger.unshift(latestMessage);
-        if (!target.alive) {
-          latestMessage = `${target.name} falls.`;
-          ledger.unshift(latestMessage);
-        }
       }
+      actedUnitIds.add(unit.id);
+      if (landedAttacks > 1 && !namedAttackMessage) latestMessage = `${unit.name} strikes ${target.name} ${landedAttacks} times for ${totalDamage} total.`;
+      ledger.unshift(latestMessage);
+      if (!target.alive) { latestMessage = `${target.name} falls.`; ledger.unshift(latestMessage); }
     }
-
     frames.push(createFrame(timeMs, combatants, latestMessage));
   }
 
@@ -240,14 +237,13 @@ function createCombatant(input: CombatantInput, team: CombatTeam, synergyTiers: 
     traits: input.unit.traits,
     attackDamage: Math.round((input.unit.attackDamage + itemStats.attackDamage) * tierMultiplier),
     magicDamage: Math.round((input.unit.magicDamage + itemStats.magicDamage + signiferBonus + pyreBonus) * tierMultiplier),
-    attackSpeed: input.unit.attackSpeed + itemStats.attackSpeed,
-    attackCooldownMs: input.unit.id === 'gunslinger' ? 100 : seededValue(seedOffset + input.unit.cost, 0, 280),
-    moveCooldownMs: seededValue(seedOffset + input.unit.health, 0, 300),
+    attackSpeed: Math.min(3, attackSpeedToTier(input.unit.attackSpeed) + itemStats.attackSpeedTiers),
+    abilityAttackSpeedBonus: 0,
     spellSlots: input.unit.spellSlots + itemStats.spellSlots
       + ((synergyTiers.get('Gate') ?? 0) > 0 && input.unit.traits.includes('Gate') ? synergyTiers.get('Gate') ?? 0 : 0)
       + ((synergyTiers.get('Signifer') ?? 0) > 0 && input.unit.traits.includes('Signifer') ? 1 : 0),
-    abilityCooldownMs: input.unit.role === 'caster' ? 850 : 1400,
     hasOpened: false,
+    abilityUsed: false,
     fearGemUsed: false,
     fleeingUntilMs: 0,
     fleeingFrom: null,
@@ -283,11 +279,15 @@ function createCombatant(input: CombatantInput, team: CombatTeam, synergyTiers: 
 function chooseTarget(unit: Combatant, combatants: Combatant[], seed: number) {
   const enemies = combatants.filter(candidate => candidate.alive && candidate.team !== unit.team);
   if (enemies.length === 0) return null;
-  if (unit.pf2Class === 'Gunslinger' && !unit.hasOpened) {
-    return [...enemies].sort((a, b) => unit.team === 'player' ? a.r - b.r : b.r - a.r)[0];
+  if (unit.pf2Class === 'Gunslinger') {
+    return [...enemies].sort((a, b) => {
+      const distanceDelta = gridDistance(unit, b) - gridDistance(unit, a);
+      if (distanceDelta !== 0) return distanceDelta;
+      return a.hp - b.hp;
+    })[0];
   }
   return [...enemies].sort((a, b) => {
-    const distanceDelta = hexDistance(unit, a) - hexDistance(unit, b);
+    const distanceDelta = gridDistance(unit, a) - gridDistance(unit, b);
     if (distanceDelta !== 0) return distanceDelta;
     const hpDelta = a.hp - b.hp;
     if (hpDelta !== 0) return hpDelta;
@@ -295,19 +295,26 @@ function chooseTarget(unit: Combatant, combatants: Combatant[], seed: number) {
   })[0];
 }
 
-function tryAbility(unit: Combatant, combatants: Combatant[], timeMs: number) {
-  if (unit.abilityCooldownMs > 0) return null;
+function trySpell(unit: Combatant, combatants: Combatant[], timeMs: number) {
+  return tryPriorityAction(unit, combatants, timeMs, 'spell');
+}
 
-  if (unit.pf2Class === 'Barbarian' && !unit.hasOpened) {
+function tryAbility(unit: Combatant, combatants: Combatant[], timeMs: number) {
+  return tryPriorityAction(unit, combatants, timeMs, 'ability');
+}
+
+function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: number, kind: 'spell' | 'ability') {
+
+  if (kind === 'ability' && unit.pf2Class === 'Barbarian' && !unit.abilityUsed) {
+    unit.abilityUsed = true;
     unit.attackDamage = Math.round(unit.attackDamage * 1.28);
     unit.wardHp += Math.round(unit.maxHp * 0.12);
     unit.hasOpened = true;
     unit.casting = true;
-    unit.abilityCooldownMs = 99999;
     return `${unit.name} enters Rage.`;
   }
 
-  if (unit.pf2Class === 'Cleric' && unit.spellSlots > 0) {
+  if (kind === 'spell' && unit.pf2Class === 'Cleric' && unit.spellSlots > 0) {
     const ally = combatants
       .filter(candidate => candidate.alive && candidate.team === unit.team && candidate.hp < candidate.maxHp)
       .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
@@ -316,12 +323,11 @@ function tryAbility(unit: Combatant, combatants: Combatant[], timeMs: number) {
       ally.hp = Math.min(ally.maxHp, ally.hp + healing);
       unit.spellSlots -= 1;
       unit.casting = true;
-      unit.abilityCooldownMs = 2400;
       return `${unit.name} uses Divine Font on ${ally.name} for ${healing}.`;
     }
   }
 
-  if (unit.pf2Class === 'Druid' && !unit.hasOpened && unit.spellSlots > 0) {
+  if (kind === 'spell' && unit.pf2Class === 'Druid' && !unit.hasOpened && unit.spellSlots > 0) {
     const frontLine = combatants.filter(candidate => candidate.alive && candidate.team === unit.team)
       .sort((a, b) => unit.team === 'player' ? a.r - b.r : b.r - a.r)
       .slice(0, 3);
@@ -330,36 +336,34 @@ function tryAbility(unit: Combatant, combatants: Combatant[], timeMs: number) {
     unit.spellSlots -= 1;
     unit.hasOpened = true;
     unit.casting = true;
-    unit.abilityCooldownMs = 2600;
     return `${unit.name} raises a primal ward of ${ward} over the front line.`;
   }
 
-  if (unit.pf2Class === 'Inventor' && !unit.hasOpened) {
+  if (kind === 'ability' && unit.pf2Class === 'Inventor' && !unit.abilityUsed) {
     const target = chooseTarget(unit, combatants, unit.maxHp);
-    if (!target || hexDistance(unit, target) > Math.max(unit.range, 2)) return null;
+    if (!target || gridDistance(unit, target) > Math.max(unit.range, 2)) return null;
+    unit.abilityUsed = true;
     const damage = Math.round(unit.attackDamage * 0.65 + unit.magicDamage * 1.15);
     applyDamage(target, damage, unit, combatants, timeMs, 'spell');
     applyOnHitEffects(unit, target, timeMs);
     unit.hasOpened = true;
     unit.casting = true;
-    unit.abilityCooldownMs = 99999;
     return `${unit.name} triggers Overdrive on ${target.name} for ${damage}.`;
   }
 
-  if (unit.pf2Class === 'Kineticist' && unit.attackCount > 0 && unit.attackCount % 3 === 0) {
-    const targets = combatants.filter(candidate => candidate.alive && candidate.team !== unit.team && hexDistance(unit, candidate) <= 2).slice(0, 3);
+  if (kind === 'ability' && unit.pf2Class === 'Kineticist' && unit.attackCount > 0 && unit.attackCount % 3 === 0) {
+    const targets = combatants.filter(candidate => candidate.alive && candidate.team !== unit.team && gridDistance(unit, candidate) <= 2).slice(0, 3);
     if (targets.length === 0) return null;
     const damage = Math.round(unit.magicDamage * 0.75);
     targets.forEach(target => applyDamage(target, damage, unit, combatants, timeMs, 'spell'));
     unit.casting = true;
     unit.attackCount += 1;
-    unit.abilityCooldownMs = 1800;
     return `${unit.name} unleashes Impulse Junction for ${damage}.`;
   }
 
-  if (unit.spellSlots > 0 && unit.magicDamage > 0) {
+  if (kind === 'spell' && unit.spellSlots > 0 && unit.magicDamage > 0) {
     const target = chooseTarget(unit, combatants, unit.maxHp + unit.hp);
-    if (!target || hexDistance(unit, target) > Math.max(unit.range, 3)) return null;
+    if (!target || gridDistance(unit, target) > Math.max(unit.range, 3)) return null;
     let damage = unit.pf2Class === 'Magus'
       ? Math.round(unit.attackDamage + unit.magicDamage * 1.2)
       : Math.round(unit.magicDamage * (unit.pf2Class === 'Sorcerer' ? 1.35 : 1.05));
@@ -368,7 +372,7 @@ function tryAbility(unit: Combatant, combatants: Combatant[], timeMs: number) {
     applyDamage(target, damage, unit, combatants, timeMs, 'spell');
     applyOnHitEffects(unit, target, timeMs);
     if (unit.pf2Class === 'Wizard' && !unit.hasOpened) {
-      combatants.filter(candidate => candidate.alive && candidate.team !== unit.team && candidate.id !== target.id && hexDistance(candidate, target) <= 1)
+      combatants.filter(candidate => candidate.alive && candidate.team !== unit.team && candidate.id !== target.id && gridDistance(candidate, target) <= 1)
         .forEach(candidate => applyDamage(candidate, Math.round(damage * 0.45), unit, combatants, timeMs, 'spell'));
     }
     if (unit.pf2Class === 'Witch' && target.alive) target.hexed = true;
@@ -379,7 +383,6 @@ function tryAbility(unit: Combatant, combatants: Combatant[], timeMs: number) {
     if (unit.pf2Class === 'Psychic' && unit.castCount === 2) unit.psycheUntilMs = timeMs + 5000;
     unit.casting = true;
     unit.hasOpened = true;
-    unit.abilityCooldownMs = unit.pf2Class === 'Magus' ? 3200 : 2600;
     if (!target.alive) return `${unit.name} casts ${unit.pf2Class === 'Magus' ? 'Spellstrike' : unit.pf2Class === 'Witch' ? 'Hex Cantrip' : 'a spell'} and drops ${target.name}.`;
     return fearMessage ?? `${unit.name} casts ${unit.pf2Class === 'Magus' ? 'Spellstrike' : unit.pf2Class === 'Witch' ? 'Hex Cantrip' : 'a spell'} on ${target.name} for ${damage}.`;
   }
@@ -395,7 +398,7 @@ function calculateAttackDamage(unit: Combatant, target: Combatant, combatants: C
       candidate.alive &&
       candidate.team === unit.team &&
       candidate.id !== unit.id &&
-      hexDistance(candidate, target) <= 1
+      gridDistance(candidate, target) <= 1
     ).length;
     if (adjacentAllies > 0) damage = Math.round(damage * 1.45);
   }
@@ -442,26 +445,98 @@ function applyFearGem(unit: Combatant, target: Combatant, timeMs: number) {
   return `${unit.name}'s Fear Gem sends ${target.name} Fleeing.`;
 }
 
-function moveToward(unit: Combatant, target: Combatant, combatants: Combatant[]) {
-  const occupied = new Set(combatants.filter(candidate => candidate.alive && candidate.id !== unit.id).map(candidate => `${candidate.q}:${candidate.r}`));
-  const next = neighbors
-    .map(delta => ({ q: unit.q + delta.q, r: unit.r + delta.r }))
-    .filter(hex => !occupied.has(`${hex.q}:${hex.r}`))
-    .sort((a, b) => hexDistance(a, target) - hexDistance(b, target))[0];
-  if (!next) return;
+function moveToward(unit: Combatant, target: Combatant, combatants: Combatant[], intent: 'engage' | 'behind' = 'engage') {
+  const next = chooseMovementDestination(unit, combatants, getPreferredPosition(unit, target, intent), target);
+  if (!next) return false;
   unit.q = next.q;
   unit.r = next.r;
+  return true;
 }
 
 function moveAwayFrom(unit: Combatant, source: { q: number; r: number }, combatants: Combatant[]) {
-  const occupied = new Set(combatants.filter(candidate => candidate.alive && candidate.id !== unit.id).map(candidate => `${candidate.q}:${candidate.r}`));
-  const next = neighbors
-    .map(delta => ({ q: unit.q + delta.q, r: unit.r + delta.r }))
-    .filter(hex => !occupied.has(`${hex.q}:${hex.r}`))
-    .sort((a, b) => hexDistance(b, source) - hexDistance(a, source))[0];
-  if (!next) return;
+  const candidates = getReachableMovementCandidates(unit, combatants);
+  const next = candidates
+    .sort((a, b) => gridDistance(b, source) - gridDistance(a, source) || b.step - a.step)[0];
+  if (!next) return false;
   unit.q = next.q;
   unit.r = next.r;
+  return true;
+}
+
+function chooseMovementDestination(unit: Combatant, combatants: Combatant[], preferred: { q: number; r: number }, target: Combatant) {
+  return getReachableMovementCandidates(unit, combatants)
+    .sort((a, b) =>
+      gridDistance(a, preferred) - gridDistance(b, preferred)
+      || gridDistance(a, target) - gridDistance(b, target)
+      || b.step - a.step
+    )[0];
+}
+
+function getReachableMovementCandidates(unit: Combatant, combatants: Combatant[]) {
+  const maxStep = getMovementStep(unit);
+  const occupancy = getOccupancyMap(combatants, unit.id);
+  const startKey = positionKey(unit);
+  const visited = new Set([startKey]);
+  const queue: Array<{ q: number; r: number; step: number }> = [{ q: unit.q, r: unit.r, step: 0 }];
+  const results: Array<{ q: number; r: number; step: number }> = [];
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const current = queue[index];
+    if (current.step >= maxStep) continue;
+    for (const delta of neighbors) {
+      const next = { q: current.q + delta.q, r: current.r + delta.r, step: current.step + 1 };
+      const key = positionKey(next);
+      if (visited.has(key) || !isInsideCombatGrid(next)) continue;
+      const occupant = occupancy.get(key);
+      if (occupant && occupant !== unit.team) continue;
+      visited.add(key);
+      if (!occupant) results.push(next);
+      if (!occupant || occupant === unit.team) queue.push(next);
+    }
+  }
+
+  return results;
+}
+
+function getMovementStep(unit: Combatant) {
+  const classOrAbilityBonus = unit.pf2Class === 'Monk' || (unit.pf2Class === 'Swashbuckler' && unit.panacheReady) ? 1 : 0;
+  const itemBonus = unit.items.includes('boots-bounding') ? 1 : 0;
+  return 1 + classOrAbilityBonus + itemBonus + unit.nailTier;
+}
+
+function isInsideCombatGrid(position: { q: number; r: number }) {
+  return position.q >= combatMinQ && position.q <= combatMaxQ && position.r >= combatMinR && position.r <= combatMaxR;
+}
+
+function getPreferredPosition(unit: Combatant, target: Combatant, intent: 'engage' | 'behind') {
+  if (intent !== 'behind') return target;
+  const behind = getBehindPosition(target);
+  return isInsideCombatGrid(behind) ? behind : target;
+}
+
+function getBehindPosition(target: Combatant) {
+  const rDirection = target.team === 'enemy' ? -1 : 1;
+  return {
+    q: target.q,
+    r: target.r + rDirection
+  };
+}
+
+function isBehindTarget(unit: Combatant, target: Combatant) {
+  const behind = getBehindPosition(target);
+  return unit.q === behind.q && unit.r === behind.r;
+}
+
+function getOccupancyMap(combatants: Combatant[], movingUnitId: string) {
+  const occupancy = new Map<string, CombatTeam>();
+  combatants
+    .filter(candidate => candidate.alive && candidate.id !== movingUnitId)
+    .forEach(candidate => occupancy.set(positionKey(candidate), candidate.team));
+  return occupancy;
+}
+
+function positionKey(position: { q: number; r: number }) {
+  return `${position.q}:${position.r}`;
 }
 
 function applyDamage(
@@ -496,7 +571,7 @@ function applyDamage(
   if (source && kind !== 'true') {
     const champion = combatants.find(candidate =>
       candidate.alive && candidate.team === target.team && candidate.pf2Class === 'Champion'
-      && !candidate.championReactionUsed && hexDistance(candidate, target) <= 1
+      && !candidate.championReactionUsed && gridDistance(candidate, target) <= 1
     );
     if (champion) {
       damage = Math.round(damage * 0.55);
@@ -555,20 +630,21 @@ function applyOnHitEffects(unit: Combatant, target: Combatant, timeMs: number) {
   }
 }
 
-function triggerReactiveStrike(actor: Combatant, combatants: Combatant[], timeMs: number) {
+function triggerReactiveStrike(actor: Combatant, combatants: Combatant[], timeMs: number, actedUnitIds: Set<string>) {
   const fighter = combatants.find(candidate =>
     candidate.alive && candidate.team !== actor.team && candidate.pf2Class === 'Fighter'
-    && !candidate.reactionUsed && hexDistance(candidate, actor) <= 1
+    && !candidate.reactionUsed && !actedUnitIds.has(candidate.id) && gridDistance(candidate, actor) <= 1
   );
   if (!fighter) return null;
   fighter.reactionUsed = true;
+  actedUnitIds.add(fighter.id);
   const damage = Math.round(fighter.attackDamage * 0.9);
   applyDamage(actor, damage, fighter, combatants, timeMs, 'physical');
   return `${fighter.name} uses Reactive Strike on ${actor.name} for ${damage}.`;
 }
 
 function hasAdjacentAlly(unit: Combatant, combatants: Combatant[]) {
-  return combatants.some(candidate => candidate.alive && candidate.team === unit.team && candidate.id !== unit.id && hexDistance(candidate, unit) <= 1);
+  return combatants.some(candidate => candidate.alive && candidate.team === unit.team && candidate.id !== unit.id && gridDistance(candidate, unit) <= 1);
 }
 
 function createFrame(timeMs: number, combatants: Combatant[], message: string): CombatFrame {
@@ -619,13 +695,22 @@ function getItemStats(itemIds: string[]) {
     if (item.id === 'flaming-rune' || item.id === 'staff-fire' || item.id === 'fear-gem') stats.magicDamage += item.id === 'staff-fire' ? 28 : item.id === 'flaming-rune' ? 18 : 10;
     if (item.id === 'resilient-rune' || item.id === 'sturdy-shield' || item.id === 'elixir-life') stats.health += item.id === 'sturdy-shield' ? 150 : item.id === 'resilient-rune' ? 120 : 80;
     if (item.id === 'wand-magic-missile' || item.id === 'endless-grimoire') stats.spellSlots += 1;
-    if (item.id === 'boots-bounding') stats.attackSpeed += 0.12;
+    if (item.id === 'boots-bounding') stats.attackSpeedTiers += 1;
     return stats;
-  }, { attackDamage: 0, magicDamage: 0, health: 0, spellSlots: 0, attackSpeed: 0 });
+  }, { attackDamage: 0, magicDamage: 0, health: 0, spellSlots: 0, attackSpeedTiers: 0 });
 }
 
-function hexDistance(a: { q: number; r: number }, b: { q: number; r: number }) {
-  return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
+function attackSpeedToTier(speed: 'slow' | 'medium' | 'fast') {
+  return speed === 'slow' ? 1 : speed === 'medium' ? 2 : 3;
+}
+
+function getBasicAttackCount(unit: Combatant, combatants: Combatant[]) {
+  const edictBonus = unit.duelistTier > 0 && !hasAdjacentAlly(unit, combatants) ? unit.duelistTier : 0;
+  const normalAttackCount = Math.min(3, unit.attackSpeed + edictBonus);
+  return Math.min(4, normalAttackCount + unit.abilityAttackSpeedBonus);
+}
+function gridDistance(a: { q: number; r: number }, b: { q: number; r: number }) {
+  return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r));
 }
 
 function seededValue(seed: number, min: number, max: number) {

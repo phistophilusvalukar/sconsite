@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { DragEvent, MouseEvent } from 'react';
+import type { CSSProperties, DragEvent, MouseEvent } from 'react';
 import { Coins, Crosshair, Dices, Hourglass, Package, Play, RefreshCw, Shield, ShoppingBag, Sparkles, Swords } from 'lucide-react';
 import {
   boardSlots as initialBoardSlots,
@@ -7,6 +7,7 @@ import {
   lobbyNames,
   synergies,
   units,
+  type AttackSpeed,
   type BoardSlot,
   type ItemDefinition,
   type OwnedUnit,
@@ -23,8 +24,19 @@ import {
 import './hellknightAutobattler.css';
 
 type Phase = 'lobby' | 'shop' | 'combat' | 'item-shop';
+type ActiveSynergy = { trait: UnitTrait; count: number; tier: number };
+interface EffectiveUnitStats {
+  health: number;
+  attackDamage: number;
+  magicDamage: number;
+  attackSpeed: AttackSpeed;
+  range: number;
+  spellSlots: number;
+  edictNotes: string[];
+}
+
 type HoveredUnit =
-  | { kind: 'unit'; unit: UnitDefinition | OwnedUnit; displayedHealth: number; x: number; y: number }
+  | { kind: 'unit'; unit: UnitDefinition | OwnedUnit; stats: EffectiveUnitStats; x: number; y: number }
   | { kind: 'combat'; unit: CombatFrameUnit; x: number; y: number };
 
 interface PlayerRecord {
@@ -91,9 +103,12 @@ export default function HellknightAutobattlerPage() {
 
   useEffect(() => {
     if (phase !== 'combat' || !lastResult || combatPlaybackDone) return undefined;
+    const currentFrame = lastResult.simulation.frames[playbackFrameIndex];
+    const nextFrame = lastResult.simulation.frames[playbackFrameIndex + 1];
+    const playbackDelayMs = Math.max(0, (nextFrame?.timeMs ?? currentFrame.timeMs) - currentFrame.timeMs);
     const timer = window.setTimeout(() => {
       setPlaybackFrameIndex(current => Math.min(current + 1, lastResult.simulation.frames.length - 1));
-    }, 180);
+    }, playbackDelayMs);
     return () => window.clearTimeout(timer);
   }, [combatPlaybackDone, lastResult, phase, playbackFrameIndex]);
 
@@ -282,7 +297,7 @@ export default function HellknightAutobattlerPage() {
     setHoveredUnit({
       kind: 'unit',
       unit,
-      displayedHealth: getDisplayedHealth(unit, activeSynergies, isDeployed),
+      stats: getEffectiveUnitStats(unit, activeSynergies, isDeployed),
       x: event.clientX,
       y: event.clientY
     });
@@ -347,16 +362,16 @@ export default function HellknightAutobattlerPage() {
                   onLeaveTooltip={() => setHoveredUnit(null)}
                 />
               ) : (
-                <section className="hex-board" aria-label="Hex deployment board">
+                <section className="square-board" aria-label="Square deployment board">
                   {board.map((slot, index) => {
                     const unit = bench.find(candidate => candidate.instanceId === slot.unitId);
                     const selected = Boolean(unit && selectedUnitId === unit.instanceId);
-                    const displayedHealth = unit ? getDisplayedHealth(unit, activeSynergies, true) : 0;
+                    const effectiveStats = unit ? getEffectiveUnitStats(unit, activeSynergies, true) : null;
                     return (
                       <button
                         key={`${slot.q}:${slot.r}`}
                         type="button"
-                        className={`hex-cell ${unit ? 'occupied' : ''} ${selected ? 'selected' : ''}`}
+                        className={`square-cell ${unit ? 'occupied' : ''} ${selected ? 'selected' : ''}`}
                         draggable={Boolean(unit)}
                         onDragStart={(event) => {
                           if (unit) startUnitDrag(unit.instanceId, event);
@@ -383,12 +398,12 @@ export default function HellknightAutobattlerPage() {
                             setSelectedUnitId(selected ? null : unit.instanceId);
                           }
                         }}
-                        aria-label={`Board hex ${index + 1}`}
+                        aria-label={`Board square ${index + 1}`}
                       >
                         {unit ? (
                           <>
                             <strong>{unit.pf2Class}</strong>
-                            <span>Tier {unit.tier} / HP {displayedHealth}</span>
+                            <span>Tier {unit.tier} / HP {effectiveStats?.health ?? unit.health}</span>
                           </>
                         ) : (
                           <span>{selectedUnitId ? 'Place' : `${slot.q},${slot.r}`}</span>
@@ -510,23 +525,20 @@ function CombatPiece({
   onMoveTooltip: (event: MouseEvent<HTMLElement>) => void;
   onLeaveTooltip: () => void;
 }) {
-  const position = combatHexToPosition(unit.q, unit.r);
+  const position = combatGridToStyle(unit.q, unit.r);
   const hpPercent = Math.max(0, Math.round((unit.hp / unit.maxHp) * 100));
   return (
     <article
       className={`combat-piece ${unit.team} ${unit.alive ? '' : 'defeated'} ${unit.attacking ? 'attacking' : ''} ${unit.casting ? 'casting' : ''} ${unit.status === 'fleeing' ? 'fleeing' : ''}`}
-      style={{ left: `${position.x}%`, top: `${position.y}%` }}
+      style={position}
       onMouseEnter={(event) => onHoverUnit(unit, event)}
       onMouseMove={onMoveTooltip}
       onMouseLeave={onLeaveTooltip}
     >
       <div className="piece-token">
-        <strong>{unit.pf2Class.slice(0, 3)}</strong>
-        <span>{unit.tier}</span>
-      </div>
-      <div className="piece-label">
-        <span>{unit.pf2Class}</span>
-        <div className="hp-track">
+        <span className="piece-tier">T{unit.tier}</span>
+        <strong>{getClassAbbreviation(unit.pf2Class)}</strong>
+        <div className="piece-hp-track">
           <i style={{ width: `${hpPercent}%` }} />
         </div>
       </div>
@@ -549,7 +561,7 @@ function UnitDetailPanel({
   onRecall: (unitId: string) => void;
   onCombine: () => void;
   onSell: (unitId: string) => void;
-  activeSynergies: Array<{ trait: UnitTrait; count: number; tier: number }>;
+  activeSynergies: ActiveSynergy[];
 }) {
   if (!unit) {
     return (
@@ -562,10 +574,7 @@ function UnitDetailPanel({
 
   const itemDetails = unit.items.map(getItem);
   const refund = Math.max(1, Math.floor(unit.cost / 2));
-  const tierMultiplier = unit.tier === 1 ? 1 : unit.tier === 2 ? 1.85 : 3.2;
-  const effectiveHealth = getDisplayedHealth(unit, activeSynergies, isDeployed);
-  const effectiveAttack = Math.round(unit.attackDamage * tierMultiplier);
-  const effectiveMagic = Math.round(unit.magicDamage * tierMultiplier);
+  const effectiveStats = getEffectiveUnitStats(unit, activeSynergies, isDeployed);
   const spells = getUnitSpells(unit);
 
   return (
@@ -593,12 +602,12 @@ function UnitDetailPanel({
       </div>
 
       <div className="unit-stat-grid">
-        <StatPill label="Health" value={`${effectiveHealth}`} />
-        <StatPill label="Attack" value={`${effectiveAttack}`} />
-        <StatPill label="Magic" value={`${effectiveMagic}`} />
-        <StatPill label="Speed" value={unit.attackSpeed.toFixed(2)} />
-        <StatPill label="Range" value={`${unit.range}`} />
-        <StatPill label="Slots" value={`${unit.spellSlots}`} />
+        <StatPill label="Health" value={`${effectiveStats.health}`} />
+        <StatPill label="Attack" value={`${effectiveStats.attackDamage}`} />
+        <StatPill label="Magic" value={`${effectiveStats.magicDamage}`} />
+        <StatPill label="Speed" value={effectiveStats.attackSpeed} />
+        <StatPill label="Range" value={`${effectiveStats.range}`} />
+        <StatPill label="Slots" value={`${effectiveStats.spellSlots}`} />
       </div>
 
       <div className="unit-detail-columns">
@@ -620,6 +629,16 @@ function UnitDetailPanel({
           ) : (
             <ul>
               {itemDetails.map(item => <li key={item.id}>{item.name}: {item.stat}. {item.effect}</li>)}
+            </ul>
+          )}
+        </div>
+        <div>
+          <h3>Edict Effects</h3>
+          {effectiveStats.edictNotes.length === 0 ? (
+            <p>No active edict stat changes.</p>
+          ) : (
+            <ul>
+              {effectiveStats.edictNotes.map(note => <li key={note}>{note}</li>)}
             </ul>
           )}
         </div>
@@ -660,8 +679,9 @@ function FloatingUnitTooltip({ target }: { target: HoveredUnit | null }) {
     <aside className="unit-tooltip floating-unit-tooltip" style={style} role="tooltip">
       <strong>{target.unit.name}</strong>
       <span>{target.unit.pf2Class} / {target.unit.role}</span>
-      <span>HP {target.displayedHealth} / AD {target.unit.attackDamage} / MD {target.unit.magicDamage}</span>
-      <span>AS {target.unit.attackSpeed.toFixed(2)} / Range {target.unit.range} / Slots {target.unit.spellSlots}</span>
+      <span>HP {target.stats.health} / AD {target.stats.attackDamage} / MD {target.stats.magicDamage}</span>
+      <span>AS {target.stats.attackSpeed} / Range {target.stats.range} / Slots {target.stats.spellSlots}</span>
+      {target.stats.edictNotes.length > 0 && <span>{target.stats.edictNotes.join(' / ')}</span>}
       <span>{target.unit.traits.join(' - ')}</span>
     </aside>
   );
@@ -863,7 +883,7 @@ function InventoryPanel({
   );
 }
 
-function SynergyPanel({ activeSynergies, armyPower }: { activeSynergies: Array<{ trait: UnitTrait; count: number; tier: number }>; armyPower: number }) {
+function SynergyPanel({ activeSynergies, armyPower }: { activeSynergies: ActiveSynergy[]; armyPower: number }) {
   return (
     <section className="side-section">
       <header>
@@ -896,11 +916,17 @@ function LogPanel({ log, wins, losses, streak }: { log: string[]; wins: number; 
   );
 }
 
-function combatHexToPosition(q: number, r: number) {
+function combatGridToStyle(q: number, r: number): CSSProperties {
+  const column = Math.max(0, Math.min(8, q + 4));
+  const row = Math.max(0, Math.min(8, r + 5));
   return {
-    x: 50 + q * 10 + r * 5,
-    y: 60 + r * 11
-  };
+    '--combat-column': column,
+    '--combat-row': row
+  } as CSSProperties;
+}
+
+function getClassAbbreviation(className: string) {
+  return className.slice(0, 3).toUpperCase();
 }
 
 function formatTime(timeMs: number) {
@@ -1045,13 +1071,12 @@ function getActiveSynergies(army: OwnedUnit[]) {
   });
 }
 
-function calculateArmyPower(army: OwnedUnit[], activeSynergies: Array<{ trait: UnitTrait; count: number; tier: number }>) {
+function calculateArmyPower(army: OwnedUnit[], activeSynergies: ActiveSynergy[]) {
   const unitPower = army.reduce((total, unit) => {
     const itemPower = unit.items.reduce((sum, itemId) => sum + getItem(itemId).cost * 18, 0);
-    const spellPower = unit.spellSlots * unit.magicDamage * 0.6;
-    const tierMultiplier = unit.tier === 1 ? 1 : unit.tier === 2 ? 1.85 : 3.2;
-    const effectiveHealth = getDisplayedHealth(unit, activeSynergies, true);
-    return total + Math.round(effectiveHealth * 0.26 + (unit.attackDamage * unit.attackSpeed * 8 + spellPower + itemPower) * tierMultiplier);
+    const effectiveStats = getEffectiveUnitStats(unit, activeSynergies, true);
+    const spellPower = effectiveStats.spellSlots * effectiveStats.magicDamage * 0.6;
+    return total + Math.round(effectiveStats.health * 0.26 + effectiveStats.attackDamage * attackSpeedToTier(effectiveStats.attackSpeed) * 4 + spellPower + itemPower);
   }, 0);
   const synergyPower = activeSynergies.reduce((total, synergy) => total + synergy.tier * 85 + synergy.count * 12, 0);
   return Math.round(unitPower + synergyPower);
@@ -1069,20 +1094,106 @@ function moveUnitOnBoard(board: BoardSlot[], unitId: string, slotIndex: number):
   });
 }
 
-function getDisplayedHealth(
-  unit: UnitDefinition | OwnedUnit,
-  activeSynergies: Array<{ trait: UnitTrait; count: number; tier: number }>,
-  edictsApply: boolean
-) {
+function getEffectiveUnitStats(unit: UnitDefinition | OwnedUnit, activeSynergies: ActiveSynergy[], edictsApply: boolean): EffectiveUnitStats {
   const tierMultiplier = 'tier' in unit ? unit.tier === 1 ? 1 : unit.tier === 2 ? 1.85 : 3.2 : 1;
-  const itemHealth = 'items' in unit ? unit.items.reduce((total, itemId) => {
-    if (itemId === 'sturdy-shield') return total + 150;
-    if (itemId === 'resilient-rune') return total + 120;
-    if (itemId === 'elixir-life') return total + 80;
-    return total;
-  }, 0) : 0;
-  const vanguardTier = edictsApply && unit.traits.includes('Vanguard')
-    ? activeSynergies.find(synergy => synergy.trait === 'Vanguard')?.tier ?? 0
-    : 0;
-  return Math.round((unit.health + itemHealth + vanguardTier * 110) * tierMultiplier);
+  const itemStats = getEquippedItemStats(unit);
+  const edictNotes: string[] = [];
+  let healthBonus = 0;
+  let magicBonus = 0;
+  let rangeBonus = 0;
+  let spellSlotBonus = 0;
+
+  if (edictsApply) {
+    const vanguardTier = getUnitEdictTier(unit, activeSynergies, 'Vanguard');
+    const signiferTier = getUnitEdictTier(unit, activeSynergies, 'Signifer');
+    const gateTier = getUnitEdictTier(unit, activeSynergies, 'Gate');
+    const pyreTier = getUnitEdictTier(unit, activeSynergies, 'Pyre');
+    const artilleryTier = getUnitEdictTier(unit, activeSynergies, 'Artillery');
+    const duelistTier = getUnitEdictTier(unit, activeSynergies, 'Duelist');
+
+    if (vanguardTier > 0) {
+      healthBonus += vanguardTier * 110;
+      edictNotes.push(`Vanguard ${vanguardTier}: +${vanguardTier * 110} health`);
+    }
+    if (signiferTier > 0) {
+      magicBonus += signiferTier * 14;
+      spellSlotBonus += 1;
+      edictNotes.push(`Signifer ${signiferTier}: +${signiferTier * 14} magic, +1 slot`);
+    }
+    if (gateTier > 0) {
+      spellSlotBonus += gateTier;
+      edictNotes.push(`Gate ${gateTier}: +${gateTier} spell slot${gateTier === 1 ? '' : 's'}`);
+    }
+    if (pyreTier > 0) {
+      magicBonus += pyreTier * 8;
+      edictNotes.push(`Pyre ${pyreTier}: +${pyreTier * 8} magic`);
+    }
+    if (artilleryTier > 0) {
+      rangeBonus += 1;
+      edictNotes.push(`Artillery ${artilleryTier}: +1 range`);
+    }
+    if (duelistTier > 0) {
+      edictNotes.push(`Duelist ${duelistTier}: +${duelistTier} attack speed tier${duelistTier === 1 ? '' : 's'} while isolated (max fast)`);
+    }
+    addNonStatEdictNotes(unit, activeSynergies, edictNotes);
+  }
+
+  return {
+    health: Math.round((unit.health + itemStats.health + healthBonus) * tierMultiplier),
+    attackDamage: Math.round((unit.attackDamage + itemStats.attackDamage) * tierMultiplier),
+    magicDamage: Math.round((unit.magicDamage + itemStats.magicDamage + magicBonus) * tierMultiplier),
+    attackSpeed: attackSpeedFromTier(Math.min(3, attackSpeedToTier(unit.attackSpeed) + itemStats.attackSpeedTiers)),
+    range: unit.range + rangeBonus,
+    spellSlots: unit.spellSlots + itemStats.spellSlots + spellSlotBonus,
+    edictNotes
+  };
+}
+
+function getEquippedItemStats(unit: UnitDefinition | OwnedUnit) {
+  const itemIds = 'items' in unit ? unit.items : [];
+  return itemIds.reduce((stats, itemId) => {
+    if (itemId === 'striking-rune') stats.attackDamage += 16;
+    if (itemId === 'doubling-rings') stats.attackDamage += 14;
+    if (itemId === 'flaming-rune') stats.magicDamage += 18;
+    if (itemId === 'staff-fire') stats.magicDamage += 28;
+    if (itemId === 'fear-gem') stats.magicDamage += 10;
+    if (itemId === 'sturdy-shield') stats.health += 150;
+    if (itemId === 'resilient-rune') stats.health += 120;
+    if (itemId === 'elixir-life') stats.health += 80;
+    if (itemId === 'wand-magic-missile') stats.spellSlots += 1;
+    if (itemId === 'endless-grimoire') stats.spellSlots += 1;
+    if (itemId === 'boots-bounding') stats.attackSpeedTiers += 1;
+    return stats;
+  }, { attackDamage: 0, magicDamage: 0, health: 0, spellSlots: 0, attackSpeedTiers: 0 });
+}
+
+function attackSpeedToTier(speed: AttackSpeed) {
+  return speed === 'slow' ? 1 : speed === 'medium' ? 2 : 3;
+}
+
+function attackSpeedFromTier(tier: number): AttackSpeed {
+  return tier <= 1 ? 'slow' : tier === 2 ? 'medium' : 'fast';
+}
+function getUnitEdictTier(unit: UnitDefinition | OwnedUnit, activeSynergies: ActiveSynergy[], trait: UnitTrait) {
+  if (!unit.traits.includes(trait)) return 0;
+  return activeSynergies.find(synergy => synergy.trait === trait)?.tier ?? 0;
+}
+
+function addNonStatEdictNotes(unit: UnitDefinition | OwnedUnit, activeSynergies: ActiveSynergy[], notes: string[]) {
+  const noteText: Partial<Record<UnitTrait, (tier: number) => string>> = {
+    Rack: tier => `Rack ${tier}: ${tier * 12}% less spell damage`,
+    Scourge: tier => `Scourge ${tier}: +${tier * 10}% damage to high-health enemies`,
+    Nail: tier => `Nail ${tier}: faster pursuit`,
+    Godclaw: tier => `Godclaw ${tier}: ${tier * 8}% less non-true damage`,
+    Chain: tier => `Chain ${tier}: third attacks pin longer`,
+    Torrent: tier => `Torrent ${tier}: periodic healing and cleansing`,
+    Executioner: tier => `Executioner ${tier}: +${tier * 18}% damage to weakened enemies`,
+    Mender: tier => `Mender ${tier}: periodic ally healing`
+  };
+
+  unit.traits.forEach(trait => {
+    const tier = activeSynergies.find(synergy => synergy.trait === trait)?.tier ?? 0;
+    const text = noteText[trait];
+    if (tier > 0 && text) notes.push(text(tier));
+  });
 }
