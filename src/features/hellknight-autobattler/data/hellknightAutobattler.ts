@@ -153,8 +153,8 @@ export const units: UnitDefinition[] = [
     magicDamage: 76,
     spellSlots: 3,
     health: 430,
-    feat: 'Arcane Thesis',
-    featText: 'First spell each duel splashes to enemies beside the target.'
+    feat: 'Spell Substitution',
+    featText: 'Cast different spells based on unit composition. Melee > Caster = Summ Ele. Melee < Caster = Summ Zombie. Melee = Caster = Force Barrage'
   },
   {
     id: 'sorcerer',
@@ -388,7 +388,7 @@ export const items: ItemDefinition[] = [
   { id: 'resilient-rune', name: 'Resilient Rune', sourceType: 'Armor rune', cost: 4, stat: '+120 health', effect: 'Reduces first spell hit each duel.' },
   { id: 'sturdy-shield', name: 'Sturdy Shield', sourceType: 'Shield', cost: 3, stat: '+150 health', effect: 'Blocks a burst of physical damage.' },
   { id: 'elixir-life', name: 'Elixir of Life', sourceType: 'Alchemical elixir', cost: 3, stat: '+80 health', effect: 'Heals once at low health.' },
-  { id: 'wand-magic-missile', name: 'Wand of Force Barrage', sourceType: 'Wand', cost: 4, stat: '+1 spell slot', effect: 'First spell fires extra force bolts.' },
+  { id: 'wand-force-barrage', name: 'Wand of Force Barrage', sourceType: 'Wand', cost: 4, stat: '+1 spell slot', effect: 'First spell fires extra force bolts.' },
   { id: 'staff-fire', name: 'Staff of Fire', sourceType: 'Staff', cost: 6, stat: '+28 magic damage', effect: 'Spells splash fire damage.' },
   { id: 'doubling-rings', name: 'Doubling Rings', sourceType: 'Worn item', cost: 5, stat: '+14 attack damage', effect: 'Copies the other held item bonus at 50% value.' },
   { id: 'boots-bounding', name: 'Boots of Bounding', sourceType: 'Worn item', cost: 3, stat: '+1 attack speed tier', effect: 'Raises attack speed by one tier and permits longer movement.' },

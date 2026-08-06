@@ -937,8 +937,8 @@ function getUnitSpells(unit: UnitDefinition) {
   const classAbilities: Record<string, string[]> = {
     Barbarian: ['Rage opening: bonus damage and temporary durability'],
     Champion: ['Champion Reaction: shield a wounded adjacent ally', 'Devotion aura: front-line mitigation'],
-    Cleric: ['Divine Font: heal the lowest-health ally', 'Doctrine strike: minor divine damage'],
-    Druid: ['Order Spell: temporary health surge', 'Primal cantrip: ranged magic attack'],
+    Cleric: ['Divine Font: heal the lowest-health ally', 'Dedicated spell path: preserves slots when no ally needs healing'],
+    Druid: ['Order Spell: temporary health surge', 'Dedicated spell path: no generic damage spell'],
     Fighter: ['Reactive Strike: punish closing or casting enemies', 'Weapon mastery: reliable physical pressure'],
     Gunslinger: ['Singular Expertise: opening back-line shot', 'Reload rhythm: slower high-impact attacks'],
     Inventor: ['Overdrive: bonus mixed damage', 'Unstable burst: engineering heat strike'],
@@ -954,7 +954,7 @@ function getUnitSpells(unit: UnitDefinition) {
     Swashbuckler: ['Panache: dodge into finishing pressure', 'Finisher: stronger isolated strike'],
     Thaumaturge: ['Exploit Vulnerability: mark the toughest enemy', 'Implement strike: mixed occult damage'],
     Witch: ['Hex Cantrip: weaken a focused enemy', 'Patron spell: repeatable ranged magic'],
-    Wizard: ['Arcane Thesis: first spell enhancement', 'Prepared spell: ranged arcane burst']
+    Wizard: ['More slot allies: summon a tier-matched Zombie', 'More slotless allies: summon a tier-matched Elemental', 'Equal composition: Magic Missile hits every enemy at infinite range']
   };
 
   return classAbilities[unit.pf2Class] ?? [unit.featText];

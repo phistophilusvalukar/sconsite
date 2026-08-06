@@ -48,6 +48,9 @@ interface Combatant extends CombatFrameUnit {
   attackSpeed: number;
   abilityAttackSpeedBonus: number;
   spellSlots: number;
+  startedWithSpellSlots: boolean;
+  abilitiesDisabled: boolean;
+  summonerId: string | null;
   hasOpened: boolean;
   abilityUsed: boolean;
   fearGemUsed: boolean;
@@ -138,6 +141,13 @@ export function simulateCombat({
         continue;
       }
       if (unit.pinnedUntilMs > timeMs) continue;
+      const infiniteRangeSpell = tryWizardForceBarrage(unit, combatants, timeMs);
+      if (infiniteRangeSpell) {
+        actedUnitIds.add(unit.id);
+        latestMessage = infiniteRangeSpell;
+        ledger.unshift(infiniteRangeSpell);
+        continue;
+      }
       const enemiesInRange = combatants.filter(candidate => candidate.alive && candidate.team !== unit.team && gridDistance(unit, candidate) <= unit.range);
       const target = chooseTarget(unit, enemiesInRange.length > 0 ? enemiesInRange : combatants, seed + timeMs);
       if (!target) continue;
@@ -217,6 +227,9 @@ function createCombatant(input: CombatantInput, team: CombatTeam, synergyTiers: 
   const signiferBonus = input.unit.traits.includes('Signifer') ? (synergyTiers.get('Signifer') ?? 0) * 14 : 0;
   const pyreBonus = input.unit.traits.includes('Pyre') ? (synergyTiers.get('Pyre') ?? 0) * 8 : 0;
   const maxHp = Math.round((input.unit.health + itemStats.health + vanguardBonus) * tierMultiplier);
+  const spellSlots = input.unit.spellSlots + itemStats.spellSlots
+    + ((synergyTiers.get('Gate') ?? 0) > 0 && input.unit.traits.includes('Gate') ? synergyTiers.get('Gate') ?? 0 : 0)
+    + ((synergyTiers.get('Signifer') ?? 0) > 0 && input.unit.traits.includes('Signifer') ? 1 : 0);
   return {
     id: `${team}-${input.unit.instanceId}`,
     team,
@@ -239,9 +252,10 @@ function createCombatant(input: CombatantInput, team: CombatTeam, synergyTiers: 
     magicDamage: Math.round((input.unit.magicDamage + itemStats.magicDamage + signiferBonus + pyreBonus) * tierMultiplier),
     attackSpeed: Math.min(3, attackSpeedToTier(input.unit.attackSpeed) + itemStats.attackSpeedTiers),
     abilityAttackSpeedBonus: 0,
-    spellSlots: input.unit.spellSlots + itemStats.spellSlots
-      + ((synergyTiers.get('Gate') ?? 0) > 0 && input.unit.traits.includes('Gate') ? synergyTiers.get('Gate') ?? 0 : 0)
-      + ((synergyTiers.get('Signifer') ?? 0) > 0 && input.unit.traits.includes('Signifer') ? 1 : 0),
+    spellSlots,
+    startedWithSpellSlots: spellSlots > 0,
+    abilitiesDisabled: false,
+    summonerId: null,
     hasOpened: false,
     abilityUsed: false,
     fearGemUsed: false,
@@ -327,6 +341,11 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
     }
   }
 
+  if (kind === 'spell' && unit.pf2Class === 'Wizard' && unit.spellSlots > 0) {
+    const balance = getWizardRosterBalance(unit, combatants);
+    if (balance === 0) return castWizardForceBarrage(unit, combatants, timeMs);
+    return summonWizardMinion(unit, combatants, balance > 0 ? 'zombie' : 'elemental');
+  }
   if (kind === 'spell' && unit.pf2Class === 'Druid' && !unit.hasOpened && unit.spellSlots > 0) {
     const frontLine = combatants.filter(candidate => candidate.alive && candidate.team === unit.team)
       .sort((a, b) => unit.team === 'player' ? a.r - b.r : b.r - a.r)
@@ -351,7 +370,7 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
     return `${unit.name} triggers Overdrive on ${target.name} for ${damage}.`;
   }
 
-  if (kind === 'ability' && unit.pf2Class === 'Kineticist' && unit.attackCount > 0 && unit.attackCount % 3 === 0) {
+  if (kind === 'ability' && !unit.abilitiesDisabled && unit.pf2Class === 'Kineticist' && unit.attackCount > 0 && unit.attackCount % 3 === 0) {
     const targets = combatants.filter(candidate => candidate.alive && candidate.team !== unit.team && gridDistance(unit, candidate) <= 2).slice(0, 3);
     if (targets.length === 0) return null;
     const damage = Math.round(unit.magicDamage * 0.75);
@@ -361,7 +380,7 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
     return `${unit.name} unleashes Impulse Junction for ${damage}.`;
   }
 
-  if (kind === 'spell' && unit.spellSlots > 0 && unit.magicDamage > 0) {
+  if (kind === 'spell' && !hasDedicatedSpellPath(unit) && unit.spellSlots > 0 && unit.magicDamage > 0) {
     const target = chooseTarget(unit, combatants, unit.maxHp + unit.hp);
     if (!target || gridDistance(unit, target) > Math.max(unit.range, 3)) return null;
     let damage = unit.pf2Class === 'Magus'
@@ -371,10 +390,7 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
     if (unit.pf2Class === 'Psychic' && unit.psycheUntilMs > timeMs) damage = Math.round(damage * 1.45);
     applyDamage(target, damage, unit, combatants, timeMs, 'spell');
     applyOnHitEffects(unit, target, timeMs);
-    if (unit.pf2Class === 'Wizard' && !unit.hasOpened) {
-      combatants.filter(candidate => candidate.alive && candidate.team !== unit.team && candidate.id !== target.id && gridDistance(candidate, target) <= 1)
-        .forEach(candidate => applyDamage(candidate, Math.round(damage * 0.45), unit, combatants, timeMs, 'spell'));
-    }
+
     if (unit.pf2Class === 'Witch' && target.alive) target.hexed = true;
     if (unit.pf2Class === 'Oracle') applyDamage(unit, Math.round(unit.maxHp * 0.05), null, combatants, timeMs, 'true');
     const fearMessage = applyFearGem(unit, target, timeMs);
@@ -390,6 +406,70 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
   return null;
 }
 
+function hasDedicatedSpellPath(unit: Combatant) {
+  return unit.pf2Class === 'Cleric' || unit.pf2Class === 'Druid' || unit.pf2Class === 'Wizard';
+}
+
+function getWizardRosterBalance(wizard: Combatant, combatants: Combatant[]) {
+  const originalAllies = combatants.filter(candidate => candidate.team === wizard.team && candidate.summonerId === null);
+  const spellSlotUnits = originalAllies.filter(candidate => candidate.startedWithSpellSlots).length;
+  return spellSlotUnits - (originalAllies.length - spellSlotUnits);
+}
+
+function tryWizardForceBarrage(wizard: Combatant, combatants: Combatant[], timeMs: number) {
+  if (wizard.pf2Class !== 'Wizard' || wizard.spellSlots <= 0 || getWizardRosterBalance(wizard, combatants) !== 0) return null;
+  return castWizardForceBarrage(wizard, combatants, timeMs);
+}
+
+function castWizardForceBarrage(wizard: Combatant, combatants: Combatant[], timeMs: number) {
+  const targets = combatants.filter(candidate => candidate.alive && candidate.team !== wizard.team);
+  if (targets.length === 0) return null;
+  targets.forEach(target => applyDamage(target, wizard.magicDamage, wizard, combatants, timeMs, 'spell'));
+  wizard.spellSlots -= 1;
+  wizard.castCount += 1;
+  wizard.casting = true;
+  wizard.hasOpened = true;
+  return `${wizard.name} casts Force Barrage across the battlefield, hitting ${targets.length} enem${targets.length === 1 ? 'y' : 'ies'} for ${wizard.magicDamage}.`;
+}
+
+function summonWizardMinion(wizard: Combatant, combatants: Combatant[], summonKind: 'zombie' | 'elemental') {
+  const existingSummon = combatants.some(candidate => candidate.alive && candidate.summonerId === wizard.id);
+  if (existingSummon) return null;
+  const position = findOpenAdjacentPosition(wizard, combatants);
+  if (!position) return null;
+  const chassisId = summonKind === 'zombie' ? 'fighter' : 'kineticist';
+  const chassis = units.find(candidate => candidate.id === chassisId);
+  if (!chassis) return null;
+  const instanceId = `${wizard.id}-${summonKind}-${wizard.castCount + 1}`;
+  const ownedChassis: OwnedUnit = { ...chassis, instanceId, tier: wizard.tier, items: [] };
+  const summon = createCombatant(
+    { unit: ownedChassis, slot: { q: position.q, r: position.r, unitId: instanceId } },
+    wizard.team,
+    new Map<UnitTrait, number>(),
+    0
+  );
+  summon.id = instanceId;
+  summon.name = summonKind === 'zombie' ? 'Zombie' : 'Elemental';
+  summon.q = position.q;
+  summon.r = position.r;
+  summon.spellSlots = 0;
+  summon.startedWithSpellSlots = false;
+  summon.abilitiesDisabled = true;
+  summon.summonerId = wizard.id;
+  combatants.push(summon);
+  wizard.spellSlots -= 1;
+  wizard.castCount += 1;
+  wizard.casting = true;
+  wizard.hasOpened = true;
+  return `${wizard.name} summons a tier ${wizard.tier} ${summon.name}.`;
+}
+
+function findOpenAdjacentPosition(unit: Combatant, combatants: Combatant[]) {
+  const occupied = new Set(combatants.filter(candidate => candidate.alive).map(positionKey));
+  return neighbors
+    .map(delta => ({ q: unit.q + delta.q, r: unit.r + delta.r }))
+    .find(position => isInsideCombatGrid(position) && !occupied.has(positionKey(position))) ?? null;
+}
 function calculateAttackDamage(unit: Combatant, target: Combatant, combatants: Combatant[], timeMs: number) {
   let damage = unit.attackDamage;
   let message: string | null = null;
@@ -632,7 +712,7 @@ function applyOnHitEffects(unit: Combatant, target: Combatant, timeMs: number) {
 
 function triggerReactiveStrike(actor: Combatant, combatants: Combatant[], timeMs: number, actedUnitIds: Set<string>) {
   const fighter = combatants.find(candidate =>
-    candidate.alive && candidate.team !== actor.team && candidate.pf2Class === 'Fighter'
+    candidate.alive && candidate.team !== actor.team && candidate.pf2Class === 'Fighter' && !candidate.abilitiesDisabled
     && !candidate.reactionUsed && !actedUnitIds.has(candidate.id) && gridDistance(candidate, actor) <= 1
   );
   if (!fighter) return null;
@@ -694,7 +774,7 @@ function getItemStats(itemIds: string[]) {
     if (item.id === 'striking-rune' || item.id === 'doubling-rings') stats.attackDamage += item.id === 'striking-rune' ? 16 : 14;
     if (item.id === 'flaming-rune' || item.id === 'staff-fire' || item.id === 'fear-gem') stats.magicDamage += item.id === 'staff-fire' ? 28 : item.id === 'flaming-rune' ? 18 : 10;
     if (item.id === 'resilient-rune' || item.id === 'sturdy-shield' || item.id === 'elixir-life') stats.health += item.id === 'sturdy-shield' ? 150 : item.id === 'resilient-rune' ? 120 : 80;
-    if (item.id === 'wand-magic-missile' || item.id === 'endless-grimoire') stats.spellSlots += 1;
+    if (item.id === 'wand-force-barrage' || item.id === 'endless-grimoire') stats.spellSlots += 1;
     if (item.id === 'boots-bounding') stats.attackSpeedTiers += 1;
     return stats;
   }, { attackDamage: 0, magicDamage: 0, health: 0, spellSlots: 0, attackSpeedTiers: 0 });

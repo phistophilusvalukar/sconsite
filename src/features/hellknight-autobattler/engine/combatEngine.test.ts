@@ -175,3 +175,61 @@ describe('stable one-second combat ticks', () => {
     expect(result.frames.map(frame => frame.message).some(message => message.includes('4 times'))).toBe(false);
   });
 });
+describe('dedicated spell paths', () => {
+  it('prevents Clerics from spending reserved healing slots on generic damage', () => {
+    const battleMessages = messages(
+      [input('cleric', 0, 2)],
+      [input('champion', 0, 0, 'target')],
+      21
+    );
+
+    expect(battleMessages.some(message => message.includes('Godclaw Chaplain casts a spell'))).toBe(false);
+    expect(battleMessages.some(message => message.includes('uses Divine Font'))).toBe(true);
+  });
+
+  it('summons a same-tier Zombie when spell-slot allies are the majority', () => {
+    const wizard = { ...owned('wizard'), tier: 2 as const };
+    const result = simulateCombat({
+      player: [
+        { unit: wizard, slot: { q: 0, r: 2, unitId: wizard.instanceId } },
+        input('cleric', 1, 2)
+      ],
+      enemy: [input('champion', 0, 0, 'target')],
+      seed: 22
+    });
+    const zombies = result.frames.flatMap(frame => frame.units).filter(unit => unit.name === 'Zombie');
+
+    expect(result.frames.some(frame => frame.message.includes('summons a tier 2 Zombie'))).toBe(true);
+    expect(zombies.length).toBeGreaterThan(0);
+    expect(zombies.every(zombie => zombie.tier === 2 && zombie.pf2Class === 'Fighter')).toBe(true);
+    expect(result.frames.every(frame => frame.units.filter(unit => unit.alive && unit.name === 'Zombie').length <= 1)).toBe(true);
+  });
+
+  it('summons a same-tier Elemental when slotless allies are the majority', () => {
+    const result = simulateCombat({
+      player: [input('wizard', 0, 2), input('fighter', 1, 2), input('barbarian', -1, 2)],
+      enemy: [input('champion', 0, 0, 'target')],
+      seed: 23
+    });
+    const elemental = result.frames.flatMap(frame => frame.units).find(unit => unit.name === 'Elemental');
+
+    expect(result.frames.some(frame => frame.message.includes('summons a tier 1 Elemental'))).toBe(true);
+    expect(elemental?.pf2Class).toBe('Kineticist');
+    expect(elemental?.tier).toBe(1);
+  });
+
+  it('casts infinite-range Magic Missile against every enemy for a balanced roster', () => {
+    const result = simulateCombat({
+      player: [input('wizard', 0, 2), input('fighter', 1, 2)],
+      enemy: [input('champion', -3, -3, 'target-one'), input('champion', 3, -3, 'target-two')],
+      seed: 24
+    });
+    const firstCombatFrame = result.frames.find(frame => frame.timeMs === 1000);
+    const openingEnemies = result.frames[0].units.filter(unit => unit.team === 'enemy');
+    const hitEnemies = firstCombatFrame?.units.filter(unit => unit.team === 'enemy') ?? [];
+
+    expect(firstCombatFrame?.message).toContain('casts Magic Missile');
+    expect(firstCombatFrame?.message).toContain('hitting 2 enemies');
+    expect(hitEnemies.every(enemy => enemy.hp < (openingEnemies.find(opening => opening.id === enemy.id)?.hp ?? 0))).toBe(true);
+  });
+});
