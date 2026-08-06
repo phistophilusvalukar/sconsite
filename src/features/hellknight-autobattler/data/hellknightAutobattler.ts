@@ -154,7 +154,7 @@ export const units: UnitDefinition[] = [
     spellSlots: 3,
     health: 430,
     feat: 'Spell Substitution',
-    featText: 'Cast different spells based on unit composition. Melee > Caster = Summ Ele. Melee < Caster = Summ Zombie. Melee = Caster = Force Barrage'
+    featText: 'Cast different spells based on unit composition.'
   },
   {
     id: 'sorcerer',

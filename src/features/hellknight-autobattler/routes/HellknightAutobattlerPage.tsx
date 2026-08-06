@@ -954,7 +954,7 @@ function getUnitSpells(unit: UnitDefinition) {
     Swashbuckler: ['Panache: dodge into finishing pressure', 'Finisher: stronger isolated strike'],
     Thaumaturge: ['Exploit Vulnerability: mark the toughest enemy', 'Implement strike: mixed occult damage'],
     Witch: ['Hex Cantrip: weaken a focused enemy', 'Patron spell: repeatable ranged magic'],
-    Wizard: ['More slot allies: summon a tier-matched Zombie', 'More slotless allies: summon a tier-matched Elemental', 'Equal composition: Magic Missile hits every enemy at infinite range']
+    Wizard: ['More martial allies: summon a tier-matched Zombie', 'More spellcaster allies: summon a tier-matched Elemental', 'Equal composition: Magic Missile hits every enemy at infinite range']
   };
 
   return classAbilities[unit.pf2Class] ?? [unit.featText];
