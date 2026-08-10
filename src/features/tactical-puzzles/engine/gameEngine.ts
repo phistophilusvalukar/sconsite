@@ -12,6 +12,7 @@ import {
 } from './geometry';
 import type {
   ActionId,
+  AttackDefinition,
   CreatureDefinition,
   DegreeOfSuccess,
   ExecutionResult,
@@ -44,6 +45,25 @@ export const ACTION_LIBRARY: ActionMetadata[] = [
   { id: 'delay', name: 'Delay', cost: 0, target: 'none', description: 'Leave initiative and resume before a later creature acts.' },
   { id: 'lightning-bolt', name: 'Lightning Bolt', cost: 2, target: 'line', description: 'Choose a direction and resolve a deterministic Reflex save for each target.' }
 ];
+
+export interface AttackModifierBreakdown {
+  base: number;
+  multipleAttackPenalty: number;
+  aidBonus: number;
+  total: number;
+}
+
+export function getAttackModifierBreakdown(state: GameState, actorId: string, attack: AttackDefinition): AttackModifierBreakdown {
+  const attackCount = state.attackCounts[actorId] ?? 0;
+  const multipleAttackPenalty = attackCount === 0 ? 0 : attackCount === 1 ? (attack.agile ? -4 : -5) : (attack.agile ? -8 : -10);
+  const aidBonus = state.creatures[actorId]?.conditions.some(condition => condition.type === 'aided') ? 1 : 0;
+  return {
+    base: attack.attackBonus,
+    multipleAttackPenalty,
+    aidBonus,
+    total: attack.attackBonus + multipleAttackPenalty + aidBonus
+  };
+}
 
 export function initializeGame(input: PuzzleDefinition): GameState {
   const puzzle = parsePuzzleDefinition(input);
@@ -215,10 +235,10 @@ function strike(state: GameState, command: Extract<GameCommand, { type: 'USE_ACT
 
   const next = cloneState(state);
   const attackCount = next.attackCounts[command.actorId] ?? 0;
-  const map = attackCount === 0 ? 0 : attackCount === 1 ? (attack.agile ? -4 : -5) : (attack.agile ? -8 : -10);
-  const aidBonus = next.creatures[command.actorId].conditions.some(condition => condition.type === 'aided') ? 1 : 0;
-  const total = natural + attack.attackBonus + map + aidBonus;
+  const modifier = getAttackModifierBreakdown(next, command.actorId, attack);
+  const total = natural + modifier.total;
   const armorClass = effectiveArmorClass(next, command.targetId, command.actorId);
+  const { multipleAttackPenalty: map, aidBonus } = modifier;
   const degree = determineDegree(natural, total, armorClass);
   const hit = degree === 'success' || degree === 'critical-success';
   const damage = hit ? attack.damage * (degree === 'critical-success' ? 2 : 1) : 0;

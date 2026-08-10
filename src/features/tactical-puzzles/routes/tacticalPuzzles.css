@@ -150,7 +150,8 @@
 
 .tp-board-column { min-width: 0; }
 .tp-board-frame { padding: .7rem; border: 1px solid rgba(230,184,92,.22); border-radius: .8rem; background: linear-gradient(145deg, #1b2928, #0d1a1e); box-shadow: inset 0 0 0 4px #091216, 0 24px 55px rgba(0,0,0,.32); }
-.tp-board { display: grid; grid-template-columns: repeat(var(--tp-board-columns), minmax(0, 1fr)); width: 100%; overflow: hidden; border: 1px solid rgba(230,184,92,.22); background: #152a29; aspect-ratio: var(--tp-board-columns) / var(--tp-board-columns); }
+.tp-player .tp-board-frame { width: min(100%, 620px); margin-inline: auto; padding: .55rem; }
+.tp-board { display: grid; grid-template-columns: repeat(var(--tp-board-columns), minmax(0, 1fr)); grid-template-rows: repeat(var(--tp-board-rows), minmax(0, 1fr)); width: 100%; overflow: hidden; border: 1px solid rgba(230,184,92,.22); background: #152a29; aspect-ratio: var(--tp-board-columns) / var(--tp-board-rows); }
 .tp-cell { position: relative; display: grid; min-width: 0; padding: 0; place-items: center; overflow: hidden; border: 0; border-right: 1px solid rgba(194,220,207,.12); border-bottom: 1px solid rgba(194,220,207,.12); background: rgba(40,72,68,.35); cursor: pointer; }
 .tp-cell:nth-child(even) { background: rgba(28,59,57,.45); }
 .tp-cell:hover { background: rgba(76,119,108,.38); }
@@ -182,12 +183,14 @@
 .tp-action-pips { display: flex; gap: .35rem; }
 .tp-action-pips span { width: .85rem; height: .85rem; border: 1px solid #55706a; border-radius: 50%; }
 .tp-action-pips span.filled { border-color: var(--tp-gold); background: var(--tp-gold); box-shadow: 0 0 9px rgba(230,184,92,.35); }
-.tp-action-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: .4rem; }
-.tp-action-buttons button { display: flex; min-height: 3.25rem; padding: .45rem; flex-direction: column; align-items: flex-start; justify-content: center; border: 1px solid rgba(181,211,201,.18); border-radius: .42rem; background: #172d31; cursor: pointer; }
+.tp-action-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: .4rem; }
+.tp-action-buttons button { display: flex; min-height: 3.65rem; padding: .5rem .55rem; flex-direction: column; gap: .24rem; align-items: stretch; justify-content: center; border: 1px solid rgba(181,211,201,.18); border-radius: .42rem; background: #172d31; color: inherit; text-align: left; cursor: pointer; }
 .tp-action-buttons button:hover:not(:disabled), .tp-action-buttons button.selected { border-color: var(--tp-gold); background: rgba(230,184,92,.12); }
 .tp-action-buttons button:disabled { opacity: .3; cursor: not-allowed; }
 .tp-action-buttons strong { font-size: .74rem; }
-.tp-action-buttons span { color: var(--tp-gold); font-size: .56rem; letter-spacing: .12em; }
+.tp-action-button-heading { display: flex; align-items: center; justify-content: space-between; gap: .35rem; }
+.tp-action-buttons .tp-action-cost { color: var(--tp-gold); font-size: .56rem; letter-spacing: .12em; }
+.tp-action-buttons small { color: #a9bbb7; font-size: .63rem; font-weight: 700; line-height: 1.25; }
 .tp-targeting-help { margin: .6rem 0 0; color: #95aaa5; font-size: .73rem; }
 .tp-control-row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .65rem; }
 
@@ -205,6 +208,14 @@
 .tp-inspector dl div { padding: .4rem; border: 1px solid rgba(181,211,201,.1); border-radius: .35rem; }
 .tp-inspector dt { color: #70847f; font-size: .58rem; text-transform: uppercase; }
 .tp-inspector dd { margin: 0; font-size: .78rem; font-weight: 800; }
+.tp-combat-options { display: grid; gap: .65rem; margin: .8rem .85rem; }
+.tp-combat-group { display: grid; gap: .35rem; }
+.tp-combat-group h3 { margin: 0; color: #718681; font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; }
+.tp-combat-option { padding: .48rem .55rem; border: 1px solid rgba(230,184,92,.18); border-radius: .38rem; background: rgba(230,184,92,.055); }
+.tp-combat-option > div { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.tp-combat-option strong, .tp-combat-option span { font-size: .7rem; }
+.tp-combat-option span { color: var(--tp-gold); font-weight: 850; white-space: nowrap; }
+.tp-combat-option small { display: block; margin-top: .16rem; color: #8fa39e; font-size: .61rem; line-height: 1.35; }
 .tp-condition-list { display: flex; flex-wrap: wrap; gap: .3rem; }
 .tp-condition-list span { padding: .25rem .4rem; border-radius: .25rem; background: rgba(230,184,92,.12); color: #e7c780; font-size: .65rem; }
 .tp-condition-list span.muted { background: transparent; color: #657a75; }

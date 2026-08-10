@@ -32,6 +32,7 @@ import {
   describeObjective,
   effectiveArmorClass,
   executeCommand,
+  getAttackModifierBreakdown,
   getActiveCreatureId,
   getCreatureDefinition,
   initializeGame,
@@ -402,7 +403,8 @@ function PuzzlePlayer({
                 const action = ACTION_LIBRARY.find(item => item.id === actionId);
                 const spellCost = actionId === 'lightning-bolt' ? activeDefinition.spells[0]?.actionCost : undefined;
                 const cost = spellCost ?? action?.cost ?? 1;
-                return <button key={actionId} className={selectedAction === actionId ? 'selected' : ''} disabled={game.status !== 'playing' || game.actionsRemaining < cost} onClick={() => chooseAction(actionId)}><strong>{action?.name ?? actionId}</strong><span>{cost === 0 ? 'FREE' : '●'.repeat(cost)}</span></button>;
+                const combatSummary = getActionCombatSummary(actionId, activeDefinition, game);
+                return <button key={actionId} className={selectedAction === actionId ? 'selected' : ''} disabled={game.status !== 'playing' || game.actionsRemaining < cost} onClick={() => chooseAction(actionId)}><span className="tp-action-button-heading"><strong>{action?.name ?? actionId}</strong><span className="tp-action-cost">{cost === 0 ? 'FREE' : '●'.repeat(cost)}</span></span>{combatSummary && <small>{combatSummary}</small>}</button>;
               })}
             </div>
             {selectedAction && <p className="tp-targeting-help">{selectedAction === 'shove' && pendingTargetId ? 'Choose a highlighted destination behind the target.' : ACTION_LIBRARY.find(action => action.id === selectedAction)?.description}</p>}
@@ -413,7 +415,20 @@ function PuzzlePlayer({
         <aside className="tp-right-column">
           <section className="tp-panel tp-inspector">
             <div className="tp-panel-heading"><span>Creature</span><span className={`tp-team-label ${selectedDefinition?.team}`}>{selectedDefinition?.team}</span></div>
-            {selectedDefinition && selectedRuntime && <><h2>{selectedDefinition.name}</h2><div className="tp-hp-track"><span style={{ width: `${Math.max(0, selectedRuntime.hp / selectedDefinition.maxHp * 100)}%` }} /></div><p className="tp-hp-label">{selectedRuntime.hp} / {selectedDefinition.maxHp} HP</p><dl><div><dt>AC</dt><dd>{activeId && selectedDefinition.team === 'enemy' ? effectiveArmorClass(game, selectedDefinition.id, activeId) : selectedDefinition.ac}</dd></div><div><dt>Fort</dt><dd>+{selectedDefinition.fortitude}</dd></div><div><dt>Ref</dt><dd>+{selectedDefinition.reflex}</dd></div><div><dt>Will</dt><dd>+{selectedDefinition.will}</dd></div><div><dt>Speed</dt><dd>{selectedDefinition.speed} ft.</dd></div><div><dt>Perception DC</dt><dd>{10 + selectedDefinition.perception}</dd></div></dl><div className="tp-condition-list">{selectedRuntime.conditions.length ? selectedRuntime.conditions.map((condition, index) => <span key={`${condition.type}-${index}`}>{condition.type}{condition.value > 1 ? ` ${condition.value}` : ''}</span>) : <span className="muted">No conditions</span>}</div></>}
+            {selectedDefinition && selectedRuntime && <>
+              <h2>{selectedDefinition.name}</h2>
+              <div className="tp-hp-track"><span style={{ width: `${Math.max(0, selectedRuntime.hp / selectedDefinition.maxHp * 100)}%` }} /></div>
+              <p className="tp-hp-label">{selectedRuntime.hp} / {selectedDefinition.maxHp} HP</p>
+              <dl><div><dt>AC</dt><dd>{activeId && selectedDefinition.team === 'enemy' ? effectiveArmorClass(game, selectedDefinition.id, activeId) : selectedDefinition.ac}</dd></div><div><dt>Fort</dt><dd>{formatModifier(selectedDefinition.fortitude)}</dd></div><div><dt>Ref</dt><dd>{formatModifier(selectedDefinition.reflex)}</dd></div><div><dt>Will</dt><dd>{formatModifier(selectedDefinition.will)}</dd></div><div><dt>Speed</dt><dd>{selectedDefinition.speed} ft.</dd></div><div><dt>Perception DC</dt><dd>{10 + selectedDefinition.perception}</dd></div></dl>
+              {(selectedDefinition.attacks.length > 0 || selectedDefinition.spells.length > 0) && <div className="tp-combat-options">
+                {selectedDefinition.attacks.length > 0 && <div className="tp-combat-group"><h3>Weapons</h3>{selectedDefinition.attacks.map(attack => {
+                  const modifier = getAttackModifierBreakdown(game, selectedDefinition.id, attack);
+                  return <div className="tp-combat-option" key={attack.id}><div><strong>{attack.name}</strong><span>{formatModifier(modifier.total)} to hit</span></div><small>{attack.damage} {attack.damageType} damage{attack.agile ? ' · Agile' : ''}{attack.range > 1 ? ` · Range ${attack.range}` : ''}</small></div>;
+                })}</div>}
+                {selectedDefinition.spells.length > 0 && <div className="tp-combat-group"><h3>Spells</h3>{selectedDefinition.spells.map(spell => <div className="tp-combat-option" key={spell.id}><div><strong>{spell.name}</strong><span>DC {spell.dc} {capitalize(spell.save)}</span></div><small>{spell.damage} {spell.damageType} damage · Basic save · {spell.actionCost} actions</small></div>)}</div>}
+              </div>}
+              <div className="tp-condition-list">{selectedRuntime.conditions.length ? selectedRuntime.conditions.map((condition, index) => <span key={`${condition.type}-${index}`}>{condition.type}{condition.value > 1 ? ` ${condition.value}` : ''}</span>) : <span className="muted">No conditions</span>}</div>
+            </>}
           </section>
           <section className="tp-panel tp-rolls"><div className="tp-panel-heading"><span>Predetermined rolls</span><strong>{game.puzzle.rolls.length - game.rollIndex} left</strong></div><div className="tp-roll-queue">{game.puzzle.rolls.map((roll, index) => <div key={index} className={index < game.rollIndex ? 'used' : index === game.rollIndex ? 'next' : ''}><span>{index < game.rollIndex ? '✓' : index === game.rollIndex ? '▶' : index + 1}</span><strong>{roll}</strong></div>)}</div></section>
           <section className="tp-panel tp-hints"><button onClick={() => setShowHint(current => !current)}><Lightbulb /> {showHint ? 'Hide hint' : 'Show hint'}</button>{showHint && <p>{puzzle.hints[0] ?? 'No hint is available.'}</p>}</section>
@@ -448,7 +463,10 @@ function TacticalBoard({
   onHover: (position: GridPosition | null) => void;
   onInteract: (position: GridPosition, creatureId?: string) => void;
 }) {
-  const style = { '--tp-board-columns': game.puzzle.board.width } as CSSProperties;
+  const style = {
+    '--tp-board-columns': game.puzzle.board.width,
+    '--tp-board-rows': game.puzzle.board.height
+  } as CSSProperties;
   const cells: GridPosition[] = [];
   for (let y = 0; y < game.puzzle.board.height; y += 1) for (let x = 0; x < game.puzzle.board.width; x += 1) cells.push({ x, y });
   const moveKeys = new Set(movementSquares.map(positionKey));
@@ -630,7 +648,10 @@ function PuzzleEditor({
     }
   }
 
-  const boardStyle = { '--tp-board-columns': draft.board.width } as CSSProperties;
+  const boardStyle = {
+    '--tp-board-columns': draft.board.width,
+    '--tp-board-rows': draft.board.height
+  } as CSSProperties;
   const cells: GridPosition[] = [];
   for (let y = 0; y < draft.board.height; y += 1) for (let x = 0; x < draft.board.width; x += 1) cells.push({ x, y });
 
@@ -722,6 +743,28 @@ function clonePuzzle(puzzle: PuzzleDefinition): PuzzleDefinition {
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'puzzle';
+}
+
+function getActionCombatSummary(actionId: ActionId, creature: CreatureDefinition, game: GameState): string | null {
+  if (actionId === 'strike') {
+    const attack = creature.attacks[0];
+    if (!attack) return null;
+    const modifier = getAttackModifierBreakdown(game, creature.id, attack);
+    return `${formatModifier(modifier.total)} to hit · ${attack.damage} ${attack.damageType}`;
+  }
+  if (actionId === 'lightning-bolt') {
+    const spell = creature.spells.find(candidate => candidate.actionId === actionId);
+    return spell ? `DC ${spell.dc} ${capitalize(spell.save)} · ${spell.damage} ${spell.damageType}` : null;
+  }
+  return null;
+}
+
+function formatModifier(value: number): string {
+  return value >= 0 ? `+${value}` : String(value);
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function initials(name: string) {

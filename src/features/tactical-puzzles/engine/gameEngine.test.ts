@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bundledPuzzles } from '../data/puzzles';
-import { executeCommand, initializeGame } from './gameEngine';
+import { executeCommand, getAttackModifierBreakdown, initializeGame } from './gameEngine';
 
 function puzzle(id: string) {
   const found = bundledPuzzles.find(item => item.id === id);
@@ -19,6 +19,22 @@ describe('tactical puzzle engine', () => {
     expect(first.state.creatures.guard.hp).toBe(0);
     expect(first.state.status).toBe('victory');
     expect(first.state.rollIndex).toBe(1);
+  });
+
+  it('reports the live Strike modifier including MAP and Aid', () => {
+    const definition = puzzle('basic-strike');
+    const state = initializeGame(definition);
+    const attack = definition.creatures.find(creature => creature.id === 'fighter')?.attacks[0];
+    if (!attack) throw new Error('Missing fighter attack.');
+
+    expect(getAttackModifierBreakdown(state, 'fighter', attack).total).toBe(attack.attackBonus);
+    state.attackCounts.fighter = 1;
+    state.creatures.fighter.conditions.push({ type: 'aided', value: 1, expires: 'end-target-turn' });
+
+    const expectedPenalty = attack.agile ? -4 : -5;
+    expect(getAttackModifierBreakdown(state, 'fighter', attack)).toEqual(expect.objectContaining({
+      multipleAttackPenalty: expectedPenalty, aidBonus: 1, total: attack.attackBonus + expectedPenalty + 1
+    }));
   });
 
   it('restores the intended Feint opening and actor-relative off-guard', () => {
