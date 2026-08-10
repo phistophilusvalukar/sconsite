@@ -775,7 +775,15 @@ function getItemStats(itemIds: string[]) {
     if (item.id === 'flaming-rune' || item.id === 'staff-fire' || item.id === 'fear-gem') stats.magicDamage += item.id === 'staff-fire' ? 28 : item.id === 'flaming-rune' ? 18 : 10;
     if (item.id === 'resilient-rune' || item.id === 'sturdy-shield' || item.id === 'elixir-life') stats.health += item.id === 'sturdy-shield' ? 150 : item.id === 'resilient-rune' ? 120 : 80;
     if (item.id === 'wand-force-barrage' || item.id === 'endless-grimoire') stats.spellSlots += 1;
-    if (item.id === 'boots-bounding') stats.attackSpeedTiers += 1;
+    if (item.id === 'boots-bounding' || item.id === 'quicksilver-boots') stats.attackSpeedTiers += 1;
+    if (item.id === 'greater-striking-rune') stats.attackDamage += 28;
+    if (item.id === 'vitality-amulet') stats.health += 220;
+    if (item.id === 'archmage-staff') stats.magicDamage += 42;
+    if (item.id === 'scroll-reserve') stats.spellSlots += 2;
+    if (item.id === 'battle-mantle') {
+      stats.health += 100;
+      stats.attackDamage += 10;
+    }
     return stats;
   }, { attackDamage: 0, magicDamage: 0, health: 0, spellSlots: 0, attackSpeedTiers: 0 });
 }

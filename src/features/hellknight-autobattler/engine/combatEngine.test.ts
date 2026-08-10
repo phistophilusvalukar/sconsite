@@ -218,7 +218,7 @@ describe('dedicated spell paths', () => {
     expect(elemental?.tier).toBe(1);
   });
 
-  it('casts infinite-range Magic Missile against every enemy for a balanced roster', () => {
+  it('casts infinite-range Force Barrage against every enemy for a balanced roster', () => {
     const result = simulateCombat({
       player: [input('wizard', 0, 2), input('fighter', 1, 2)],
       enemy: [input('champion', -3, -3, 'target-one'), input('champion', 3, -3, 'target-two')],
@@ -228,7 +228,7 @@ describe('dedicated spell paths', () => {
     const openingEnemies = result.frames[0].units.filter(unit => unit.team === 'enemy');
     const hitEnemies = firstCombatFrame?.units.filter(unit => unit.team === 'enemy') ?? [];
 
-    expect(firstCombatFrame?.message).toContain('casts Magic Missile');
+    expect(firstCombatFrame?.message).toContain('casts Force Barrage');
     expect(firstCombatFrame?.message).toContain('hitting 2 enemies');
     expect(hitEnemies.every(enemy => enemy.hp < (openingEnemies.find(opening => opening.id === enemy.id)?.hp ?? 0))).toBe(true);
   });

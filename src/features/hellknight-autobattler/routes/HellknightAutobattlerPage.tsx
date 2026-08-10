@@ -21,7 +21,16 @@ import {
   type CombatFrameUnit,
   type CombatSimulationResult
 } from '../engine/combatEngine';
-import './hellknightAutobattler.css';
+import {
+  createUnitPool,
+  getUnitPrice,
+  getUnitRarity,
+  returnUnitToPool,
+  rollBattleItemDrop,
+  rollUnitShop,
+  takeUnitFromPool,
+  type ShopOffer
+} from '../engine/shopEngine';import './hellknightAutobattler.css';
 
 type Phase = 'lobby' | 'shop' | 'combat' | 'item-shop';
 type ActiveSynergy = { trait: UnitTrait; count: number; tier: number };
@@ -76,7 +85,10 @@ export default function HellknightAutobattlerPage() {
   const [bench, setBench] = useState<OwnedUnit[]>([]);
   const [board, setBoard] = useState<BoardSlot[]>(initialBoardSlots);
   const [inventory, setInventory] = useState<string[]>(['sturdy-shield']);
+  const [unitPool, setUnitPool] = useState(createUnitPool);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [inspectedShopUnit, setInspectedShopUnit] = useState<UnitDefinition | null>(null);
+  const [inspectedItem, setInspectedItem] = useState<ItemDefinition | null>(null);
   const [draggedUnitId, setDraggedUnitId] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<CombatResult | null>(null);
   const [playbackFrameIndex, setPlaybackFrameIndex] = useState(0);
@@ -84,7 +96,7 @@ export default function HellknightAutobattlerPage() {
   const [log, setLog] = useState<string[]>(['Queue opens under black iron banners.']);
 
   const lobbyPlayers = useMemo(() => buildLobby(lobbyTick), [lobbyTick]);
-  const shop = useMemo(() => buildShop(shopSeed, round), [shopSeed, round]);
+  const shop = useMemo(() => rollUnitShop(shopSeed, round, unitPool, roundShopSize), [shopSeed, round, unitPool]);
   const itemShop = useMemo(() => buildItemShop(itemSeed, round), [itemSeed, round]);
   const army = useMemo(() => board
     .map(slot => bench.find(unit => unit.instanceId === slot.unitId))
@@ -93,6 +105,7 @@ export default function HellknightAutobattlerPage() {
   const armyPower = useMemo(() => calculateArmyPower(army, activeSynergies), [army, activeSynergies]);
   const benchUnits = bench.filter(unit => !board.some(slot => slot.unitId === unit.instanceId));
   const selectedUnit = bench.find(unit => unit.instanceId === selectedUnitId) ?? null;
+  const detailUnit: UnitDefinition | OwnedUnit | null = selectedUnit ?? inspectedShopUnit;
   const selectedUnitIsDeployed = Boolean(selectedUnit && board.some(slot => slot.unitId === selectedUnit.instanceId));
   const selectedCombineCopies = selectedUnit
     ? bench.filter(unit => unit.id === selectedUnit.id && unit.tier === selectedUnit.tier).length
@@ -132,8 +145,9 @@ export default function HellknightAutobattlerPage() {
     }
   }
 
-  function buyUnit(unit: UnitDefinition) {
-    if (gold < unit.cost || rosterFull) return;
+  function buyUnit(offer: ShopOffer) {
+    const { unit } = offer;
+    if (gold < unit.cost || rosterFull || (unitPool[unit.id] ?? 0) <= 0) return;
     const ownedUnit: OwnedUnit = {
       ...unit,
       instanceId: `${unit.id}-${nextInstance}`,
@@ -141,9 +155,24 @@ export default function HellknightAutobattlerPage() {
       items: []
     };
     setBench(current => [...current, ownedUnit]);
+    setUnitPool(current => takeUnitFromPool(current, unit.id));
     setNextInstance(current => current + 1);
     setGold(current => current - unit.cost);
-    setLog(current => [`Bought ${unit.name}.`, ...current].slice(0, 6));
+    setShopSeed(current => current + 31);
+    setInspectedShopUnit(null);
+    setLog(current => [`Bought rarity ${offer.rarity} ${unit.name}; the roster was dealt again.`, ...current].slice(0, 6));
+  }
+
+  function inspectShopUnit(unit: UnitDefinition) {
+    setSelectedUnitId(null);
+    setInspectedItem(null);
+    setInspectedShopUnit(unit);
+  }
+
+  function inspectItem(item: ItemDefinition) {
+    setSelectedUnitId(null);
+    setInspectedShopUnit(null);
+    setInspectedItem(item);
   }
 
   function refreshShop() {
@@ -218,6 +247,7 @@ export default function HellknightAutobattlerPage() {
     if (!unit) return;
     const refund = Math.max(1, Math.floor(unit.cost / 2));
     setBench(current => current.filter(candidate => candidate.instanceId !== unitId));
+    setUnitPool(current => returnUnitToPool(current, unit.id, 3 ** (unit.tier - 1)));
     setBoard(current => current.map(slot => slot.unitId === unitId ? { ...slot, unitId: null } : slot));
     setInventory(current => [...current, ...unit.items]);
     setGold(current => current + refund);
@@ -261,7 +291,7 @@ export default function HellknightAutobattlerPage() {
     const streakGold = Math.min(3, Math.floor(Math.abs(streak) / 2));
     const roundGold = 5 + (won ? 1 : 0) + interest + streakGold;
     const nextRound = round + 1;
-    const drop = items[(itemSeed + round * 5) % items.length].id;
+    const droppedItem = rollBattleItemDrop(itemSeed + shopSeed, round, won);
 
     setPhase('combat');
     setPlaybackFrameIndex(0);
@@ -270,16 +300,16 @@ export default function HellknightAutobattlerPage() {
     setStreak(current => won ? Math.max(1, current + 1) : Math.min(-1, current - 1));
     setHealth(current => won ? current : Math.max(0, current - damage));
     setGold(current => current + roundGold);
-    setInventory(current => [...current, drop]);
+    if (droppedItem) setInventory(current => [...current, droppedItem.id]);
     setLastResult({
       opponent,
       won,
       damage,
-      summary: `${won ? 'Victory' : simulation.winner === 'draw' ? 'Draw' : 'Defeat'} against ${opponent}. Earned ${roundGold} gold and recovered ${getItem(drop).name}.`,
+      summary: `${won ? 'Victory' : simulation.winner === 'draw' ? 'Draw' : 'Defeat'} against ${opponent}. Earned ${roundGold} gold${droppedItem ? ` and recovered ${droppedItem.name}` : ''}.`,
       simulation
     });
     setLog(current => [
-      `${won ? 'Won' : simulation.winner === 'draw' ? 'Drew' : 'Lost'} round ${round} vs ${opponent}; ${roundGold} gold, ${getItem(drop).name} dropped.`,
+      `${won ? 'Won' : simulation.winner === 'draw' ? 'Drew' : 'Lost'} round ${round} vs ${opponent}; ${roundGold} gold${droppedItem ? `, ${droppedItem.name} dropped` : ', no item drop'}.`,
       ...simulation.ledger.slice(0, 4),
       ...current
     ].slice(0, 7));
@@ -395,6 +425,8 @@ export default function HellknightAutobattlerPage() {
                             return;
                           }
                           if (unit) {
+                            setInspectedShopUnit(null);
+                            setInspectedItem(null);
                             setSelectedUnitId(selected ? null : unit.instanceId);
                           }
                         }}
@@ -422,7 +454,11 @@ export default function HellknightAutobattlerPage() {
                     key={unit.instanceId}
                     unit={unit}
                     selected={selectedUnitId === unit.instanceId}
-                    onSelect={() => setSelectedUnitId(unit.instanceId)}
+                    onSelect={() => {
+                      setInspectedShopUnit(null);
+                      setInspectedItem(null);
+                      setSelectedUnitId(unit.instanceId);
+                    }}
                     onDragStart={(event) => startUnitDrag(unit.instanceId, event)}
                     onDragEnd={() => setDraggedUnitId(null)}
                     onRecall={() => recallUnit(unit.instanceId)}
@@ -432,24 +468,29 @@ export default function HellknightAutobattlerPage() {
                   />
                 ))}
               </section>
-              <UnitDetailPanel
-                unit={selectedUnit}
-                isDeployed={selectedUnitIsDeployed}
-                combineCopies={selectedCombineCopies}
-                onRecall={recallUnit}
-                onCombine={combineSelectedUnit}
-                onSell={sellUnit}
-                activeSynergies={activeSynergies}
-              />
+              {inspectedItem ? (
+                <ItemDetailPanel item={inspectedItem} />
+              ) : (
+                <UnitDetailPanel
+                  unit={detailUnit}
+                  isDeployed={selectedUnitIsDeployed}
+                  combineCopies={selectedCombineCopies}
+                  onRecall={recallUnit}
+                  onCombine={combineSelectedUnit}
+                  onSell={sellUnit}
+                  activeSynergies={activeSynergies}
+                />
+              )}
             </main>
 
             <aside className="command-column">
               {phase === 'item-shop' ? (
-                <ItemShopPanel itemShop={itemShop} gold={gold} onBuy={buyItem} onContinue={() => setPhase('shop')} />
+                <ItemShopPanel itemShop={itemShop} gold={gold} onInspect={inspectItem} onBuy={buyItem} onContinue={() => setPhase('shop')} />
               ) : (
                 <ShopPanel
                   shop={shop}
                   gold={gold}
+                  onInspect={inspectShopUnit}
                   onBuy={buyUnit}
                   onRefresh={refreshShop}
                   onHoverUnit={showUnitTooltip}
@@ -555,7 +596,7 @@ function UnitDetailPanel({
   onSell,
   activeSynergies
 }: {
-  unit: OwnedUnit | null;
+  unit: UnitDefinition | OwnedUnit | null;
   isDeployed: boolean;
   combineCopies: number;
   onRecall: (unitId: string) => void;
@@ -572,8 +613,10 @@ function UnitDetailPanel({
     );
   }
 
-  const itemDetails = unit.items.map(getItem);
+  const isOwned = 'instanceId' in unit;
+  const itemDetails = isOwned ? unit.items.map(getItem) : [];
   const refund = Math.max(1, Math.floor(unit.cost / 2));
+  const rarity = getUnitRarity(unit);
   const effectiveStats = getEffectiveUnitStats(unit, activeSynergies, isDeployed);
   const spells = getUnitSpells(unit);
 
@@ -583,21 +626,25 @@ function UnitDetailPanel({
         <div>
           <p className="hellknight-kicker">Unit Dossier</p>
           <h2>{unit.name}</h2>
-          <span>{unit.pf2Class} / {unit.role} / Tier {unit.tier}</span>
+          <span>{unit.pf2Class} / {unit.role} / Tier {'tier' in unit ? unit.tier : 1} / Rarity {rarity} / {getUnitPrice(unit)}g</span>
         </div>
         <div className="unit-trait-row">
           {unit.traits.map(trait => <span key={trait}>{trait}</span>)}
-          {isDeployed && (
+          {isOwned && isDeployed && (
             <button type="button" className="unit-command-button" onClick={() => onRecall(unit.instanceId)}>
               Recall
             </button>
           )}
-          <button type="button" className="unit-command-button" onClick={onCombine} disabled={unit.tier >= 3 || combineCopies < 3}>
-            Combine {combineCopies}/3
-          </button>
-          <button type="button" className="sell-unit-button" onClick={() => onSell(unit.instanceId)}>
-            Sell {refund}g
-          </button>
+          {isOwned && (
+            <>
+              <button type="button" className="unit-command-button" onClick={onCombine} disabled={unit.tier >= 3 || combineCopies < 3}>
+                Combine {combineCopies}/3
+              </button>
+              <button type="button" className="sell-unit-button" onClick={() => onSell(unit.instanceId)}>
+                Sell {refund}g
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -647,6 +694,29 @@ function UnitDetailPanel({
   );
 }
 
+function ItemDetailPanel({ item }: { item: ItemDefinition }) {
+  return (
+    <section className="unit-detail-panel item-detail-panel">
+      <div className="unit-detail-heading">
+        <div>
+          <p className="hellknight-kicker">Item Dossier</p>
+          <h2>{item.name}</h2>
+          <span>{item.sourceType} / {item.cost} gold</span>
+        </div>
+      </div>
+      <div className="unit-detail-columns">
+        <div>
+          <h3>Stat Bonus</h3>
+          <strong>{item.stat}</strong>
+        </div>
+        <div>
+          <h3>Combat Effect</h3>
+          <p>{item.effect}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
 function StatPill({ label, value }: { label: string; value: string }) {
   return (
     <article className="stat-pill">
@@ -720,15 +790,17 @@ function LobbyPanel({ players, onTick, onStart }: { players: PlayerRecord[]; onT
 function ShopPanel({
   shop,
   gold,
+  onInspect,
   onBuy,
   onRefresh,
   onHoverUnit,
   onMoveTooltip,
   onLeaveTooltip
 }: {
-  shop: UnitDefinition[];
+  shop: ShopOffer[];
   gold: number;
-  onBuy: (unit: UnitDefinition) => void;
+  onInspect: (unit: UnitDefinition) => void;
+  onBuy: (offer: ShopOffer) => void;
   onRefresh: () => void;
   onHoverUnit: (unit: UnitDefinition, event: MouseEvent<HTMLElement>) => void;
   onMoveTooltip: (event: MouseEvent<HTMLElement>) => void;
@@ -743,29 +815,44 @@ function ShopPanel({
         </button>
       </header>
       <div className="shop-list">
-        {shop.map(unit => (
-          <button
-            key={`${unit.id}-${unit.cost}`}
-            type="button"
-            className="shop-card"
-            onMouseEnter={(event) => onHoverUnit(unit, event)}
-            onMouseMove={onMoveTooltip}
-            onMouseLeave={onLeaveTooltip}
-            onClick={() => onBuy(unit)}
-            disabled={gold < unit.cost}
-          >
-            <span className="cost">{unit.cost}g</span>
-            <strong>{unit.name}</strong>
-            <span>{unit.pf2Class} / {unit.role}</span>
-            <small>{unit.traits.join(' - ')}</small>
-          </button>
+        {shop.length === 0 ? <p>The available unit pool is empty.</p> : shop.map(offer => (
+          <article key={offer.offerId} className={`shop-card rarity-${offer.rarity}`}>
+            <button
+              type="button"
+              className="shop-inspect"
+              onMouseEnter={(event) => onHoverUnit(offer.unit, event)}
+              onMouseMove={onMoveTooltip}
+              onMouseLeave={onLeaveTooltip}
+              onClick={() => onInspect(offer.unit)}
+            >
+              <span className="cost">{offer.unit.cost}g</span>
+              <strong>{offer.unit.name}</strong>
+              <span>{offer.unit.pf2Class} / {offer.unit.role}</span>
+              <small>Rarity {offer.rarity} / {offer.unit.traits.join(' - ')}</small>
+            </button>
+            <button type="button" className="shop-buy" onClick={() => onBuy(offer)} disabled={gold < offer.unit.cost}>
+              Recruit
+            </button>
+          </article>
         ))}
       </div>
     </section>
   );
 }
 
-function ItemShopPanel({ itemShop, gold, onBuy, onContinue }: { itemShop: ItemDefinition[]; gold: number; onBuy: (item: ItemDefinition) => void; onContinue: () => void }) {
+function ItemShopPanel({
+  itemShop,
+  gold,
+  onInspect,
+  onBuy,
+  onContinue
+}: {
+  itemShop: ItemDefinition[];
+  gold: number;
+  onInspect: (item: ItemDefinition) => void;
+  onBuy: (item: ItemDefinition) => void;
+  onContinue: () => void;
+}) {
   return (
     <section className="side-section">
       <header>
@@ -774,18 +861,22 @@ function ItemShopPanel({ itemShop, gold, onBuy, onContinue }: { itemShop: ItemDe
       </header>
       <div className="shop-list">
         {itemShop.map(item => (
-          <button key={item.id} type="button" className="shop-card item-card" onClick={() => onBuy(item)} disabled={gold < item.cost}>
-            <span className="cost">{item.cost}g</span>
-            <strong>{item.name}</strong>
-            <span>{item.sourceType}</span>
-            <small>{item.stat}. {item.effect}</small>
-          </button>
+          <article key={item.id} className="shop-card item-card">
+            <button type="button" className="shop-inspect" onClick={() => onInspect(item)}>
+              <span className="cost">{item.cost}g</span>
+              <strong>{item.name}</strong>
+              <span>{item.sourceType}</span>
+              <small>{item.stat}</small>
+            </button>
+            <button type="button" className="shop-buy" onClick={() => onBuy(item)} disabled={gold < item.cost}>
+              Purchase
+            </button>
+          </article>
         ))}
       </div>
     </section>
   );
 }
-
 function UnitChip({
   unit,
   selected,
@@ -954,7 +1045,7 @@ function getUnitSpells(unit: UnitDefinition) {
     Swashbuckler: ['Panache: dodge into finishing pressure', 'Finisher: stronger isolated strike'],
     Thaumaturge: ['Exploit Vulnerability: mark the toughest enemy', 'Implement strike: mixed occult damage'],
     Witch: ['Hex Cantrip: weaken a focused enemy', 'Patron spell: repeatable ranged magic'],
-    Wizard: ['More martial allies: summon a tier-matched Zombie', 'More spellcaster allies: summon a tier-matched Elemental', 'Equal composition: Magic Missile hits every enemy at infinite range']
+    Wizard: ['More spell-slot allies: summon a tier-matched Zombie', 'More slotless allies: summon a tier-matched Elemental', 'Equal composition: Force Barrage hits every enemy at infinite range']
   };
 
   return classAbilities[unit.pf2Class] ?? [unit.featText];
@@ -985,23 +1076,9 @@ function fillLobby(players: PlayerRecord[]) {
   return filled;
 }
 
-function buildShop(seed: number, round: number) {
-  return Array.from({ length: roundShopSize }, (_, index) => {
-    const roll = seededNumber(seed + round * 7 + index * 11, 0, units.length - 1);
-    return units[(roll + index) % units.length];
-  });
-}
-
 function buildItemShop(seed: number, round: number) {
   return Array.from({ length: 4 }, (_, index) => items[(seed + round * 3 + index * 5) % items.length]);
 }
-
-function seededNumber(seed: number, min: number, max: number) {
-  const x = Math.sin(seed * 999) * 10000;
-  const normalized = x - Math.floor(x);
-  return Math.floor(normalized * (max - min + 1)) + min;
-}
-
 function getItem(itemId: string) {
   return items.find(item => item.id === itemId) ?? items[0];
 }
@@ -1160,9 +1237,17 @@ function getEquippedItemStats(unit: UnitDefinition | OwnedUnit) {
     if (itemId === 'sturdy-shield') stats.health += 150;
     if (itemId === 'resilient-rune') stats.health += 120;
     if (itemId === 'elixir-life') stats.health += 80;
-    if (itemId === 'wand-magic-missile') stats.spellSlots += 1;
+    if (itemId === 'wand-force-barrage') stats.spellSlots += 1;
     if (itemId === 'endless-grimoire') stats.spellSlots += 1;
-    if (itemId === 'boots-bounding') stats.attackSpeedTiers += 1;
+    if (itemId === 'boots-bounding' || itemId === 'quicksilver-boots') stats.attackSpeedTiers += 1;
+    if (itemId === 'greater-striking-rune') stats.attackDamage += 28;
+    if (itemId === 'vitality-amulet') stats.health += 220;
+    if (itemId === 'archmage-staff') stats.magicDamage += 42;
+    if (itemId === 'scroll-reserve') stats.spellSlots += 2;
+    if (itemId === 'battle-mantle') {
+      stats.health += 100;
+      stats.attackDamage += 10;
+    }
     return stats;
   }, { attackDamage: 0, magicDamage: 0, health: 0, spellSlots: 0, attackSpeedTiers: 0 });
 }

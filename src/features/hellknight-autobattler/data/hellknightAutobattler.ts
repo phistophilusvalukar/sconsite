@@ -394,7 +394,13 @@ export const items: ItemDefinition[] = [
   { id: 'boots-bounding', name: 'Boots of Bounding', sourceType: 'Worn item', cost: 3, stat: '+1 attack speed tier', effect: 'Raises attack speed by one tier and permits longer movement.' },
   { id: 'endless-grimoire', name: 'Endless Grimoire', sourceType: 'Grimoire', cost: 5, stat: '+1 spell slot', effect: 'Prepared casters open with an extra spell.' },
   { id: 'fear-gem', name: 'Fear Gem', sourceType: 'Consumable talisman', cost: 4, stat: '+10 magic damage', effect: 'First hit applies Fleeing, making the target run away and stop attacking briefly.' },
-  { id: 'sleeves-storage', name: 'Sleeves of Storage', sourceType: 'Worn item', cost: 2, stat: '+1 item sale gold', effect: 'Selling this item refunds a bonus gold.' }
+  { id: 'sleeves-storage', name: 'Sleeves of Storage', sourceType: 'Worn item', cost: 2, stat: '+1 item sale gold', effect: 'Selling this item refunds a bonus gold.' },
+  { id: 'greater-striking-rune', name: 'Greater Striking Rune', sourceType: 'Weapon rune', cost: 7, stat: '+28 attack damage', effect: 'Greatly increases every strike in a basic attack set.' },
+  { id: 'vitality-amulet', name: 'Vitality Amulet', sourceType: 'Worn item', cost: 6, stat: '+220 health', effect: 'Provides a large increase to maximum health.' },
+  { id: 'archmage-staff', name: 'Archmage Staff', sourceType: 'Staff', cost: 7, stat: '+42 magic damage', effect: 'Greatly increases spell and magic ability damage.' },
+  { id: 'quicksilver-boots', name: 'Quicksilver Boots', sourceType: 'Worn item', cost: 6, stat: '+1 attack speed tier', effect: 'Raises attack speed by one tier, up to fast.' },
+  { id: 'scroll-reserve', name: 'Scroll of Reserves', sourceType: 'Consumable scroll', cost: 6, stat: '+2 spell slots', effect: 'Adds two spell casts to the unit at the start of combat.' },
+  { id: 'battle-mantle', name: 'Battle Mantle', sourceType: 'Worn item', cost: 5, stat: '+100 health, +10 attack damage', effect: 'Provides balanced durability and martial pressure.' }
 ];
 
 export const synergies: Record<UnitTrait, { thresholds: number[]; text: string }> = {
