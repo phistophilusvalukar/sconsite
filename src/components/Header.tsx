@@ -33,6 +33,13 @@ const preloadedRoutes = new Set<string>();
 
 function preloadRoute(href: PreloadableRoute) {
   if (preloadedRoutes.has(href)) return;
+  if (String(href) === '/tactical-puzzles') {
+    preloadedRoutes.add(href);
+    import('../features/tactical-puzzles/routes/TacticalPuzzlesPage').catch(() => {
+      preloadedRoutes.delete(href);
+    });
+    return;
+  }
   preloadedRoutes.add(href);
   routePreloaders[href]().catch(() => {
     preloadedRoutes.delete(href);
@@ -51,6 +58,7 @@ const navigationGroups: NavigationGroup[] = [
   { name: 'People', pageKeys: ['characters', 'guilds', 'citizens'] },
   { name: 'Play', pageKeys: ['schedule', 'games'] },
   { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals', 'citadel-tactics'] },
+  { name: 'Tactics', pageKeys: ['tactical-puzzles'] },
   { name: 'Tools', pageKeys: ['skill-checks', 'campaign-objectives', 'event'] }
 ];
 

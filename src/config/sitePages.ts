@@ -3,6 +3,7 @@ import {
   Briefcase,
   CalendarDays,
   ClipboardList,
+  Dices,
   GitBranch,
   Home,
   Newspaper,
@@ -30,6 +31,7 @@ export type SitePageKey =
   | 'arcane-locks'
   | 'broken-seals'
   | 'citadel-tactics'
+  | 'tactical-puzzles'
   | 'campaign-objectives'
   | 'event'
   | 'skill-checks'
@@ -140,6 +142,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Hellknight-themed PF2e class auto battler prototype.',
     icon: Swords,
     routePrefixes: ['/citadel-tactics']
+  },
+  {
+    key: 'tactical-puzzles',
+    name: 'Tactical Puzzles',
+    href: '/tactical-puzzles',
+    description: 'Create and solve deterministic Pathfinder 2e combat puzzles.',
+    icon: Dices,
+    routePrefixes: ['/tactical-puzzles']
   },
   {
     key: 'campaign-objectives',

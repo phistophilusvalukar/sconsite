@@ -30,6 +30,7 @@ const CardGamePage = lazy(() => import('./pages/CardGamePage'));
 const BrokenSealsPage = lazy(() => import('./features/broken-seals/routes/BrokenSealsPage'));
 const CampaignObjectivesPage = lazy(() => import('./features/campaign-objectives/routes/CampaignObjectivesPage'));
 const HellknightAutobattlerPage = lazy(() => import('./features/hellknight-autobattler/routes/HellknightAutobattlerPage'));
+const TacticalPuzzlesPage = lazy(() => import('./features/tactical-puzzles/routes/TacticalPuzzlesPage'));
 
 function RouteFallback() {
   return (
@@ -72,6 +73,7 @@ function AppRoutes() {
         <Route path="/arcane-locks/:sessionId" element={<PageGate pageKey="arcane-locks"><ArcaneLocksPage /></PageGate>} />
         <Route path="/broken-seals" element={<PageGate pageKey="broken-seals"><BrokenSealsPage /></PageGate>} />
         <Route path="/citadel-tactics" element={<PageGate pageKey="citadel-tactics"><HellknightAutobattlerPage /></PageGate>} />
+        <Route path="/tactical-puzzles" element={<PageGate pageKey="tactical-puzzles"><TacticalPuzzlesPage /></PageGate>} />
         <Route path="/campaign-objectives" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
         <Route path="/campaign-objectives/:campaignSlug" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
         <Route path="/campaign-objectives/:campaignSlug/parties/:partyId" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
