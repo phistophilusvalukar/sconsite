@@ -3,12 +3,15 @@ import { units } from '../data/hellknightAutobattler';
 import {
   addRoundSupply,
   createUnitPool,
+  getBankInterest,
   getMaximumRarityForRound,
   getShopRerollCost,
+  getUnitCopiesForTier,
   getUnitPrice,
   getUnitRarity,
   getUnitSellValue,
   removeShopOffer,
+  returnUnitToPool,
   rollBattleItemDrop,
   rollUnitShop,
   takeUnitFromPool
@@ -84,6 +87,19 @@ describe('Citadel Tactics unit shop', () => {
     expect(getUnitSellValue({ ...owned, tier: 1 })).toBe(getUnitPrice(unit));
     expect(getUnitSellValue({ ...owned, tier: 2 })).toBe(getUnitPrice(unit) * 3);
     expect(getUnitSellValue({ ...owned, tier: 3 })).toBe(getUnitPrice(unit) * 9);
+  });
+
+  it('returns every combined copy of a sold unit to the available pool', () => {
+    const unit = units[0];
+    const depletedPool = { ...createUnitPool(0), [unit.id]: 1 };
+
+    expect(returnUnitToPool(depletedPool, unit.id, getUnitCopiesForTier(1))[unit.id]).toBe(2);
+    expect(returnUnitToPool(depletedPool, unit.id, getUnitCopiesForTier(2))[unit.id]).toBe(4);
+    expect(returnUnitToPool(depletedPool, unit.id, getUnitCopiesForTier(3))[unit.id]).toBe(10);
+  });
+
+  it('awards one bank-interest gold for every ten unspent gold', () => {
+    expect([0, 5, 9, 10, 19, 20, 57, 100].map(getBankInterest)).toEqual([0, 0, 0, 1, 1, 2, 5, 10]);
   });
 
   it('rolls battle drops deterministically with both drops and no-drop outcomes', () => {

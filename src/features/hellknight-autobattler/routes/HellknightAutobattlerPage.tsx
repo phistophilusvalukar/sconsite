@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, DragEvent, MouseEvent } from 'react';
-import { Coins, Crosshair, Dices, Hourglass, Package, Play, RefreshCw, Shield, ShoppingBag, Sparkles, Swords } from 'lucide-react';
+import { Coins, Dices, Hourglass, Package, Play, RefreshCw, Shield, ShoppingBag, Sparkles, Swords } from 'lucide-react';
 import {
   boardSlots as initialBoardSlots,
   items,
@@ -24,6 +24,7 @@ import {
 import {
   addRoundSupply,
   createUnitPool,
+  getBankInterest,
   getShopRerollCost,
   getUnitPrice,
   getUnitRarity,
@@ -72,7 +73,7 @@ interface CombatResult {
 
 const playerNames = ['You', 'Avarice Trial', 'Ink Rack', 'Citadel Nail', 'Black Archive', 'Gate Signifer', 'Pyre Marshal', 'Torrent Bailiff'];
 const maxPlayers = 8;
-const startingGold = 12;
+const startingGold = 5;
 const benchLimit = 9;
 const roundShopSize = 5;
 
@@ -302,7 +303,7 @@ export default function HellknightAutobattlerPage() {
     });
     const won = simulation.winner === 'player';
     const damage = won ? 0 : Math.max(4, round + simulation.survivingEnemyUnits * 3);
-    const interest = Math.min(5, Math.floor(gold / 10));
+    const interest = getBankInterest(gold);
     const streakGold = Math.min(3, Math.floor(Math.abs(streak) / 2));
     const roundGold = 5 + (won ? 1 : 0) + interest + streakGold;
     const nextRound = round + 1;
@@ -322,11 +323,11 @@ export default function HellknightAutobattlerPage() {
       opponent,
       won,
       damage,
-      summary: `${won ? 'Victory' : simulation.winner === 'draw' ? 'Draw' : 'Defeat'} against ${opponent}. Earned ${roundGold} gold${droppedItem ? ` and recovered ${droppedItem.name}` : ''}.`,
+      summary: `${won ? 'Victory' : simulation.winner === 'draw' ? 'Draw' : 'Defeat'} against ${opponent}. Earned ${roundGold} gold${interest > 0 ? `, including ${interest} bank interest` : ''}${droppedItem ? `, and recovered ${droppedItem.name}` : ''}.`,
       simulation
     });
     setLog(current => [
-      `${won ? 'Won' : simulation.winner === 'draw' ? 'Drew' : 'Lost'} round ${round} vs ${opponent}; ${roundGold} gold${droppedItem ? `, ${droppedItem.name} dropped` : ', no item drop'}.`,
+      `${won ? 'Won' : simulation.winner === 'draw' ? 'Drew' : 'Lost'} round ${round} vs ${opponent}; ${roundGold} gold${interest > 0 ? ` (${interest} bank interest)` : ''}${droppedItem ? `, ${droppedItem.name} dropped` : ', no item drop'}.`,
       ...simulation.ledger.slice(0, 4),
       ...current
     ].slice(0, 7));
@@ -455,6 +456,14 @@ export default function HellknightAutobattlerPage() {
                           <>
                             <strong>{unit.pf2Class}</strong>
                             <span>Tier {unit.tier} / HP {effectiveStats?.health ?? unit.health}</span>
+                            {unit.items.length > 0 && (
+                              <span className="board-item-slots" aria-label={`${unit.items.length} equipped item${unit.items.length === 1 ? '' : 's'}`}>
+                                {unit.items.map((itemId, itemIndex) => {
+                                  const item = getItem(itemId);
+                                  return <span key={`${itemId}-${itemIndex}`} className="board-item-slot" title={item.name}>{item.name}</span>;
+                                })}
+                              </span>
+                            )}
                           </>
                         ) : (
                           <span>{selectedUnitId ? 'Place' : `${slot.q},${slot.r}`}</span>
@@ -480,7 +489,6 @@ export default function HellknightAutobattlerPage() {
                     }}
                     onDragStart={(event) => startUnitDrag(unit.instanceId, event)}
                     onDragEnd={() => setDraggedUnitId(null)}
-                    onRecall={() => recallUnit(unit.instanceId)}
                     onHoverUnit={showUnitTooltip}
                     onMoveTooltip={moveTooltip}
                     onLeaveTooltip={() => setHoveredUnit(null)}
@@ -753,16 +761,20 @@ function FloatingUnitTooltip({ target }: { target: HoveredUnit | null }) {
   };
 
   if (target.kind === 'combat') {
+    const itemNames = target.unit.items.map(itemId => getItem(itemId).name);
     return (
       <aside className="unit-tooltip floating-unit-tooltip" style={style} role="tooltip">
         <strong>{target.unit.name}</strong>
         <span>{target.unit.pf2Class} / {target.unit.team}</span>
         <span>HP {target.unit.hp}/{target.unit.maxHp}</span>
         <span>Range {target.unit.range} / Tier {target.unit.tier}</span>
+        {itemNames.length > 0 && <span>Items: {itemNames.join(' / ')}</span>}
         <span>{target.unit.status === 'fleeing' ? 'Fleeing' : target.unit.alive ? 'Fighting' : 'Defeated'}</span>
       </aside>
     );
   }
+
+  const itemNames = 'items' in target.unit ? target.unit.items.map(itemId => getItem(itemId).name) : [];
 
   return (
     <aside className="unit-tooltip floating-unit-tooltip" style={style} role="tooltip">
@@ -770,6 +782,7 @@ function FloatingUnitTooltip({ target }: { target: HoveredUnit | null }) {
       <span>{target.unit.pf2Class} / {target.unit.role}</span>
       <span>HP {target.stats.health} / AD {target.stats.attackDamage} / MD {target.stats.magicDamage}</span>
       <span>AS {target.stats.attackSpeed} / Range {target.stats.range} / Slots {target.stats.spellSlots}</span>
+      {itemNames.length > 0 && <span>Items: {itemNames.join(' / ')}</span>}
       {target.stats.edictNotes.length > 0 && <span>{target.stats.edictNotes.join(' / ')}</span>}
       <span>{target.unit.traits.join(' - ')}</span>
     </aside>
@@ -904,7 +917,6 @@ function UnitChip({
   onSelect,
   onDragStart,
   onDragEnd,
-  onRecall,
   onHoverUnit,
   onMoveTooltip,
   onLeaveTooltip
@@ -914,7 +926,6 @@ function UnitChip({
   onSelect: () => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
   onDragEnd: () => void;
-  onRecall: () => void;
   onHoverUnit: (unit: OwnedUnit, event: MouseEvent<HTMLElement>) => void;
   onMoveTooltip: (event: MouseEvent<HTMLElement>) => void;
   onLeaveTooltip: () => void;
@@ -934,9 +945,6 @@ function UnitChip({
         <strong>{unit.pf2Class}</strong>
         <span>{unit.name}</span>
         <small>Tier {unit.tier} / {unit.items.length}/2 items</small>
-      </button>
-      <button type="button" aria-label={`Recall ${unit.name}`} onClick={onRecall}>
-        <Crosshair className="h-4 w-4" />
       </button>
     </article>
   );

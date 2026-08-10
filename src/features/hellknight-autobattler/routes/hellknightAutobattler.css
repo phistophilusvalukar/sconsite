@@ -254,6 +254,30 @@
   font-weight: 800;
 }
 
+.square-cell .board-item-slots {
+  position: absolute;
+  right: 0.3rem;
+  bottom: 0.3rem;
+  left: 0.3rem;
+  display: flex;
+  gap: 0.2rem;
+  justify-content: center;
+}
+
+.square-cell .board-item-slot {
+  overflow: hidden;
+  max-width: 48%;
+  border: 1px solid rgba(96, 165, 250, 0.58);
+  border-radius: 999px;
+  background: rgba(30, 64, 175, 0.5);
+  color: #dbeafe;
+  padding: 0.08rem 0.3rem;
+  font-size: 0.58rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .combat-arena {
   --combat-grid-size: min(420px, calc(100% - 2rem));
   position: relative;
@@ -480,7 +504,7 @@
 
 .unit-chip {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 36px;
+  grid-template-columns: minmax(150px, 1fr);
   overflow: visible;
   min-width: 230px;
   border: 1px solid rgba(148, 163, 184, 0.24);
@@ -503,6 +527,7 @@
   justify-items: start;
   gap: 0.12rem;
   text-align: left;
+  width: 100%;
 }
 
 .unit-chip strong,
@@ -684,6 +709,7 @@
 
 .shop-card {
   min-height: 94px;
+  padding: 0;
 }
 
 .shop-card:hover {
@@ -851,16 +877,20 @@
   display: grid;
   gap: 0.18rem;
   width: 100%;
+  min-height: 94px;
   border: 0;
   background: transparent;
   color: inherit;
-  padding: 0 3rem 0 0;
+  padding: 0.7rem 5.2rem 0.7rem 0.7rem;
   text-align: left;
 }
 
 .shop-buy {
-  justify-self: end;
-  margin-top: 0.45rem;
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.7rem;
+  z-index: 1;
+  margin: 0;
   border: 1px solid rgba(250, 204, 21, 0.34);
   border-radius: 5px;
   background: rgba(120, 53, 15, 0.45);

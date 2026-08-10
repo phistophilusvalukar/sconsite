@@ -61,6 +61,10 @@ export function getUnitSellValue(unit: OwnedUnit) {
   return getUnitPrice(unit) * getUnitCopiesForTier(unit.tier);
 }
 
+export function getBankInterest(gold: number) {
+  return Math.floor(Math.max(0, gold) / 10);
+}
+
 export function takeUnitFromPool(pool: UnitPool, unitId: string): UnitPool {
   return { ...pool, [unitId]: Math.max(0, (pool[unitId] ?? 0) - 1) };
 }
