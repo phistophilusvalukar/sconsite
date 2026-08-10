@@ -1,4 +1,4 @@
-import { items, units, type ItemDefinition, type UnitDefinition } from '../data/hellknightAutobattler';
+import { items, units, type ItemDefinition, type OwnedUnit, type UnitDefinition } from '../data/hellknightAutobattler';
 
 export type UnitRarity = 1 | 2 | 3 | 4 | 5;
 export type UnitPool = Record<string, number>;
@@ -8,6 +8,8 @@ export interface ShopOffer {
   unit: UnitDefinition;
   rarity: UnitRarity;
 }
+
+export const SHOP_REROLL_COST = 2;
 
 const rarityWeights: Record<UnitRarity, number> = { 1: 55, 2: 25, 3: 12, 4: 6, 5: 2 };
 
@@ -46,12 +48,33 @@ export function createUnitPool(copiesPerUnit = 5): UnitPool {
   return Object.fromEntries(units.map(unit => [unit.id, copiesPerUnit]));
 }
 
+export function addRoundSupply(pool: UnitPool, copiesPerUnit = 1): UnitPool {
+  const copies = Math.max(0, copiesPerUnit);
+  return Object.fromEntries(units.map(unit => [unit.id, (pool[unit.id] ?? 0) + copies]));
+}
+
+export function getUnitCopiesForTier(tier: OwnedUnit['tier']) {
+  return 3 ** (tier - 1);
+}
+
+export function getUnitSellValue(unit: OwnedUnit) {
+  return getUnitPrice(unit) * getUnitCopiesForTier(unit.tier);
+}
+
 export function takeUnitFromPool(pool: UnitPool, unitId: string): UnitPool {
   return { ...pool, [unitId]: Math.max(0, (pool[unitId] ?? 0) - 1) };
 }
 
 export function returnUnitToPool(pool: UnitPool, unitId: string, copies: number): UnitPool {
   return { ...pool, [unitId]: (pool[unitId] ?? 0) + Math.max(0, copies) };
+}
+
+export function removeShopOffer(offers: ShopOffer[], offerId: string): ShopOffer[] {
+  return offers.filter(offer => offer.offerId !== offerId);
+}
+
+export function getShopRerollCost(offers: ShopOffer[]) {
+  return offers.length === 0 ? 0 : SHOP_REROLL_COST;
 }
 
 export function rollUnitShop(seed: number, round: number, pool: UnitPool, size = 5): ShopOffer[] {

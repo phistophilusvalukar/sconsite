@@ -22,15 +22,21 @@ import {
   type CombatSimulationResult
 } from '../engine/combatEngine';
 import {
+  addRoundSupply,
   createUnitPool,
+  getShopRerollCost,
   getUnitPrice,
   getUnitRarity,
+  getUnitCopiesForTier,
+  getUnitSellValue,
+  removeShopOffer,
   returnUnitToPool,
   rollBattleItemDrop,
   rollUnitShop,
   takeUnitFromPool,
   type ShopOffer
-} from '../engine/shopEngine';import './hellknightAutobattler.css';
+} from '../engine/shopEngine';
+import './hellknightAutobattler.css';
 
 type Phase = 'lobby' | 'shop' | 'combat' | 'item-shop';
 type ActiveSynergy = { trait: UnitTrait; count: number; tier: number };
@@ -86,6 +92,7 @@ export default function HellknightAutobattlerPage() {
   const [board, setBoard] = useState<BoardSlot[]>(initialBoardSlots);
   const [inventory, setInventory] = useState<string[]>(['sturdy-shield']);
   const [unitPool, setUnitPool] = useState(createUnitPool);
+  const [shop, setShop] = useState<ShopOffer[]>(() => rollUnitShop(17, 1, createUnitPool(), roundShopSize));
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [inspectedShopUnit, setInspectedShopUnit] = useState<UnitDefinition | null>(null);
   const [inspectedItem, setInspectedItem] = useState<ItemDefinition | null>(null);
@@ -96,7 +103,6 @@ export default function HellknightAutobattlerPage() {
   const [log, setLog] = useState<string[]>(['Queue opens under black iron banners.']);
 
   const lobbyPlayers = useMemo(() => buildLobby(lobbyTick), [lobbyTick]);
-  const shop = useMemo(() => rollUnitShop(shopSeed, round, unitPool, roundShopSize), [shopSeed, round, unitPool]);
   const itemShop = useMemo(() => buildItemShop(itemSeed, round), [itemSeed, round]);
   const army = useMemo(() => board
     .map(slot => bench.find(unit => unit.instanceId === slot.unitId))
@@ -147,7 +153,10 @@ export default function HellknightAutobattlerPage() {
 
   function buyUnit(offer: ShopOffer) {
     const { unit } = offer;
-    if (gold < unit.cost || rosterFull || (unitPool[unit.id] ?? 0) <= 0) return;
+    if (!shop.some(currentOffer => currentOffer.offerId === offer.offerId)
+      || gold < unit.cost
+      || rosterFull
+      || (unitPool[unit.id] ?? 0) <= 0) return;
     const ownedUnit: OwnedUnit = {
       ...unit,
       instanceId: `${unit.id}-${nextInstance}`,
@@ -156,11 +165,11 @@ export default function HellknightAutobattlerPage() {
     };
     setBench(current => [...current, ownedUnit]);
     setUnitPool(current => takeUnitFromPool(current, unit.id));
+    setShop(current => removeShopOffer(current, offer.offerId));
     setNextInstance(current => current + 1);
     setGold(current => current - unit.cost);
-    setShopSeed(current => current + 31);
     setInspectedShopUnit(null);
-    setLog(current => [`Bought rarity ${offer.rarity} ${unit.name}; the roster was dealt again.`, ...current].slice(0, 6));
+    setLog(current => [`Bought rarity ${offer.rarity} ${unit.name}; its shop slot is now empty.`, ...current].slice(0, 6));
   }
 
   function inspectShopUnit(unit: UnitDefinition) {
@@ -176,10 +185,16 @@ export default function HellknightAutobattlerPage() {
   }
 
   function refreshShop() {
-    if (gold < 2) return;
-    setGold(current => current - 2);
-    setShopSeed(current => current + 31);
-    setLog(current => ['The quartermaster burns a writ and deals five new recruits.', ...current].slice(0, 6));
+    const rerollCost = getShopRerollCost(shop);
+    if (gold < rerollCost) return;
+    const nextShopSeed = shopSeed + 31;
+    setGold(current => current - rerollCost);
+    setShopSeed(nextShopSeed);
+    setShop(rollUnitShop(nextShopSeed, round, unitPool, roundShopSize));
+    setLog(current => [
+      `${rerollCost === 0 ? 'The empty roster is refilled' : 'The quartermaster burns a writ'} and deals five new recruits.`,
+      ...current
+    ].slice(0, 6));
   }
 
   function placeUnit(unitId: string, slotIndex: number) {
@@ -245,9 +260,9 @@ export default function HellknightAutobattlerPage() {
   function sellUnit(unitId: string) {
     const unit = bench.find(candidate => candidate.instanceId === unitId);
     if (!unit) return;
-    const refund = Math.max(1, Math.floor(unit.cost / 2));
+    const refund = getUnitSellValue(unit);
     setBench(current => current.filter(candidate => candidate.instanceId !== unitId));
-    setUnitPool(current => returnUnitToPool(current, unit.id, 3 ** (unit.tier - 1)));
+    setUnitPool(current => returnUnitToPool(current, unit.id, getUnitCopiesForTier(unit.tier)));
     setBoard(current => current.map(slot => slot.unitId === unitId ? { ...slot, unitId: null } : slot));
     setInventory(current => [...current, ...unit.items]);
     setGold(current => current + refund);
@@ -291,6 +306,8 @@ export default function HellknightAutobattlerPage() {
     const streakGold = Math.min(3, Math.floor(Math.abs(streak) / 2));
     const roundGold = 5 + (won ? 1 : 0) + interest + streakGold;
     const nextRound = round + 1;
+    const nextShopSeed = shopSeed + 13;
+    const nextUnitPool = addRoundSupply(unitPool);
     const droppedItem = rollBattleItemDrop(itemSeed + shopSeed, round, won);
 
     setPhase('combat');
@@ -313,8 +330,10 @@ export default function HellknightAutobattlerPage() {
       ...simulation.ledger.slice(0, 4),
       ...current
     ].slice(0, 7));
+    setUnitPool(nextUnitPool);
     setRound(nextRound);
-    setShopSeed(current => current + 13);
+    setShopSeed(nextShopSeed);
+    setShop(rollUnitShop(nextShopSeed, nextRound, nextUnitPool, roundShopSize));
     setItemSeed(current => current + 19);
   }
 
@@ -615,7 +634,7 @@ function UnitDetailPanel({
 
   const isOwned = 'instanceId' in unit;
   const itemDetails = isOwned ? unit.items.map(getItem) : [];
-  const refund = Math.max(1, Math.floor(unit.cost / 2));
+  const refund = isOwned ? getUnitSellValue(unit) : 0;
   const rarity = getUnitRarity(unit);
   const effectiveStats = getEffectiveUnitStats(unit, activeSynergies, isDeployed);
   const spells = getUnitSpells(unit);
@@ -806,12 +825,14 @@ function ShopPanel({
   onMoveTooltip: (event: MouseEvent<HTMLElement>) => void;
   onLeaveTooltip: () => void;
 }) {
+  const rerollCost = getShopRerollCost(shop);
+
   return (
     <section className="side-section">
       <header>
         <h2><ShoppingBag className="h-4 w-4" /> Roster</h2>
-        <button type="button" onClick={onRefresh} disabled={gold < 2}>
-          <RefreshCw className="h-4 w-4" /> 2g
+        <button type="button" onClick={onRefresh} disabled={gold < rerollCost}>
+          <RefreshCw className="h-4 w-4" /> {rerollCost}g
         </button>
       </header>
       <div className="shop-list">
