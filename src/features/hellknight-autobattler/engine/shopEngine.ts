@@ -1,4 +1,5 @@
 import { items, units, type ItemDefinition, type OwnedUnit, type UnitDefinition } from '../data/hellknightAutobattler';
+import { calculateUnitBalanceMetrics } from './balanceMetrics';
 
 export type UnitRarity = 1 | 2 | 3 | 4 | 5;
 export type UnitPool = Record<string, number>;
@@ -18,13 +19,7 @@ const rankedUnitIds = [...units]
   .map(unit => unit.id);
 
 export function calculateUnitStatScore(unit: UnitDefinition) {
-  const speedAttacks = unit.attackSpeed === 'slow' ? 1 : unit.attackSpeed === 'medium' ? 2 : 3;
-  return Math.round(
-    unit.health * 0.26
-    + unit.attackDamage * speedAttacks * 4
-    + unit.magicDamage * (1 + unit.spellSlots * 0.35)
-    + unit.range * 12
-  );
+  return calculateUnitBalanceMetrics(unit).combatValue;
 }
 
 export function getUnitRarity(unit: UnitDefinition): UnitRarity {

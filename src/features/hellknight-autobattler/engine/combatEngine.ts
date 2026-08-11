@@ -2,6 +2,18 @@ import { items, synergies, units, type BoardSlot, type OwnedUnit, type UnitTrait
 
 export type CombatTeam = 'player' | 'enemy';
 
+export type CombatUnitEffect =
+  | 'warded'
+  | 'raging'
+  | 'psyche'
+  | 'panache'
+  | 'hexed'
+  | 'burning'
+  | 'pinned'
+  | 'hunted'
+  | 'exposed'
+  | 'fleeing';
+
 export interface CombatantInput {
   unit: OwnedUnit;
   slot: BoardSlot;
@@ -21,7 +33,15 @@ export interface CombatFrameUnit {
   alive: boolean;
   casting: boolean;
   attacking: boolean;
+  visualAction: CombatVisualAction | null;
   status: 'fleeing' | null;
+  effects: CombatUnitEffect[];
+  items: string[];
+}
+
+export interface CombatVisualAction {
+  kind: 'melee' | 'ranged' | 'magic';
+  targetIds: string[];
 }
 
 export interface CombatFrame {
@@ -40,7 +60,6 @@ export interface CombatSimulationResult {
 }
 
 interface Combatant extends CombatFrameUnit {
-  items: string[];
   role: OwnedUnit['role'];
   traits: UnitTrait[];
   attackDamage: number;
@@ -123,6 +142,11 @@ export function simulateCombat({
   let latestMessage = frames[0].message;
 
   for (let timeMs = tickMs; timeMs <= maxDurationMs; timeMs += tickMs) {
+    combatants.forEach(unit => {
+      unit.attacking = false;
+      unit.casting = false;
+      unit.visualAction = null;
+    });
     const livingPlayer = combatants.filter(unit => unit.alive && unit.team === 'player');
     const livingEnemy = combatants.filter(unit => unit.alive && unit.team === 'enemy');
     if (livingPlayer.length === 0 || livingEnemy.length === 0) break;
@@ -130,8 +154,6 @@ export function simulateCombat({
     const actedUnitIds = new Set<string>();
     for (const unit of combatants.filter(candidate => candidate.alive).sort((a, b) => a.id.localeCompare(b.id))) {
       if (actedUnitIds.has(unit.id)) continue;
-      unit.attacking = false;
-      unit.casting = false;
       applyPeriodicEffects(unit, combatants, timeMs, ledger);
       if (!unit.alive) continue;
       if (unit.fleeingUntilMs > timeMs && unit.fleeingFrom) {
@@ -184,6 +206,10 @@ export function simulateCombat({
         applyOnHitEffects(unit, target, timeMs);
         const fearMessage = applyFearGem(unit, target, timeMs);
         unit.attacking = true;
+        unit.visualAction = {
+          kind: unit.range > 1 ? 'ranged' : 'melee',
+          targetIds: [target.id]
+        };
         unit.attackCount += 1;
         landedAttacks += 1;
         totalDamage += damage;
@@ -244,7 +270,9 @@ function createCombatant(input: CombatantInput, team: CombatTeam, synergyTiers: 
     alive: true,
     casting: false,
     attacking: false,
+    visualAction: null,
     status: null,
+    effects: [],
     items: input.unit.items,
     role: input.unit.role,
     traits: input.unit.traits,
@@ -325,6 +353,7 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
     unit.wardHp += Math.round(unit.maxHp * 0.12);
     unit.hasOpened = true;
     unit.casting = true;
+    unit.visualAction = { kind: 'magic', targetIds: [unit.id] };
     return `${unit.name} enters Rage.`;
   }
 
@@ -337,6 +366,7 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
       ally.hp = Math.min(ally.maxHp, ally.hp + healing);
       unit.spellSlots -= 1;
       unit.casting = true;
+      unit.visualAction = { kind: 'magic', targetIds: [ally.id] };
       return `${unit.name} uses Divine Font on ${ally.name} for ${healing}.`;
     }
   }
@@ -355,6 +385,7 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
     unit.spellSlots -= 1;
     unit.hasOpened = true;
     unit.casting = true;
+    unit.visualAction = { kind: 'magic', targetIds: frontLine.map(ally => ally.id) };
     return `${unit.name} raises a primal ward of ${ward} over the front line.`;
   }
 
@@ -367,6 +398,7 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
     applyOnHitEffects(unit, target, timeMs);
     unit.hasOpened = true;
     unit.casting = true;
+    unit.visualAction = { kind: 'magic', targetIds: [target.id] };
     return `${unit.name} triggers Overdrive on ${target.name} for ${damage}.`;
   }
 
@@ -376,6 +408,7 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
     const damage = Math.round(unit.magicDamage * 0.75);
     targets.forEach(target => applyDamage(target, damage, unit, combatants, timeMs, 'spell'));
     unit.casting = true;
+    unit.visualAction = { kind: 'magic', targetIds: targets.map(target => target.id) };
     unit.attackCount += 1;
     return `${unit.name} unleashes Impulse Junction for ${damage}.`;
   }
@@ -398,6 +431,7 @@ function tryPriorityAction(unit: Combatant, combatants: Combatant[], timeMs: num
     unit.castCount += 1;
     if (unit.pf2Class === 'Psychic' && unit.castCount === 2) unit.psycheUntilMs = timeMs + 5000;
     unit.casting = true;
+    unit.visualAction = { kind: 'magic', targetIds: [target.id] };
     unit.hasOpened = true;
     if (!target.alive) return `${unit.name} casts ${unit.pf2Class === 'Magus' ? 'Spellstrike' : unit.pf2Class === 'Witch' ? 'Hex Cantrip' : 'a spell'} and drops ${target.name}.`;
     return fearMessage ?? `${unit.name} casts ${unit.pf2Class === 'Magus' ? 'Spellstrike' : unit.pf2Class === 'Witch' ? 'Hex Cantrip' : 'a spell'} on ${target.name} for ${damage}.`;
@@ -428,6 +462,7 @@ function castWizardForceBarrage(wizard: Combatant, combatants: Combatant[], time
   wizard.spellSlots -= 1;
   wizard.castCount += 1;
   wizard.casting = true;
+  wizard.visualAction = { kind: 'magic', targetIds: targets.map(target => target.id) };
   wizard.hasOpened = true;
   return `${wizard.name} casts Force Barrage across the battlefield, hitting ${targets.length} enem${targets.length === 1 ? 'y' : 'ies'} for ${wizard.magicDamage}.`;
 }
@@ -452,6 +487,10 @@ function summonWizardMinion(wizard: Combatant, combatants: Combatant[], summonKi
   summon.name = summonKind === 'zombie' ? 'Zombie' : 'Elemental';
   summon.q = position.q;
   summon.r = position.r;
+  summon.maxHp = Math.round(summon.maxHp * 0.55);
+  summon.hp = summon.maxHp;
+  summon.attackDamage = Math.round(summon.attackDamage * 0.55);
+  summon.magicDamage = Math.round(summon.magicDamage * 0.55);
   summon.spellSlots = 0;
   summon.startedWithSpellSlots = false;
   summon.abilitiesDisabled = true;
@@ -460,6 +499,7 @@ function summonWizardMinion(wizard: Combatant, combatants: Combatant[], summonKi
   wizard.spellSlots -= 1;
   wizard.castCount += 1;
   wizard.casting = true;
+  wizard.visualAction = { kind: 'magic', targetIds: [summon.id] };
   wizard.hasOpened = true;
   return `${wizard.name} summons a tier ${wizard.tier} ${summon.name}.`;
 }
@@ -720,6 +760,8 @@ function triggerReactiveStrike(actor: Combatant, combatants: Combatant[], timeMs
   actedUnitIds.add(fighter.id);
   const damage = Math.round(fighter.attackDamage * 0.9);
   applyDamage(actor, damage, fighter, combatants, timeMs, 'physical');
+  fighter.attacking = true;
+  fighter.visualAction = { kind: 'melee', targetIds: [actor.id] };
   return `${fighter.name} uses Reactive Strike on ${actor.name} for ${damage}.`;
 }
 
@@ -751,9 +793,30 @@ function createFrame(timeMs: number, combatants: Combatant[], message: string): 
       alive: unit.alive,
       casting: unit.casting,
       attacking: unit.attacking,
-      status: unit.status
+      visualAction: unit.visualAction
+        ? { ...unit.visualAction, targetIds: [...unit.visualAction.targetIds] }
+        : null,
+      status: unit.status,
+      effects: getFrameEffects(unit, combatants, timeMs),
+      items: [...unit.items]
     }))
   };
+}
+
+function getFrameEffects(unit: Combatant, combatants: Combatant[], timeMs: number): CombatUnitEffect[] {
+  if (!unit.alive) return [];
+  const effects: CombatUnitEffect[] = [];
+  if (unit.wardHp > 0) effects.push('warded');
+  if (unit.pf2Class === 'Barbarian' && unit.abilityUsed) effects.push('raging');
+  if (unit.psycheUntilMs > timeMs) effects.push('psyche');
+  if (unit.panacheReady) effects.push('panache');
+  if (unit.hexed) effects.push('hexed');
+  if (unit.burnUntilMs > timeMs) effects.push('burning');
+  if (unit.pinnedUntilMs > timeMs) effects.push('pinned');
+  if (combatants.some(source => source.alive && source.team !== unit.team && source.huntedTargetId === unit.id)) effects.push('hunted');
+  if (combatants.some(source => source.alive && source.team !== unit.team && source.vulnerableTargetId === unit.id)) effects.push('exposed');
+  if (unit.status === 'fleeing') effects.push('fleeing');
+  return effects;
 }
 
 function getActiveSynergyTiers(army: OwnedUnit[]) {

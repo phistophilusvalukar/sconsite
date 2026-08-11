@@ -19,12 +19,13 @@ import {
   simulateCombat,
   type CombatFrame,
   type CombatFrameUnit,
-  type CombatSimulationResult
+  type CombatSimulationResult,
+  type CombatUnitEffect
 } from '../engine/combatEngine';
+import { calculateUnitBalanceMetrics } from '../engine/balanceMetrics';
 import {
   addRoundSupply,
   createUnitPool,
-  getBankInterest,
   getShopRerollCost,
   getUnitPrice,
   getUnitRarity,
@@ -37,6 +38,28 @@ import {
   takeUnitFromPool,
   type ShopOffer
 } from '../engine/shopEngine';
+import {
+  EXPERIENCE_PURCHASE_COST,
+  MATCH_EXPERIENCE,
+  MATCH_WIN_GOLD,
+  PURCHASE_EXPERIENCE,
+  applyRoundOutcomes,
+  areAllActiveParticipantsReady,
+  calculateBattleOutcomeDamage,
+  createMatchParticipants,
+  createRoundPairings,
+  getExperienceRequired,
+  getLastStanding,
+  getTeamCapacity,
+  markNpcParticipantsReady,
+  purchaseExperience,
+  resolveNpcPairing,
+  setParticipantReady,
+  trimBoardToCapacity,
+  type BattleOutcome,
+  type MatchParticipant,
+  type RoundPairing
+} from '../engine/matchEngine';
 import './hellknightAutobattler.css';
 
 type Phase = 'lobby' | 'shop' | 'combat' | 'item-shop';
@@ -55,7 +78,7 @@ type HoveredUnit =
   | { kind: 'unit'; unit: UnitDefinition | OwnedUnit; stats: EffectiveUnitStats; x: number; y: number }
   | { kind: 'combat'; unit: CombatFrameUnit; x: number; y: number };
 
-interface PlayerRecord {
+interface LobbyPlayerRecord {
   id: string;
   name: string;
   isPlayer: boolean;
@@ -64,11 +87,17 @@ interface PlayerRecord {
 }
 
 interface CombatResult {
+  round: number;
+  opponentId: string | null;
   opponent: string;
   won: boolean;
-  damage: number;
+  loserDamage: number;
   summary: string;
   simulation: CombatSimulationResult;
+  participants: MatchParticipant[];
+  pairings: RoundPairing[];
+  playerPairing: RoundPairing;
+  rewardItemId: string | null;
 }
 
 const playerNames = ['You', 'Avarice Trial', 'Ink Rack', 'Citadel Nail', 'Black Archive', 'Gate Signifer', 'Pyre Marshal', 'Torrent Bailiff'];
@@ -76,6 +105,61 @@ const maxPlayers = 8;
 const startingGold = 5;
 const benchLimit = 9;
 const roundShopSize = 5;
+
+type SpellShape = 'orb' | 'shard' | 'diamond' | 'star' | 'cross' | 'leaf' | 'hex' | 'gear' | 'eye';
+type EffectTone = 'buff' | 'debuff';
+
+interface ProjectileTheme {
+  primary: string;
+  secondary: string;
+  glow: string;
+  shape: SpellShape;
+}
+
+const projectileThemes: Record<string, ProjectileTheme> = {
+  Fighter: { primary: '#f59e0b', secondary: '#fef3c7', glow: '#fbbf24', shape: 'shard' },
+  Barbarian: { primary: '#ef4444', secondary: '#fed7aa', glow: '#f97316', shape: 'shard' },
+  Champion: { primary: '#eab308', secondary: '#ffffff', glow: '#fde047', shape: 'cross' },
+  Ranger: { primary: '#22c55e', secondary: '#d9f99d', glow: '#4ade80', shape: 'leaf' },
+  Rogue: { primary: '#a855f7', secondary: '#fbcfe8', glow: '#d946ef', shape: 'shard' },
+  Wizard: { primary: '#7c3aed', secondary: '#a5f3fc', glow: '#8b5cf6', shape: 'diamond' },
+  Sorcerer: { primary: '#f43f5e', secondary: '#fed7aa', glow: '#fb7185', shape: 'star' },
+  Cleric: { primary: '#38bdf8', secondary: '#ffffff', glow: '#7dd3fc', shape: 'cross' },
+  Druid: { primary: '#16a34a', secondary: '#bef264', glow: '#4ade80', shape: 'leaf' },
+  Witch: { primary: '#9333ea', secondary: '#bbf7d0', glow: '#c084fc', shape: 'hex' },
+  Magus: { primary: '#4f46e5', secondary: '#67e8f9', glow: '#818cf8', shape: 'diamond' },
+  Gunslinger: { primary: '#94a3b8', secondary: '#e0f2fe', glow: '#38bdf8', shape: 'shard' },
+  Inventor: { primary: '#f97316', secondary: '#67e8f9', glow: '#fb923c', shape: 'gear' },
+  Kineticist: { primary: '#06b6d4', secondary: '#fed7aa', glow: '#22d3ee', shape: 'orb' },
+  Oracle: { primary: '#d946ef', secondary: '#fef08a', glow: '#e879f9', shape: 'eye' },
+  Monk: { primary: '#f59e0b', secondary: '#fef9c3', glow: '#facc15', shape: 'orb' },
+  Swashbuckler: { primary: '#0ea5e9', secondary: '#fde68a', glow: '#38bdf8', shape: 'shard' },
+  Summoner: { primary: '#14b8a6', secondary: '#ddd6fe', glow: '#2dd4bf', shape: 'hex' },
+  Thaumaturge: { primary: '#ea580c', secondary: '#e9d5ff', glow: '#fb923c', shape: 'star' },
+  Psychic: { primary: '#ec4899', secondary: '#a5f3fc', glow: '#f472b6', shape: 'eye' }
+};
+
+const fallbackProjectileTheme: ProjectileTheme = {
+  primary: '#38bdf8',
+  secondary: '#f8fafc',
+  glow: '#7dd3fc',
+  shape: 'orb'
+};
+
+const projectileScaleByTier: Record<CombatFrameUnit['tier'], number> = { 1: 0.9, 2: 1.25, 3: 1.65 };
+
+const combatEffectDetails: Record<CombatUnitEffect, { label: string; shortLabel: string; tone: EffectTone }> = {
+  warded: { label: 'Warded', shortLabel: 'WD', tone: 'buff' },
+  raging: { label: 'Raging', shortLabel: 'RG', tone: 'buff' },
+  psyche: { label: 'Unleashed Psyche', shortLabel: 'PS', tone: 'buff' },
+  panache: { label: 'Panache', shortLabel: 'PN', tone: 'buff' },
+  hexed: { label: 'Hexed', shortLabel: 'HX', tone: 'debuff' },
+  burning: { label: 'Burning', shortLabel: 'BR', tone: 'debuff' },
+  pinned: { label: 'Pinned', shortLabel: 'PI', tone: 'debuff' },
+  hunted: { label: 'Hunted Prey', shortLabel: 'HT', tone: 'debuff' },
+  exposed: { label: 'Exploit Vulnerability', shortLabel: 'EX', tone: 'debuff' },
+  fleeing: { label: 'Fleeing', shortLabel: 'FL', tone: 'debuff' }
+};
 
 export default function HellknightAutobattlerPage() {
   const [phase, setPhase] = useState<Phase>('lobby');
@@ -86,6 +170,11 @@ export default function HellknightAutobattlerPage() {
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [playerLevel, setPlayerLevel] = useState(1);
+  const [playerExperience, setPlayerExperience] = useState(0);
+  const [matchParticipants, setMatchParticipants] = useState<MatchParticipant[]>(() => markNpcParticipantsReady(createMatchParticipants(playerNames)));
+  const [roundSettled, setRoundSettled] = useState(false);
+  const [matchWinner, setMatchWinner] = useState<MatchParticipant | null>(null);
   const [shopSeed, setShopSeed] = useState(17);
   const [itemSeed, setItemSeed] = useState(91);
   const [nextInstance, setNextInstance] = useState(1);
@@ -110,6 +199,12 @@ export default function HellknightAutobattlerPage() {
     .filter((unit): unit is OwnedUnit => Boolean(unit)), [bench, board]);
   const activeSynergies = useMemo(() => getActiveSynergies(army), [army]);
   const armyPower = useMemo(() => calculateArmyPower(army, activeSynergies), [army, activeSynergies]);
+  const vanguardTier = activeSynergies.find(synergy => synergy.trait === 'Vanguard')?.tier ?? 0;
+  const teamCapacity = getTeamCapacity(playerLevel, vanguardTier);
+  const readyParticipants = matchParticipants.filter(participant => !participant.eliminated && participant.health > 0 && participant.ready).length;
+  const activeParticipants = matchParticipants.filter(participant => !participant.eliminated && participant.health > 0).length;
+  const localMatchParticipant = matchParticipants.find(participant => participant.isLocalPlayer) ?? null;
+  const experienceRequired = getExperienceRequired(playerLevel);
   const benchUnits = bench.filter(unit => !board.some(slot => slot.unitId === unit.instanceId));
   const selectedUnit = bench.find(unit => unit.instanceId === selectedUnitId) ?? null;
   const detailUnit: UnitDefinition | OwnedUnit | null = selectedUnit ?? inspectedShopUnit;
@@ -132,6 +227,70 @@ export default function HellknightAutobattlerPage() {
     return () => window.clearTimeout(timer);
   }, [combatPlaybackDone, lastResult, phase, playbackFrameIndex]);
 
+  useEffect(() => {
+    if (phase !== 'combat' || !lastResult || !combatPlaybackDone || roundSettled) return;
+    setRoundSettled(true);
+    const localPlayer = lastResult.participants.find(participant => participant.isLocalPlayer);
+    if (!localPlayer) return;
+    const playerOutcome: BattleOutcome = {
+      pairingId: lastResult.playerPairing.id,
+      participantIds: [localPlayer.id, ...(lastResult.opponentId ? [lastResult.opponentId] : [])],
+      winnerId: lastResult.simulation.winner === 'player'
+        ? localPlayer.id
+        : lastResult.simulation.winner === 'enemy' ? lastResult.opponentId : null,
+      loserId: lastResult.simulation.winner === 'player'
+        ? lastResult.opponentId
+        : lastResult.simulation.winner === 'enemy' ? localPlayer.id : null,
+      damage: lastResult.loserDamage
+    };
+    const npcOutcomes = lastResult.pairings
+      .filter(pairing => pairing.id !== lastResult.playerPairing.id)
+      .map(pairing => resolveNpcPairing(pairing, lastResult.participants, lastResult.round, shopSeed + itemSeed));
+    const settledParticipants = applyRoundOutcomes(lastResult.participants, [playerOutcome, ...npcOutcomes]);
+    const settledLocalPlayer = settledParticipants.find(participant => participant.isLocalPlayer)!;
+    const interest = Math.floor(localPlayer.gold / 10);
+    const matchGold = lastResult.won ? MATCH_WIN_GOLD : 0;
+    const playerDamageTaken = lastResult.simulation.winner === 'enemy' ? lastResult.loserDamage : 0;
+    const opponentDamageTaken = lastResult.simulation.winner === 'player' ? lastResult.loserDamage : 0;
+    const rewardItem = lastResult.rewardItemId ? getItem(lastResult.rewardItemId) : null;
+    const leveledUp = settledLocalPlayer.level > localPlayer.level;
+    const verdict = lastResult.simulation.winner === 'player' ? 'Victory' : lastResult.simulation.winner === 'draw' ? 'Draw' : 'Defeat';
+    const rewardSummary = matchGold > 0
+      ? `${matchGold + interest} gold${interest > 0 ? `, including ${interest} interest` : ''}`
+      : `${interest} interest gold and no match gold`;
+
+    setMatchParticipants(settledParticipants);
+    setGold(settledLocalPlayer.gold);
+    setHealth(settledLocalPlayer.health);
+    setStreak(settledLocalPlayer.streak);
+    setPlayerLevel(settledLocalPlayer.level);
+    setPlayerExperience(settledLocalPlayer.experience);
+    setWins(current => current + (lastResult.simulation.winner === 'player' ? 1 : 0));
+    setLosses(current => current + (lastResult.simulation.winner === 'enemy' ? 1 : 0));
+    if (rewardItem) setInventory(current => [...current, rewardItem.id]);
+    const winner = getLastStanding(settledParticipants);
+    setMatchWinner(winner);
+    setLastResult(current => current ? {
+      ...current,
+      summary: `${verdict} against ${current.opponent}. Awarded ${rewardSummary}${playerDamageTaken > 0 ? `; took ${playerDamageTaken} damage` : ''}${opponentDamageTaken > 0 ? `; dealt ${opponentDamageTaken} commander damage` : ''}${leveledUp ? `; reached level ${settledLocalPlayer.level}` : ''}${rewardItem ? `; recovered ${rewardItem.name}` : ''}.`
+    } : current);
+    setLog(current => [
+      `${verdict} in round ${lastResult.round} vs ${lastResult.opponent}: ${rewardSummary}${playerDamageTaken > 0 ? `, ${playerDamageTaken} damage taken` : ''}${opponentDamageTaken > 0 ? `, ${opponentDamageTaken} commander damage dealt` : ''}.`,
+      `All active commanders gained ${MATCH_EXPERIENCE} XP.${leveledUp ? ` You reached level ${settledLocalPlayer.level}.` : ''}`,
+      ...npcOutcomes.map(outcome => formatNpcOutcome(outcome, settledParticipants)),
+      ...lastResult.simulation.ledger.slice(0, 3),
+      ...current
+    ].slice(0, 9));
+  }, [combatPlaybackDone, itemSeed, lastResult, phase, roundSettled, shopSeed]);
+
+  useEffect(() => {
+    if (army.length <= teamCapacity) return;
+    const trimmed = trimBoardToCapacity(board, teamCapacity);
+    if (trimmed.recalledUnitIds.length === 0) return;
+    setBoard(trimmed.slots);
+    setLog(current => [`Team capacity fell to ${teamCapacity}; ${trimmed.recalledUnitIds.length} excess unit${trimmed.recalledUnitIds.length === 1 ? ' was' : 's were'} recalled.`, ...current].slice(0, 9));
+  }, [army.length, board, teamCapacity]);
+
   function advanceLobby() {
     const nextTick = lobbyTick + 1;
     setLobbyTick(nextTick);
@@ -140,16 +299,21 @@ export default function HellknightAutobattlerPage() {
   }
 
   function startMatch() {
-    const filledLobby = fillLobby(lobbyPlayers);
+    const participants = markNpcParticipantsReady(createMatchParticipants(playerNames));
+    setMatchParticipants(participants);
+    setPlayerLevel(1);
+    setPlayerExperience(0);
+    setHealth(100);
+    setGold(startingGold);
+    setStreak(0);
+    setRoundSettled(false);
+    setMatchWinner(null);
     setPhase('shop');
     setLog([
       `Match sealed with ${lobbyPlayers.length} player${lobbyPlayers.length === 1 ? '' : 's'} and ${maxPlayers - lobbyPlayers.length} automata.`,
       `Round ${round}: buy five offered units, place your line, then submit the verdict.`,
       ...log
     ].slice(0, 7));
-    if (filledLobby.length === 0) {
-      setLobbyTick(1);
-    }
   }
 
   function buyUnit(offer: ShopOffer) {
@@ -199,8 +363,32 @@ export default function HellknightAutobattlerPage() {
   }
 
   function placeUnit(unitId: string, slotIndex: number) {
+    const alreadyDeployed = board.some(slot => slot.unitId === unitId);
+    const replacingUnit = Boolean(board[slotIndex]?.unitId);
+    if (!alreadyDeployed && !replacingUnit && army.length >= teamCapacity) {
+      setLog(current => [`Deployment is capped at ${teamCapacity} units. Gain a level or activate Vanguard tier 3.`, ...current].slice(0, 9));
+      return;
+    }
     setBoard(current => moveUnitOnBoard(current, unitId, slotIndex));
     setSelectedUnitId(null);
+  }
+
+  function buyExperience() {
+    const purchase = purchaseExperience(playerLevel, playerExperience, gold);
+    if (!purchase.purchased) return;
+    setGold(purchase.gold);
+    setPlayerLevel(purchase.level);
+    setPlayerExperience(purchase.experience);
+    setMatchParticipants(current => current.map(participant => participant.isLocalPlayer ? {
+      ...participant,
+      gold: purchase.gold,
+      level: purchase.level,
+      experience: purchase.experience
+    } : participant));
+    setLog(current => [
+      `Purchased ${PURCHASE_EXPERIENCE} XP for ${EXPERIENCE_PURCHASE_COST} gold${purchase.level > playerLevel ? ` and reached level ${purchase.level}` : ''}.`,
+      ...current
+    ].slice(0, 9));
   }
 
   function startUnitDrag(unitId: string, event: DragEvent<HTMLElement>) {
@@ -288,10 +476,29 @@ export default function HellknightAutobattlerPage() {
     setLog(current => [`Purchased ${item.name} from the special armory round.`, ...current].slice(0, 6));
   }
 
-  function resolveCombat() {
-    const opponent = playerNames[(round * 3 + shopSeed) % playerNames.length] === 'You'
-      ? 'Automated Armiger'
-      : playerNames[(round * 3 + shopSeed) % playerNames.length];
+  function readyForCombat() {
+    const localPlayer = matchParticipants.find(participant => participant.isLocalPlayer);
+    if (!localPlayer || localPlayer.eliminated || army.length === 0) return;
+    let preparedParticipants = matchParticipants.map(participant => participant.isLocalPlayer ? {
+      ...participant,
+      health,
+      gold,
+      level: playerLevel,
+      experience: playerExperience,
+      streak
+    } : participant);
+    preparedParticipants = markNpcParticipantsReady(setParticipantReady(preparedParticipants, localPlayer.id, true));
+    setMatchParticipants(preparedParticipants);
+    if (!areAllActiveParticipantsReady(preparedParticipants)) {
+      setLog(current => ['Your army is ready. Waiting for the remaining commanders.', ...current].slice(0, 9));
+      return;
+    }
+
+    const pairings = createRoundPairings(preparedParticipants, round, shopSeed + itemSeed);
+    const playerPairing = pairings.find(pairing => pairing.leftId === localPlayer.id || pairing.rightId === localPlayer.id);
+    if (!playerPairing) return;
+    const opponentId = playerPairing.leftId === localPlayer.id ? playerPairing.rightId : playerPairing.leftId;
+    const opponent = preparedParticipants.find(participant => participant.id === opponentId)?.name ?? 'Citadel Echo';
     const playerInputs = board.flatMap(slot => {
       const unit = bench.find(candidate => candidate.instanceId === slot.unitId);
       return unit ? [{ unit, slot }] : [];
@@ -302,44 +509,90 @@ export default function HellknightAutobattlerPage() {
       seed: shopSeed + itemSeed + round
     });
     const won = simulation.winner === 'player';
-    const damage = won ? 0 : Math.max(4, round + simulation.survivingEnemyUnits * 3);
-    const interest = getBankInterest(gold);
-    const streakGold = Math.min(3, Math.floor(Math.abs(streak) / 2));
-    const roundGold = 5 + (won ? 1 : 0) + interest + streakGold;
-    const nextRound = round + 1;
-    const nextShopSeed = shopSeed + 13;
-    const nextUnitPool = addRoundSupply(unitPool);
+    const finalFrame = simulation.frames.at(-1);
+    const loserDamage = calculateBattleOutcomeDamage(simulation.winner, finalFrame?.units ?? []);
     const droppedItem = rollBattleItemDrop(itemSeed + shopSeed, round, won);
 
     setPhase('combat');
     setPlaybackFrameIndex(0);
-    setWins(current => current + (won ? 1 : 0));
-    setLosses(current => current + (won ? 0 : 1));
-    setStreak(current => won ? Math.max(1, current + 1) : Math.min(-1, current - 1));
-    setHealth(current => won ? current : Math.max(0, current - damage));
-    setGold(current => current + roundGold);
-    if (droppedItem) setInventory(current => [...current, droppedItem.id]);
+    setRoundSettled(false);
     setLastResult({
+      round,
+      opponentId,
       opponent,
       won,
-      damage,
-      summary: `${won ? 'Victory' : simulation.winner === 'draw' ? 'Draw' : 'Defeat'} against ${opponent}. Earned ${roundGold} gold${interest > 0 ? `, including ${interest} bank interest` : ''}${droppedItem ? `, and recovered ${droppedItem.name}` : ''}.`,
-      simulation
+      loserDamage,
+      summary: `Combat underway against ${opponent}. Rewards settle when the verdict is final.`,
+      simulation,
+      participants: preparedParticipants,
+      pairings,
+      playerPairing,
+      rewardItemId: droppedItem?.id ?? null
     });
-    setLog(current => [
-      `${won ? 'Won' : simulation.winner === 'draw' ? 'Drew' : 'Lost'} round ${round} vs ${opponent}; ${roundGold} gold${interest > 0 ? ` (${interest} bank interest)` : ''}${droppedItem ? `, ${droppedItem.name} dropped` : ', no item drop'}.`,
-      ...simulation.ledger.slice(0, 4),
-      ...current
-    ].slice(0, 7));
+    setLog(current => [`All ${preparedParticipants.filter(participant => !participant.eliminated).length} active commanders are ready. Round ${round} pairings locked.`, ...current].slice(0, 9));
+  }
+
+  function nextPlanningPhase() {
+    if (!roundSettled || matchWinner) return;
+    const localPlayer = matchParticipants.find(participant => participant.isLocalPlayer);
+    if (!localPlayer || localPlayer.eliminated) return;
+    const readyForShop = markNpcParticipantsReady(setParticipantReady(matchParticipants, localPlayer.id, true));
+    setMatchParticipants(readyForShop);
+    if (!areAllActiveParticipantsReady(readyForShop)) {
+      setLog(current => ['Ready for the next shop. Waiting for the remaining commanders.', ...current].slice(0, 9));
+      return;
+    }
+    const nextRound = round + 1;
+    const nextShopSeed = shopSeed + 13;
+    const nextUnitPool = addRoundSupply(unitPool);
     setUnitPool(nextUnitPool);
     setRound(nextRound);
     setShopSeed(nextShopSeed);
     setShop(rollUnitShop(nextShopSeed, nextRound, nextUnitPool, roundShopSize));
     setItemSeed(current => current + 19);
+    setMatchParticipants(current => markNpcParticipantsReady(current.map(participant => participant.isLocalPlayer
+      ? { ...participant, ready: false }
+      : participant)));
+    setPhase(round % 3 === 0 ? 'item-shop' : 'shop');
+    setLog(current => [`All active commanders are ready. Round ${nextRound} shop phase begins.`, ...current].slice(0, 9));
   }
 
-  function nextPlanningPhase() {
-    setPhase(round > 1 && (round - 1) % 3 === 0 ? 'item-shop' : 'shop');
+  function resolveRemainingTournament() {
+    const localPlayer = matchParticipants.find(participant => participant.isLocalPlayer);
+    if (!localPlayer?.eliminated || matchWinner) return;
+
+    let resolvedParticipants = matchParticipants;
+    let resolvedRound = round;
+    let finalRoundMessages: string[] = [];
+
+    for (let step = 0; step < 200 && !getLastStanding(resolvedParticipants); step += 1) {
+      resolvedRound += 1;
+      const pairings = createRoundPairings(resolvedParticipants, resolvedRound, shopSeed + itemSeed + resolvedRound * 29);
+      const outcomes = pairings.map(pairing => resolveNpcPairing(
+        pairing,
+        resolvedParticipants,
+        resolvedRound,
+        shopSeed + itemSeed + resolvedRound * 29
+      ));
+      resolvedParticipants = applyRoundOutcomes(resolvedParticipants, outcomes);
+      finalRoundMessages = outcomes.map(outcome => formatNpcOutcome(outcome, resolvedParticipants));
+    }
+
+    const winner = getLastStanding(resolvedParticipants);
+    setRound(resolvedRound);
+    setMatchParticipants(resolvedParticipants);
+    setMatchWinner(winner);
+    setLastResult(current => current ? {
+      ...current,
+      summary: winner
+        ? `${winner.name} is the last commander standing after ${resolvedRound} rounds.`
+        : `The automated tournament reached round ${resolvedRound} without a final verdict.`
+    } : current);
+    setLog(current => [
+      winner ? `${winner.name} wins the Citadel Tactics match.` : 'The remaining tournament could not reach a final verdict.',
+      ...finalRoundMessages,
+      ...current
+    ].slice(0, 9));
   }
 
   function showUnitTooltip(unit: UnitDefinition | OwnedUnit, event: MouseEvent<HTMLElement>) {
@@ -377,6 +630,7 @@ export default function HellknightAutobattlerPage() {
             <span><Shield className="h-4 w-4" /> Health {health}</span>
             <span><Coins className="h-4 w-4" /> Gold {gold}</span>
             <span><Swords className="h-4 w-4" /> Round {round}</span>
+            <span><Sparkles className="h-4 w-4" /> Level {playerLevel} {experienceRequired > 0 ? `(${playerExperience}/${experienceRequired} XP)` : '(Max)'}</span>
           </div>
         </header>
 
@@ -389,16 +643,30 @@ export default function HellknightAutobattlerPage() {
                 <div>
                   <p className="hellknight-kicker">{phase === 'item-shop' ? 'Special Armory' : phase === 'combat' ? 'Combat Verdict' : 'Recruitment'}</p>
                   <h2>{phase === 'combat' ? lastResult?.summary ?? 'The field resolves.' : 'Arrange the battle line'}</h2>
+                  <div className="round-flow-status">
+                    <span>Team {army.length}/{teamCapacity}</span>
+                    <span>{readyParticipants}/{activeParticipants} ready</span>
+                    {vanguardTier >= 3 && <span>Vanguard command +1</span>}
+                  </div>
                 </div>
                 <div className="toolbar-actions">
                   {phase === 'combat' ? (
-                    <button type="button" onClick={nextPlanningPhase} disabled={!combatPlaybackDone}>
-                      <Play className="h-4 w-4" /> Continue
+                    <button
+                      type="button"
+                      onClick={localMatchParticipant?.eliminated ? resolveRemainingTournament : nextPlanningPhase}
+                      disabled={!combatPlaybackDone || !roundSettled || Boolean(matchWinner)}
+                    >
+                      <Play className="h-4 w-4" /> {matchWinner ? `${matchWinner.name} Wins` : localMatchParticipant?.eliminated ? 'Resolve Remaining Match' : 'Ready for Next Shop'}
                     </button>
                   ) : (
-                    <button type="button" className="primary-action" onClick={resolveCombat} disabled={army.length === 0}>
-                      <Swords className="h-4 w-4" /> Fight
-                    </button>
+                    <>
+                      <button type="button" onClick={buyExperience} disabled={gold < EXPERIENCE_PURCHASE_COST || experienceRequired === 0}>
+                        <Sparkles className="h-4 w-4" /> Buy {PURCHASE_EXPERIENCE} XP · {EXPERIENCE_PURCHASE_COST}g
+                      </button>
+                      <button type="button" className="primary-action" onClick={readyForCombat} disabled={army.length === 0 || Boolean(localMatchParticipant?.ready)}>
+                        <Swords className="h-4 w-4" /> {localMatchParticipant?.ready ? 'Waiting for Commanders' : 'Ready for Combat'}
+                      </button>
+                    </>
                   )}
                 </div>
               </section>
@@ -450,6 +718,7 @@ export default function HellknightAutobattlerPage() {
                             setSelectedUnitId(selected ? null : unit.instanceId);
                           }
                         }}
+                        disabled={Boolean(!unit && selectedUnitId && army.length >= teamCapacity)}
                         aria-label={`Board square ${index + 1}`}
                       >
                         {unit ? (
@@ -533,6 +802,7 @@ export default function HellknightAutobattlerPage() {
                 onSell={sellItem}
               />
               <SynergyPanel activeSynergies={activeSynergies} armyPower={armyPower} />
+              <StandingsPanel participants={matchParticipants} />
               <LogPanel log={log} wins={wins} losses={losses} streak={streak} />
             </aside>
           </div>
@@ -557,6 +827,11 @@ function CombatArena({
   onLeaveTooltip: () => void;
 }) {
   const liveUnits = frame.units.filter(unit => unit.alive);
+  const unitById = new Map(frame.units.map(unit => [unit.id, unit]));
+  const effects = frame.units.flatMap(source => source.visualAction?.targetIds.flatMap((targetId, index) => {
+    const target = unitById.get(targetId);
+    return target ? [{ source, target, index, kind: source.visualAction!.kind }] : [];
+  }) ?? []);
   return (
     <section className="combat-arena" aria-label="Real-time combat arena">
       <div className="combat-arena-grid" />
@@ -565,10 +840,21 @@ function CombatArena({
         <strong>{frame.message}</strong>
         <span>{result ? `${result.opponent}` : 'Opponent'}</span>
       </div>
+      <div className="combat-effects-layer" aria-hidden="true">
+        {effects.map(effect => (
+          <CombatEffect
+            key={`${frame.timeMs}-${effect.source.id}-${effect.target.id}-${effect.index}`}
+            source={effect.source}
+            target={effect.target}
+            kind={effect.kind}
+          />
+        ))}
+      </div>
       {frame.units.map(unit => (
         <CombatPiece
-          key={unit.id}
+          key={`${unit.id}-${unit.visualAction ? frame.timeMs : 'idle'}`}
           unit={unit}
+          target={unit.visualAction ? unitById.get(unit.visualAction.targetIds[0]) : undefined}
           onHoverUnit={onHoverUnit}
           onMoveTooltip={onMoveTooltip}
           onLeaveTooltip={onLeaveTooltip}
@@ -582,22 +868,104 @@ function CombatArena({
   );
 }
 
+function CombatEffect({
+  source,
+  target,
+  kind
+}: {
+  source: CombatFrameUnit;
+  target: CombatFrameUnit;
+  kind: NonNullable<CombatFrameUnit['visualAction']>['kind'];
+}) {
+  const sourceColumn = Math.max(0, Math.min(8, source.q + 4));
+  const sourceRow = Math.max(0, Math.min(8, source.r + 5));
+  const targetColumn = Math.max(0, Math.min(8, target.q + 4));
+  const targetRow = Math.max(0, Math.min(8, target.r + 5));
+  const deltaColumn = targetColumn - sourceColumn;
+  const deltaRow = targetRow - sourceRow;
+  const distance = Math.hypot(deltaColumn, deltaRow);
+  const angle = Math.atan2(deltaRow, deltaColumn) * (180 / Math.PI);
+  const sourceLeft = ((sourceColumn + 0.5) / 9) * 100;
+  const sourceTop = ((sourceRow + 0.5) / 9) * 100;
+  const targetLeft = ((targetColumn + 0.5) / 9) * 100;
+  const targetTop = ((targetRow + 0.5) / 9) * 100;
+  const theme = projectileThemes[source.pf2Class] ?? fallbackProjectileTheme;
+  const projectileScale = projectileScaleByTier[source.tier];
+  const style = {
+    '--effect-source-left': `${sourceLeft}%`,
+    '--effect-source-top': `${sourceTop}%`,
+    '--effect-target-left': `${targetLeft}%`,
+    '--effect-target-top': `${targetTop}%`,
+    '--effect-mid-left': `${sourceLeft + (targetLeft - sourceLeft) * 0.58}%`,
+    '--effect-mid-top': `${sourceTop + (targetTop - sourceTop) * 0.58}%`,
+    '--effect-trail-length': `${(distance / 9) * 100}%`,
+    '--effect-angle': `${angle}deg`,
+    '--projectile-primary': theme.primary,
+    '--projectile-secondary': theme.secondary,
+    '--projectile-glow': theme.glow,
+    '--projectile-scale': projectileScale,
+    '--projectile-start-scale': projectileScale * 0.38,
+    '--projectile-burst-scale': projectileScale * 1.3,
+    '--projectile-end-scale': projectileScale * 0.42
+  } as CSSProperties;
+
+  return (
+    <div
+      className={`combat-effect ${kind} ${source.team} spell-shape-${theme.shape} projectile-tier-${source.tier}`}
+      style={style}
+      data-projectile-class={source.pf2Class}
+      data-projectile-rank={source.tier}
+      data-spell-shape={theme.shape}
+    >
+      <i className="combat-target-marker" />
+      {kind === 'melee' ? <i className="combat-melee-slash" /> : <i className="combat-effect-trail" />}
+      {kind === 'ranged' && (
+        <>
+          <i className="combat-projectile ranged-projectile" />
+          <i className="combat-impact-spark spark-one" />
+          <i className="combat-impact-spark spark-two" />
+          <i className="combat-impact-spark spark-three" />
+        </>
+      )}
+      {kind === 'magic' && [0, 1, 2].map(particle => (
+        <i
+          key={particle}
+          className="combat-projectile magic-projectile"
+          style={{
+            '--particle-offset': `${(particle - 1) * 9}px`,
+            '--particle-delay': `${particle * 70}ms`
+          } as CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
 function CombatPiece({
   unit,
+  target,
   onHoverUnit,
   onMoveTooltip,
   onLeaveTooltip
 }: {
   unit: CombatFrameUnit;
+  target?: CombatFrameUnit;
   onHoverUnit: (unit: CombatFrameUnit, event: MouseEvent<HTMLElement>) => void;
   onMoveTooltip: (event: MouseEvent<HTMLElement>) => void;
   onLeaveTooltip: () => void;
 }) {
-  const position = combatGridToStyle(unit.q, unit.r);
+  const position = {
+    ...combatGridToStyle(unit.q, unit.r),
+    ...getMeleeNudgeStyle(unit, target)
+  };
   const hpPercent = Math.max(0, Math.round((unit.hp / unit.maxHp) * 100));
+  const actionClass = unit.visualAction ? `${unit.visualAction.kind}-action` : '';
+  const effects = unit.effects.map(effect => ({ effect, ...combatEffectDetails[effect] }));
+  const hasBuff = effects.some(effect => effect.tone === 'buff');
+  const hasDebuff = effects.some(effect => effect.tone === 'debuff');
   return (
     <article
-      className={`combat-piece ${unit.team} ${unit.alive ? '' : 'defeated'} ${unit.attacking ? 'attacking' : ''} ${unit.casting ? 'casting' : ''} ${unit.status === 'fleeing' ? 'fleeing' : ''}`}
+      className={`combat-piece ${unit.team} ${unit.alive ? '' : 'defeated'} ${unit.attacking ? 'attacking' : ''} ${unit.casting ? 'casting' : ''} ${actionClass} ${unit.status === 'fleeing' ? 'fleeing' : ''} ${hasBuff ? 'has-buff' : ''} ${hasDebuff ? 'has-debuff' : ''}`}
       style={position}
       onMouseEnter={(event) => onHoverUnit(unit, event)}
       onMouseMove={onMoveTooltip}
@@ -610,6 +978,20 @@ function CombatPiece({
           <i style={{ width: `${hpPercent}%` }} />
         </div>
       </div>
+      {effects.length > 0 && (
+        <div className="piece-effect-stack" aria-label={effects.map(effect => effect.label).join(', ')}>
+          {effects.map(effect => (
+            <span
+              key={effect.effect}
+              className={`piece-effect ${effect.tone}`}
+              title={effect.label}
+              aria-label={effect.label}
+            >
+              {effect.shortLabel}
+            </span>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
@@ -645,6 +1027,15 @@ function UnitDetailPanel({
   const refund = isOwned ? getUnitSellValue(unit) : 0;
   const rarity = getUnitRarity(unit);
   const effectiveStats = getEffectiveUnitStats(unit, activeSynergies, isDeployed);
+  const balanceMetrics = calculateUnitBalanceMetrics({
+    ...unit,
+    health: effectiveStats.health,
+    attackDamage: effectiveStats.attackDamage,
+    magicDamage: effectiveStats.magicDamage,
+    attackSpeed: effectiveStats.attackSpeed,
+    range: effectiveStats.range,
+    spellSlots: effectiveStats.spellSlots
+  });
   const spells = getUnitSpells(unit);
 
   return (
@@ -682,6 +1073,8 @@ function UnitDetailPanel({
         <StatPill label="Speed" value={effectiveStats.attackSpeed} />
         <StatPill label="Range" value={`${effectiveStats.range}`} />
         <StatPill label="Slots" value={`${effectiveStats.spellSlots}`} />
+        <StatPill label="Est. DPS" value={`${balanceMetrics.rangeAdjustedDps}`} />
+        <StatPill label="Effective HP" value={`${balanceMetrics.effectiveHealth}`} />
       </div>
 
       <div className="unit-detail-columns">
@@ -762,6 +1155,7 @@ function FloatingUnitTooltip({ target }: { target: HoveredUnit | null }) {
 
   if (target.kind === 'combat') {
     const itemNames = target.unit.items.map(itemId => getItem(itemId).name);
+    const effectNames = target.unit.effects.map(effect => combatEffectDetails[effect].label);
     return (
       <aside className="unit-tooltip floating-unit-tooltip" style={style} role="tooltip">
         <strong>{target.unit.name}</strong>
@@ -769,12 +1163,22 @@ function FloatingUnitTooltip({ target }: { target: HoveredUnit | null }) {
         <span>HP {target.unit.hp}/{target.unit.maxHp}</span>
         <span>Range {target.unit.range} / Tier {target.unit.tier}</span>
         {itemNames.length > 0 && <span>Items: {itemNames.join(' / ')}</span>}
+        {effectNames.length > 0 && <span>Effects: {effectNames.join(' / ')}</span>}
         <span>{target.unit.status === 'fleeing' ? 'Fleeing' : target.unit.alive ? 'Fighting' : 'Defeated'}</span>
       </aside>
     );
   }
 
   const itemNames = 'items' in target.unit ? target.unit.items.map(itemId => getItem(itemId).name) : [];
+  const tooltipBalance = calculateUnitBalanceMetrics({
+    ...target.unit,
+    health: target.stats.health,
+    attackDamage: target.stats.attackDamage,
+    magicDamage: target.stats.magicDamage,
+    attackSpeed: target.stats.attackSpeed,
+    range: target.stats.range,
+    spellSlots: target.stats.spellSlots
+  });
 
   return (
     <aside className="unit-tooltip floating-unit-tooltip" style={style} role="tooltip">
@@ -782,6 +1186,7 @@ function FloatingUnitTooltip({ target }: { target: HoveredUnit | null }) {
       <span>{target.unit.pf2Class} / {target.unit.role}</span>
       <span>HP {target.stats.health} / AD {target.stats.attackDamage} / MD {target.stats.magicDamage}</span>
       <span>AS {target.stats.attackSpeed} / Range {target.stats.range} / Slots {target.stats.spellSlots}</span>
+      <span>Est. DPS {tooltipBalance.rangeAdjustedDps} / Effective HP {tooltipBalance.effectiveHealth}</span>
       {itemNames.length > 0 && <span>Items: {itemNames.join(' / ')}</span>}
       {target.stats.edictNotes.length > 0 && <span>{target.stats.edictNotes.join(' / ')}</span>}
       <span>{target.unit.traits.join(' - ')}</span>
@@ -789,7 +1194,7 @@ function FloatingUnitTooltip({ target }: { target: HoveredUnit | null }) {
   );
 }
 
-function LobbyPanel({ players, onTick, onStart }: { players: PlayerRecord[]; onTick: () => void; onStart: () => void }) {
+function LobbyPanel({ players, onTick, onStart }: { players: LobbyPlayerRecord[]; onTick: () => void; onStart: () => void }) {
   return (
     <section className="lobby-panel">
       <div className="lobby-status">
@@ -849,7 +1254,9 @@ function ShopPanel({
         </button>
       </header>
       <div className="shop-list">
-        {shop.length === 0 ? <p>The available unit pool is empty.</p> : shop.map(offer => (
+        {shop.length === 0 ? <p>The available unit pool is empty.</p> : shop.map(offer => {
+          const balance = calculateUnitBalanceMetrics(offer.unit);
+          return (
           <article key={offer.offerId} className={`shop-card rarity-${offer.rarity}`}>
             <button
               type="button"
@@ -863,12 +1270,14 @@ function ShopPanel({
               <strong>{offer.unit.name}</strong>
               <span>{offer.unit.pf2Class} / {offer.unit.role}</span>
               <small>Rarity {offer.rarity} / {offer.unit.traits.join(' - ')}</small>
+              <small className="shop-balance">DPS {balance.rangeAdjustedDps} / EHP {balance.effectiveHealth}</small>
             </button>
             <button type="button" className="shop-buy" onClick={() => onBuy(offer)} disabled={gold < offer.unit.cost}>
               Recruit
             </button>
           </article>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -1022,6 +1431,45 @@ function SynergyPanel({ activeSynergies, armyPower }: { activeSynergies: ActiveS
   );
 }
 
+function StandingsPanel({ participants }: { participants: MatchParticipant[] }) {
+  const ordered = [...participants].sort((left, right) =>
+    Number(left.eliminated) - Number(right.eliminated)
+    || right.health - left.health
+    || left.name.localeCompare(right.name)
+  );
+  return (
+    <section className="side-section standings-panel">
+      <header>
+        <h2><Shield className="h-4 w-4" /> Standings</h2>
+        <span>{ordered.filter(participant => !participant.eliminated).length} active</span>
+      </header>
+      <div className="standings-list">
+        {ordered.map(participant => (
+          <article
+            key={participant.id}
+            className={`${participant.isLocalPlayer ? 'local' : ''} ${participant.eliminated ? 'eliminated' : ''}`}
+          >
+            <strong>{participant.name}</strong>
+            <span>{participant.eliminated ? 'Eliminated' : `${participant.health} HP · Lv ${participant.level}`}</span>
+            <small>{participant.eliminated ? 'Out of the match' : `${participant.gold}g · ${participant.ready ? 'Ready' : 'Planning'}`}</small>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function formatNpcOutcome(outcome: BattleOutcome, participants: MatchParticipant[]) {
+  const winner = outcome.winnerId ? participants.find(participant => participant.id === outcome.winnerId) : null;
+  const loser = outcome.loserId ? participants.find(participant => participant.id === outcome.loserId) : null;
+  const elimination = loser?.eliminated ? ' and is eliminated' : '';
+
+  if (winner && loser) return `${winner.name} defeats ${loser.name}; ${loser.name} takes ${outcome.damage} damage${elimination}.`;
+  if (winner) return `${winner.name} defeats a Citadel Echo.`;
+  if (loser) return `A Citadel Echo defeats ${loser.name}; ${loser.name} takes ${outcome.damage} damage${elimination}.`;
+  return 'A paired battle ends in a draw.';
+}
+
 function LogPanel({ log, wins, losses, streak }: { log: string[]; wins: number; losses: number; streak: number }) {
   return (
     <section className="side-section">
@@ -1042,6 +1490,19 @@ function combatGridToStyle(q: number, r: number): CSSProperties {
   return {
     '--combat-column': column,
     '--combat-row': row
+  } as CSSProperties;
+}
+
+function getMeleeNudgeStyle(unit: CombatFrameUnit, target?: CombatFrameUnit): CSSProperties {
+  if (unit.visualAction?.kind !== 'melee' || !target) return {};
+  const deltaQ = target.q - unit.q;
+  const deltaR = target.r - unit.r;
+  const distance = Math.hypot(deltaQ, deltaR) || 1;
+  return {
+    '--melee-nudge-x': `${(deltaQ / distance) * 14}px`,
+    '--melee-nudge-y': `${(deltaR / distance) * 14}px`,
+    '--melee-return-x': `${(deltaQ / distance) * 10.5}px`,
+    '--melee-return-y': `${(deltaR / distance) * 10.5}px`
   } as CSSProperties;
 }
 
@@ -1080,7 +1541,7 @@ function getUnitSpells(unit: UnitDefinition) {
   return classAbilities[unit.pf2Class] ?? [unit.featText];
 }
 
-function buildLobby(tick: number): PlayerRecord[] {
+function buildLobby(tick: number): LobbyPlayerRecord[] {
   const count = Math.min(maxPlayers, 1 + tick);
   return playerNames.slice(0, count).map((name, index) => ({
     id: `player-${index}`,
@@ -1091,7 +1552,7 @@ function buildLobby(tick: number): PlayerRecord[] {
   }));
 }
 
-function fillLobby(players: PlayerRecord[]) {
+function fillLobby(players: LobbyPlayerRecord[]) {
   const filled = [...players];
   for (let index = players.length; index < maxPlayers; index += 1) {
     filled.push({
@@ -1219,7 +1680,7 @@ function getEffectiveUnitStats(unit: UnitDefinition | OwnedUnit, activeSynergies
 
     if (vanguardTier > 0) {
       healthBonus += vanguardTier * 110;
-      edictNotes.push(`Vanguard ${vanguardTier}: +${vanguardTier * 110} health`);
+      edictNotes.push(`Vanguard ${vanguardTier}: +${vanguardTier * 110} health${vanguardTier >= 3 ? ', +1 team capacity' : ''}`);
     }
     if (signiferTier > 0) {
       magicBonus += signiferTier * 14;

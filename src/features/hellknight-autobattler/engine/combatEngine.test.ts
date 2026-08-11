@@ -45,6 +45,19 @@ describe('hellknight combat abilities', () => {
     const enemy = [input('cleric', 0, 0, 'enemy-cleric'), input('fighter', 1, 0, 'enemy-fighter')];
     expect(simulateCombat({ player, enemy, seed: 41 })).toEqual(simulateCombat({ player, enemy, seed: 41 }));
   });
+
+  it('publishes active buffs and debuffs in combat frames for the renderer', () => {
+    const result = simulateCombat({
+      player: [input('barbarian', -1, 2), input('ranger', 0, 2), input('witch', 1, 2)],
+      enemy: [input('champion', -1, 0, 'target-one'), input('champion', 0, 0, 'target-two'), input('champion', 1, 0, 'target-three')],
+      seed: 17
+    });
+    const frameUnits = result.frames.flatMap(frame => frame.units);
+
+    expect(frameUnits.some(unit => unit.id === 'player-barbarian' && unit.effects.includes('raging') && unit.effects.includes('warded'))).toBe(true);
+    expect(frameUnits.some(unit => unit.team === 'enemy' && unit.effects.includes('hunted'))).toBe(true);
+    expect(frameUnits.some(unit => unit.team === 'enemy' && unit.effects.includes('hexed'))).toBe(true);
+  });
 });
 
 describe('hellknight Edicts', () => {
@@ -126,6 +139,44 @@ describe('square-grid combat movement', () => {
 });
 
 describe('stable one-second combat ticks', () => {
+  it('records the target and delivery style for melee, ranged, and magic actions', () => {
+    const melee = simulateCombat({
+      player: [input('fighter', 0, 1)],
+      enemy: [input('champion', 0, 0, 'melee-target')],
+      seed: 6
+    });
+    const ranged = simulateCombat({
+      player: [{ ...input('ranger', 0, 2), unit: { ...owned('ranger'), spellSlots: 0 } }],
+      enemy: [input('champion', 0, 0, 'ranged-target')],
+      seed: 6
+    });
+    const magic = simulateCombat({
+      player: [input('wizard', 0, 2), input('fighter', 1, 2, 'ally')],
+      enemy: [input('champion', -3, -3, 'magic-one'), input('champion', 3, -3, 'magic-two')],
+      seed: 24
+    });
+
+    const meleeAction = melee.frames.flatMap(frame => frame.units)
+      .find(unit => unit.id === 'player-fighter' && unit.visualAction)?.visualAction;
+    const rangedAction = ranged.frames.flatMap(frame => frame.units)
+      .find(unit => unit.id === 'player-ranger' && unit.visualAction)?.visualAction;
+    const magicAction = magic.frames.flatMap(frame => frame.units)
+      .find(unit => unit.id === 'player-wizard' && unit.visualAction)?.visualAction;
+
+    expect(meleeAction).toEqual({
+      kind: 'melee',
+      targetIds: ['enemy-melee-target']
+    });
+    expect(rangedAction).toEqual({
+      kind: 'ranged',
+      targetIds: ['enemy-ranged-target']
+    });
+    expect(magicAction).toEqual({
+      kind: 'magic',
+      targetIds: ['enemy-magic-one', 'enemy-magic-two']
+    });
+  });
+
   it('casts available spells before using an ability', () => {
     const spellcastingBarbarian = { ...owned('barbarian'), magicDamage: 50, spellSlots: 1 };
     const durableTarget = { ...owned('champion', 'target'), health: 5000, attackDamage: 1 };
