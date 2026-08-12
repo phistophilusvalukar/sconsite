@@ -462,6 +462,48 @@ select:focus-visible {
 /* Preserve utility-driven fill positioning used by registry portrait cards. */
 .dynamic-character-portrait.absolute { position: absolute; }
 
+/* Registry cards keep every portrait layer inside the card; other placements retain the cutout pop-out. */
+.dynamic-character-portrait.dynamic-character-portrait-card-crop { overflow: hidden; }
+.dynamic-character-portrait-card-crop .dynamic-character-portrait-cutout-stage {
+  overflow: hidden;
+  border-radius: inherit;
+  clip-path: inset(0);
+}
+
+.dynamic-character-portrait-overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.dynamic-character-portrait-fallback {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.dynamic-character-portrait-fallback.absolute { position: absolute; }
+.dynamic-character-portrait-fallback > img {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+/* The public registry keeps its artwork on the right while its readability veil spans the full card. */
+.dynamic-character-portrait-public-card .dynamic-character-portrait-frame,
+.dynamic-character-portrait-public-card .dynamic-character-portrait-cutout-stage,
+.dynamic-character-portrait-fallback.dynamic-character-portrait-public-card > img {
+  left: 42%;
+}
+
+.dynamic-character-portrait-fallback.dynamic-character-portrait-public-card > img { width: 58%; }
+
 .dynamic-character-portrait-background,
 .dynamic-character-portrait-cutout,
 .dynamic-character-portrait-depth,

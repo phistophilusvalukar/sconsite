@@ -17,6 +17,7 @@ interface DynamicCharacterPortraitProps {
   alt: string;
   className?: string;
   motion?: 'parallax' | 'hover' | 'none';
+  overlayClassName?: string;
   title?: string;
 }
 
@@ -32,6 +33,7 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
   alt,
   className = '',
   motion = 'hover',
+  overlayClassName,
   title
 }) => {
   const portraitRef = useRef<HTMLDivElement>(null);
@@ -73,6 +75,14 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
   }, [isDynamic, motion]);
 
   if (!isDynamic || !character) {
+    if (overlayClassName) {
+      return (
+        <div title={title} className={`dynamic-character-portrait-fallback ${className}`.trim()}>
+          <img src={fallbackSrc} alt={alt} />
+          <div className={`dynamic-character-portrait-overlay ${overlayClassName}`} aria-hidden="true" />
+        </div>
+      );
+    }
     return <img src={fallbackSrc} alt={alt} title={title} className={className} />;
   }
 
@@ -137,6 +147,7 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
         <div className="dynamic-character-portrait-depth" />
         <div className="dynamic-character-portrait-glint" />
       </div>
+      {overlayClassName && <div className={`dynamic-character-portrait-overlay ${overlayClassName}`} aria-hidden="true" />}
       <div className="dynamic-character-portrait-cutout-stage" aria-hidden="true">
         <img
           className="dynamic-character-portrait-cutout"

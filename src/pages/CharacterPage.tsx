@@ -360,21 +360,20 @@ function AllCharactersView({ characters, currentUserId, onSelectCharacter }: { c
 
 function PublicCharacterCard({ character, isOwnCharacter, onSelect }: { character: Character; isOwnCharacter: boolean; onSelect: () => void }) {
   const avatar = getAvatarFromFoundryJson(character.foundryJson) || normalizeFoundryAvatar(character.stats?.avatar) || DEFAULT_NPC_PLACEHOLDER;
-  const hasDynamicPortrait = Boolean(character.profileDynamicPortraitEnabled && character.profilePortraitBackgroundImageUrl && character.profilePortraitCutoutImageUrl);
 
   return (
     <button
       onClick={onSelect}
-      className={`group relative min-h-[210px] rounded-lg border border-fantasy-700/30 bg-midnight-900/70 p-5 text-left transition-colors hover:border-yellow-400/60 ${hasDynamicPortrait ? 'overflow-visible hover:z-20' : 'overflow-hidden'}`}
+      className="group relative min-h-[210px] overflow-hidden rounded-lg border border-fantasy-700/30 bg-midnight-900/70 p-5 text-left transition-colors hover:border-yellow-400/60"
     >
       <DynamicCharacterPortrait
         character={character}
         fallbackSrc={avatar}
         alt=""
-        className="absolute inset-y-0 right-0 h-full w-[58%] rounded-lg object-cover opacity-65 transition-transform duration-300 group-hover:scale-105"
+        className="dynamic-character-portrait-card-crop dynamic-character-portrait-public-card absolute inset-0 h-full w-full rounded-lg object-cover transition-transform duration-300 group-hover:scale-105"
         motion="hover"
+        overlayClassName="bg-gradient-to-r from-midnight-950 via-midnight-950/90 via-[55%] to-midnight-950/10"
       />
-      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-midnight-950 via-midnight-950/90 via-[55%] to-midnight-950/10" />
       <div className="relative z-10 flex min-h-[170px] max-w-[68%] flex-col">
         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300">Level {character.level} {character.class}</p>
         <h3 className="mt-2 font-fantasy text-3xl font-bold text-white">{character.name}</h3>
