@@ -114,6 +114,7 @@ const CharacterProfilePage: React.FC = () => {
       profileFontColor: draft.fontColor,
       profileBaseColor: draft.baseColor,
       profileAccentColor: draft.accentColor,
+      profileBannerImageUrl: draft.bannerImageUrl || undefined,
       profileLayoutStyle: draft.layoutStyle,
       profileSectionVisibility: { ...draft.sectionVisibility }
     };
@@ -246,6 +247,13 @@ const CharacterProfilePage: React.FC = () => {
               <div className="character-layout-options">
                 {characterLayoutOptions.map(option => <button type="button" className={draft.layoutStyle === option.value ? 'is-selected' : ''} onClick={() => updateDraft('layoutStyle', option.value)} key={option.value}><span className={`character-layout-sketch character-layout-sketch-${option.value}`}><i /><i /><i /></span><strong>{option.label}</strong><small>{option.description}</small></button>)}
               </div>
+            </div>
+
+            <div className="character-editor-section">
+              <h3>Hero artwork</h3>
+              <p>Use a direct HTTPS image link as the banner behind the character name.</p>
+              <label className="character-field"><span>Banner image URL</span><input type="url" value={draft.bannerImageUrl} onChange={event => updateDraft('bannerImageUrl', event.target.value)} placeholder="https://example.com/character-banner.webp" /><small>Wide images work best. A dark veil is added automatically for readable text.</small></label>
+              {draft.bannerImageUrl && <div className="character-banner-preview"><img src={draft.bannerImageUrl} alt="Character banner preview" /><span>Banner preview</span></div>}
             </div>
 
             <div className="character-editor-section">

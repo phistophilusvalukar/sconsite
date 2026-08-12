@@ -17,7 +17,8 @@ import {
   CharacterProfileCustomizationInput,
   characterProfileCustomizationSchema,
   defaultCharacterProfilePalette,
-  defaultCharacterProfileSectionVisibility
+  defaultCharacterProfileSectionVisibility,
+  isSafeCharacterBannerImageUrl
 } from '../features/characters/characterProfileCustomization';
 import { deriveAbilityBoostsFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
@@ -94,6 +95,7 @@ type CharacterCreateInput = Omit<
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
+  | 'profileBannerImageUrl'
   | 'profileLayoutStyle'
   | 'profileSectionVisibility'
 > & Partial<Pick<
@@ -103,6 +105,7 @@ type CharacterCreateInput = Omit<
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
+  | 'profileBannerImageUrl'
   | 'profileLayoutStyle'
   | 'profileSectionVisibility'
 >>;
@@ -134,6 +137,7 @@ interface CharacterRow {
   profile_font_color?: string | null;
   profile_base_color?: string | null;
   profile_accent_color?: string | null;
+  profile_banner_image_url?: string | null;
   profile_layout_style?: Character['profileLayoutStyle'] | null;
   profile_section_visibility?: Partial<Character['profileSectionVisibility']> | null;
   created_at: string;
@@ -254,6 +258,7 @@ export class CharacterService {
         profile_font_color: characterData.profileFontColor || defaultCharacterProfilePalette.fontColor,
         profile_base_color: characterData.profileBaseColor || defaultCharacterProfilePalette.baseColor,
         profile_accent_color: characterData.profileAccentColor || defaultCharacterProfilePalette.accentColor,
+        profile_banner_image_url: characterData.profileBannerImageUrl || null,
         profile_layout_style: characterData.profileLayoutStyle || 'chronicle',
         profile_section_visibility: characterData.profileSectionVisibility || defaultCharacterProfileSectionVisibility,
         created_at: now,
@@ -1058,6 +1063,9 @@ export class CharacterService {
       profileFontColor: dbCharacter.profile_font_color || defaultCharacterProfilePalette.fontColor,
       profileBaseColor: dbCharacter.profile_base_color || defaultCharacterProfilePalette.baseColor,
       profileAccentColor: dbCharacter.profile_accent_color || defaultCharacterProfilePalette.accentColor,
+      profileBannerImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_banner_image_url || '')
+        ? dbCharacter.profile_banner_image_url || undefined
+        : undefined,
       profileLayoutStyle: dbCharacter.profile_layout_style || 'chronicle',
       profileSectionVisibility: {
         ...defaultCharacterProfileSectionVisibility,

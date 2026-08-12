@@ -108,6 +108,7 @@ interface GuildRow {
   leader_character?: { name?: string } | null;
   logo?: string;
   emblem_url?: string;
+  banner_image_url?: string;
   region?: string;
   font_family?: Guild['fontFamily'];
   font_color?: string;
@@ -914,6 +915,7 @@ export class GuildService {
       leaderCharacterName: dbGuild.leader_character?.name,
       logo: dbGuild.logo,
       emblemUrl: isSafeExternalImageUrl(dbGuild.emblem_url || dbGuild.logo || '') ? dbGuild.emblem_url || dbGuild.logo : undefined,
+      bannerImageUrl: isSafeExternalImageUrl(dbGuild.banner_image_url || '') ? dbGuild.banner_image_url : undefined,
       region: dbGuild.region || '',
       fontFamily: dbGuild.font_family || 'cinzel',
       fontColor: dbGuild.font_color || defaultGuildPalette.fontColor,

@@ -381,7 +381,12 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
           : 'flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-fantasy-700/40 bg-midnight-950 shadow-2xl'}
         data-layout={character.profileLayoutStyle || 'chronicle'}
       >
-        <div className={pageMode ? 'character-profile-heading' : 'flex items-center justify-between border-b border-fantasy-700/30 px-6 py-4'}>
+        <div
+          className={pageMode ? `character-profile-heading${character.profileBannerImageUrl ? ' has-banner-image' : ''}` : 'flex items-center justify-between border-b border-fantasy-700/30 px-6 py-4'}
+          style={pageMode && character.profileBannerImageUrl ? {
+            backgroundImage: `linear-gradient(90deg, color-mix(in srgb, var(--character-base) 96%, transparent), color-mix(in srgb, var(--character-base) 48%, transparent), color-mix(in srgb, var(--character-base) 82%, transparent)), url(${JSON.stringify(character.profileBannerImageUrl)})`
+          } : undefined}
+        >
           <div>
             <p className={pageMode ? 'character-profile-kicker' : 'text-sm uppercase tracking-[0.14em] text-yellow-300'}>{canEdit ? 'Character Dossier' : 'Public Character'}</p>
             <h2 className={pageMode ? '' : 'font-fantasy text-2xl font-bold text-white'}>{character.name}</h2>
@@ -405,9 +410,9 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                 {sectionVisibility.abilityMatrix && <AbilityRadarChart scores={abilityScores} pageMode={pageMode} />}
               </div>}
               <div className="space-y-5">
-                <div>
-                  <p className={pageMode ? 'character-profile-overline' : 'text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300'}>Level {character.level} {character.class}</p>
-                  <h3 className={pageMode ? 'character-profile-nameplate' : 'font-fantasy text-4xl font-bold text-white'}>{character.name}</h3>
+                <div className={pageMode ? 'character-profile-rankline' : 'flex flex-wrap items-baseline gap-3'}>
+                  <span>Level {character.level}</span>
+                  <strong>{character.class}</strong>
                 </div>
                 {sectionVisibility.details && <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
                   <Detail label="Ancestry" value={character.ancestry || character.race} />

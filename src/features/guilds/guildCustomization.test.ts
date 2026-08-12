@@ -26,6 +26,7 @@ const validCustomization = {
     guestbook: true
   },
   emblemUrl: '',
+  bannerImageUrl: '',
   headquartersName: 'The Gilded Compass',
   headquartersTitle: 'Hall of the Far Horizon',
   headquartersTitleHtml: 'Hall of the <em>Far Horizon</em>',
@@ -56,6 +57,7 @@ describe('guild customization', () => {
   it('maps every stored font choice to a usable font stack', () => {
     expect(getGuildFontStack('cormorant')).toContain('Cormorant Garamond');
     expect(getGuildFontStack('inter')).toContain('Inter');
+    expect(getGuildFontStack('grenze')).toContain('Grenze Gotisch');
   });
 
   it('requires an explicit visibility choice for every customizable section', () => {
@@ -84,6 +86,12 @@ describe('guild customization', () => {
     expect(isSafeExternalImageUrl('https://images.example.com/emblem.webp')).toBe(true);
     expect(isSafeExternalImageUrl('javascript:alert(1)')).toBe(false);
     expect(isSafeExternalImageUrl('http://images.example.com/emblem.webp')).toBe(false);
+    expect(guildCustomizationSchema.safeParse({
+      ...validCustomization,
+      fontFamily: 'pirata',
+      layoutStyle: 'saga',
+      bannerImageUrl: 'https://images.example.com/banner.webp'
+    }).success).toBe(true);
   });
 
   it('escapes plain legacy text before turning it into rich HTML', () => {

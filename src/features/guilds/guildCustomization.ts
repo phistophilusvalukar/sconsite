@@ -6,13 +6,19 @@ export const guildFontOptions = [
   { value: 'cinzel', label: 'Cinzel', stack: 'Cinzel, Georgia, serif' },
   { value: 'cormorant', label: 'Cormorant', stack: '"Cormorant Garamond", Georgia, serif' },
   { value: 'merriweather', label: 'Merriweather', stack: 'Merriweather, Georgia, serif' },
-  { value: 'inter', label: 'Inter', stack: 'Inter, ui-sans-serif, system-ui, sans-serif' }
+  { value: 'inter', label: 'Inter', stack: 'Inter, ui-sans-serif, system-ui, sans-serif' },
+  { value: 'alegreya', label: 'Alegreya', stack: 'Alegreya, Georgia, serif' },
+  { value: 'im-fell', label: 'IM Fell English', stack: '"IM Fell English", Georgia, serif' },
+  { value: 'uncial', label: 'Uncial Antiqua', stack: '"Uncial Antiqua", Georgia, serif' },
+  { value: 'pirata', label: 'Pirata One', stack: '"Pirata One", Georgia, serif' },
+  { value: 'grenze', label: 'Grenze Gotisch', stack: '"Grenze Gotisch", Georgia, serif' }
 ] as const;
 
 export const guildLayoutOptions = [
   { value: 'chronicle', label: 'Chronicle', description: 'A balanced editorial page.' },
   { value: 'stronghold', label: 'Stronghold', description: 'Headquarters takes center stage.' },
-  { value: 'banner', label: 'Banner', description: 'A bold, ceremonial presentation.' }
+  { value: 'banner', label: 'Banner', description: 'A bold, ceremonial presentation.' },
+  { value: 'saga', label: 'Saga', description: 'A monumental hero and asymmetric twelve-column hall.' }
 ] as const;
 
 export const defaultGuildRoleLabels = {
@@ -58,11 +64,11 @@ export const guildCustomizationSchema = z.object({
   subtitle: z.string().trim().max(140),
   description: z.string().trim().max(4000),
   descriptionHtml: z.string().trim().max(12000),
-  fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter']),
+  fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze']),
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
-  layoutStyle: z.enum(['chronicle', 'stronghold', 'banner']),
+  layoutStyle: z.enum(['chronicle', 'stronghold', 'banner', 'saga']),
   rosterDisplay: z.enum(['ledger', 'dossiers', 'cards']),
   sectionVisibility: z.object({
     charter: z.boolean(),
@@ -75,6 +81,7 @@ export const guildCustomizationSchema = z.object({
     guestbook: z.boolean()
   }).strict(),
   emblemUrl: externalImageUrl,
+  bannerImageUrl: externalImageUrl,
   headquartersName: z.string().trim().max(100),
   headquartersTitle: z.string().trim().max(140),
   headquartersTitleHtml: z.string().trim().max(1200),
@@ -113,6 +120,7 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   rosterDisplay: guild.rosterDisplay,
   sectionVisibility: { ...guild.sectionVisibility },
   emblemUrl: guild.emblemUrl || '',
+  bannerImageUrl: guild.bannerImageUrl || '',
   headquartersName: guild.headquartersName,
   headquartersTitle: guild.headquartersTitle,
   headquartersTitleHtml: guild.headquartersTitleHtml || plainTextToRichHtml(guild.headquartersTitle),

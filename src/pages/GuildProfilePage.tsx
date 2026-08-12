@@ -177,6 +177,7 @@ const GuildProfilePage: React.FC = () => {
       ...guild,
       ...draft,
       emblemUrl: draft.emblemUrl || undefined,
+      bannerImageUrl: draft.bannerImageUrl || undefined,
       headquartersImageUrl: draft.headquartersImageUrl || undefined
     };
   }, [draft, guild, isEditing]);
@@ -365,7 +366,12 @@ const GuildProfilePage: React.FC = () => {
           {isGuildmaster && <button type="button" onClick={openEditor}><Palette size={17} /> Customize page</button>}
         </nav>
 
-        <header className="guild-profile-hero">
+        <header
+          className={`guild-profile-hero${displayGuild.bannerImageUrl ? ' has-banner-image' : ''}`}
+          style={displayGuild.bannerImageUrl ? {
+            backgroundImage: `linear-gradient(90deg, color-mix(in srgb, var(--guild-base) 94%, transparent), color-mix(in srgb, var(--guild-base) 55%, transparent), color-mix(in srgb, var(--guild-base) 86%, transparent)), url(${JSON.stringify(displayGuild.bannerImageUrl)})`
+          } : undefined}
+        >
           <div className="guild-profile-emblem">
             {displayGuild.emblemUrl ? <img src={displayGuild.emblemUrl} alt={`${displayGuild.name} emblem`} /> : <Shield aria-hidden="true" />}
           </div>
@@ -672,6 +678,8 @@ const GuildProfilePage: React.FC = () => {
               <p>Paste a direct HTTPS image link from a host that allows embedding.</p>
               <label className="guild-field"><span>Emblem image URL</span><input type="url" value={draft.emblemUrl} onChange={event => updateDraft('emblemUrl', event.target.value)} placeholder="https://example.com/emblem.png" /></label>
               {draft.emblemUrl && <div className="guild-url-preview guild-url-preview-emblem"><img src={draft.emblemUrl} alt="Emblem URL preview" /><span>Emblem preview</span></div>}
+              <label className="guild-field"><span>Title banner image URL</span><input type="url" value={draft.bannerImageUrl} onChange={event => updateDraft('bannerImageUrl', event.target.value)} placeholder="https://example.com/guild-banner.webp" /><small>A wide image displayed behind the guild title.</small></label>
+              {draft.bannerImageUrl && <div className="guild-url-preview"><img src={draft.bannerImageUrl} alt="Guild title banner preview" /><span>Title banner preview</span></div>}
               <label className="guild-field"><span>Headquarters image URL</span><input type="url" value={draft.headquartersImageUrl} onChange={event => updateDraft('headquartersImageUrl', event.target.value)} placeholder="https://example.com/headquarters.webp" /></label>
               {draft.headquartersImageUrl && <div className="guild-url-preview"><img src={draft.headquartersImageUrl} alt="Headquarters URL preview" /><span>Headquarters preview</span></div>}
             </div>
