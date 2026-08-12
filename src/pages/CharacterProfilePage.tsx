@@ -6,6 +6,7 @@ import {
   Crosshair,
   Eye,
   EyeOff,
+  HelpCircle,
   Loader2,
   Palette,
   Pencil,
@@ -35,6 +36,11 @@ import './characterProfile.css';
 const CharacterDetails = lazy(() => import('../components/CharacterDetailsModal'));
 const CharacterForm = lazy(() => import('../components/CharacterForm'));
 
+const DYNAMIC_PORTRAIT_TUTORIAL_IMAGES = {
+  top: 'https://assets.forge-vtt.com/63bf21c87e2f5e785340cb33/tokenizer/pc-images/placeholderImage/placeholder.top.webp',
+  bottom: 'https://assets.forge-vtt.com/63bf21c87e2f5e785340cb33/tokenizer/pc-images/placeholderImage/placeholder.background.png'
+} as const;
+
 const SECTION_OPTIONS: Array<{
   key: keyof Character['profileSectionVisibility'];
   label: string;
@@ -63,6 +69,7 @@ const CharacterProfilePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [editorMessage, setEditorMessage] = useState('');
   const [linkMessage, setLinkMessage] = useState('');
+  const [showDynamicPortraitTutorial, setShowDynamicPortraitTutorial] = useState(false);
 
   const loadProfile = useCallback(async () => {
     if (!characterId || !user?.id) return;
@@ -132,12 +139,14 @@ const CharacterProfilePage: React.FC = () => {
     if (!character) return;
     setDraft(customizationFromCharacter(character));
     setEditorMessage('');
+    setShowDynamicPortraitTutorial(false);
     setIsEditingProfile(true);
   };
 
   const closeEditor = () => {
     setDraft(null);
     setEditorMessage('');
+    setShowDynamicPortraitTutorial(false);
     setIsEditingProfile(false);
   };
 
@@ -274,7 +283,44 @@ const CharacterProfilePage: React.FC = () => {
             </div>
 
             <div className="character-editor-section">
-              <h3>Dynamic portrait</h3>
+              <div className="character-dynamic-heading">
+                <h3>Dynamic portrait</h3>
+                <button
+                  type="button"
+                  className={showDynamicPortraitTutorial ? 'is-open' : ''}
+                  onClick={() => setShowDynamicPortraitTutorial(current => !current)}
+                  aria-expanded={showDynamicPortraitTutorial}
+                  aria-controls="dynamic-portrait-tutorial"
+                >
+                  <HelpCircle size={15} /> How it works
+                </button>
+              </div>
+              {showDynamicPortraitTutorial && <div className="character-dynamic-tutorial" id="dynamic-portrait-tutorial">
+                <div className="character-dynamic-tutorial-heading">
+                  <div><span>Two images, one portrait</span><strong>Build a portrait with depth</strong></div>
+                  <button type="button" onClick={() => setShowDynamicPortraitTutorial(false)} aria-label="Close Dynamic Portrait tutorial"><X size={16} /></button>
+                </div>
+                <div
+                  className="character-dynamic-tutorial-stage"
+                  role="img"
+                  aria-label="The bottom background layer enters from the left and the top transparent character layer enters from the right. They join to form a tilting Dynamic Portrait."
+                >
+                  <div className="character-dynamic-tutorial-bottom" aria-hidden="true">
+                    <span><strong>Bottom layer</strong><small>Background image</small></span>
+                    <div><img src={DYNAMIC_PORTRAIT_TUTORIAL_IMAGES.bottom} alt="" /></div>
+                  </div>
+                  <div className="character-dynamic-tutorial-top" aria-hidden="true">
+                    <span><strong>Top layer</strong><small>Transparent cutout</small></span>
+                    <img src={DYNAMIC_PORTRAIT_TUTORIAL_IMAGES.top} alt="" />
+                  </div>
+                  <span className="character-dynamic-tutorial-result" aria-hidden="true">Dynamic portrait</span>
+                </div>
+                <div className="character-dynamic-tutorial-steps">
+                  <span><b>1</b> Choose a scene for the bottom.</span>
+                  <span><b>2</b> Add a transparent character cutout on top.</span>
+                  <span><b>3</b> The two layers move separately to create depth.</span>
+                </div>
+              </div>}
               <p>Layer a transparent character cutout over a background. The portrait shifts with the page and tilts beneath the pointer anywhere this character appears.</p>
               <label className="character-dynamic-toggle"><input type="checkbox" checked={draft.dynamicPortraitEnabled} onChange={event => updateDraft('dynamicPortraitEnabled', event.target.checked)} /><span><strong>Use Dynamic Portrait site-wide</strong><small>Both direct HTTPS image links are required when enabled.</small></span></label>
               <label className="character-field"><span>Background image URL</span><input type="url" value={draft.portraitBackgroundImageUrl} onChange={event => updateDraft('portraitBackgroundImageUrl', event.target.value)} placeholder="https://example.com/forest-background.webp" /><small>A wide or square scenic image works best.</small></label>
