@@ -25,6 +25,8 @@ export const DATABASE_TABLES = {
   GUILDS: 'guilds',
   GUILD_MEMBERSHIPS: 'guild_memberships',
   GUILD_APPLICATIONS: 'guild_applications',
+  GUILD_CHECKINS: 'guild_checkins',
+  GUILD_GUESTBOOK_ENTRIES: 'guild_guestbook_entries',
   SCHEDULE_POLLS: 'schedule_polls',
   SCHEDULE_PARTICIPANTS: 'schedule_participants',
   SCHEDULE_AVAILABILITY: 'schedule_availability',

@@ -14,6 +14,17 @@ const validCustomization = {
   baseColor: '#171425',
   accentColor: '#d6a84b',
   layoutStyle: 'chronicle' as const,
+  rosterDisplay: 'dossiers' as const,
+  sectionVisibility: {
+    charter: true,
+    requirements: true,
+    headquarters: true,
+    leader: true,
+    roster: true,
+    messageBoard: true,
+    checkIn: true,
+    guestbook: true
+  },
   emblemUrl: '',
   headquartersName: 'The Gilded Compass',
   headquartersTitle: 'Hall of the Far Horizon',
@@ -21,6 +32,9 @@ const validCustomization = {
   headquartersDescription: 'A warm hall filled with maps.',
   headquartersDescriptionHtml: '<p>A warm hall filled with maps.</p>',
   headquartersImageUrl: '',
+  requirements: 'Bring a map and a story.',
+  messageBoardHtml: '<p>Welcome, travelers.</p>',
+  guestbookEnabled: true,
   roleLabels: { ...defaultGuildRoleLabels }
 };
 
@@ -42,6 +56,28 @@ describe('guild customization', () => {
   it('maps every stored font choice to a usable font stack', () => {
     expect(getGuildFontStack('cormorant')).toContain('Cormorant Garamond');
     expect(getGuildFontStack('inter')).toContain('Inter');
+  });
+
+  it('requires an explicit visibility choice for every customizable section', () => {
+    const result = guildCustomizationSchema.safeParse({
+      ...validCustomization,
+      sectionVisibility: {
+        charter: true,
+        requirements: true,
+        headquarters: true,
+        leader: true,
+        roster: true,
+        messageBoard: true,
+        checkIn: true
+      }
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects unsupported roster presentations and oversized visitor content', () => {
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, rosterDisplay: 'carousel' }).success).toBe(false);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, messageBoardHtml: 'x'.repeat(12001) }).success).toBe(false);
   });
 
   it('only accepts HTTPS image links', () => {

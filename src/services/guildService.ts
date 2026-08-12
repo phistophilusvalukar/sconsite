@@ -1,4 +1,5 @@
 import DatabaseService from './database';
+import { z } from 'zod';
 import { DATABASE_TABLES } from '../config/database';
 import {
   ApiResponse,
@@ -6,16 +7,26 @@ import {
   CharacterStats,
   Guild,
   GuildApplication,
+  GuildCheckin,
+  GuildCheckinResult,
+  GuildGuestbookEntry,
   GuildMembership,
   JsonValue
 } from '../types/database';
 import {
   GuildCustomizationInput,
+  defaultGuildSectionVisibility,
   defaultGuildRoleLabels,
   guildCustomizationSchema,
   isSafeExternalImageUrl
 } from '../features/guilds/guildCustomization';
 import { plainTextToRichHtml, richTextToPlainText, sanitizeRichHtml } from '../features/guilds/richText';
+
+const guildCheckinResultSchema = z.object({
+  awarded: z.boolean(),
+  influencePoints: z.number().int().nonnegative(),
+  checkinDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+}).strict();
 
 export interface CreateGuildInput {
   name: string;
@@ -102,12 +113,18 @@ interface GuildRow {
   base_color?: string;
   accent_color?: string;
   layout_style?: Guild['layoutStyle'];
+  roster_display?: Guild['rosterDisplay'];
+  section_visibility?: Partial<Guild['sectionVisibility']>;
   headquarters_name?: string;
   headquarters_title?: string;
   headquarters_title_html?: string;
   headquarters_description?: string;
   headquarters_description_html?: string;
   headquarters_image_url?: string;
+  message_board_html?: string;
+  message_board_updated_at?: string | null;
+  guestbook_enabled?: boolean;
+  influence_points?: number;
   role_labels?: Guild['roleLabels'];
   status?: Guild['status'];
   recruitment_status?: Guild['recruitmentStatus'];
@@ -123,6 +140,29 @@ interface GuildRow {
   applications?: GuildApplicationRow[];
   created_at: string;
   updated_at: string;
+}
+
+interface GuildCheckinRow {
+  id: string;
+  guild_id: string;
+  character_id: string;
+  user_id: string;
+  checkin_date: string;
+  influence_awarded: number;
+  created_at: string;
+  character?: GuildCharacterRow | null;
+}
+
+interface GuildGuestbookRow {
+  id: string;
+  guild_id: string;
+  author_user_id: string;
+  character_id?: string;
+  message: string;
+  hidden_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  character?: GuildCharacterRow | null;
 }
 
 export class GuildService {
@@ -307,6 +347,7 @@ export class GuildService {
         headquartersTitleHtml: sanitizeRichHtml(parsed.data.headquartersTitleHtml, 'inline'),
         headquartersDescriptionHtml: sanitizeRichHtml(parsed.data.headquartersDescriptionHtml)
       };
+      safeProfile.messageBoardHtml = sanitizeRichHtml(parsed.data.messageBoardHtml);
       safeProfile.description = richTextToPlainText(safeProfile.descriptionHtml).slice(0, 4000);
       safeProfile.headquartersTitle = richTextToPlainText(safeProfile.headquartersTitleHtml).slice(0, 140);
       safeProfile.headquartersDescription = richTextToPlainText(safeProfile.headquartersDescriptionHtml).slice(0, 3000);
@@ -324,6 +365,104 @@ export class GuildService {
     } catch (error) {
       console.error('Error updating guild customization:', error);
       return { success: false, error: 'Failed to update guild page' };
+    }
+  }
+
+  async getTodayCheckins(guildId: string): Promise<ApiResponse<GuildCheckin[]>> {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GUILD_CHECKINS)
+        .select(`
+          *,
+          character:characters!guild_checkins_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,created_at,updated_at)
+        `)
+        .eq('guild_id', guildId)
+        .eq('checkin_date', today)
+        .order('created_at', { ascending: false });
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: (data || []).map(row => this.transformCheckinFromDb(row)) };
+    } catch (error) {
+      console.error('Error loading guild check-ins:', error);
+      return { success: false, error: 'Failed to load guild check-ins' };
+    }
+  }
+
+  async checkInCharacter(guildId: string, characterId: string): Promise<ApiResponse<GuildCheckinResult>> {
+    try {
+      const { data, error } = await this.dbService.getClient().rpc('check_in_guild_character_command', {
+        p_guild_id: guildId,
+        p_character_id: characterId
+      });
+      if (error) return { success: false, error: error.message };
+      const result = guildCheckinResultSchema.safeParse(data);
+      if (!result.success) {
+        return { success: false, error: 'The guild check-in response was invalid.' };
+      }
+      return {
+        success: true,
+        data: result.data,
+        message: result.data.awarded ? 'Checked in. The guild gained 1 influence.' : 'That character has already checked in today.'
+      };
+    } catch (error) {
+      console.error('Error checking in guild character:', error);
+      return { success: false, error: 'Failed to check in' };
+    }
+  }
+
+  async getGuestbookEntries(guildId: string): Promise<ApiResponse<GuildGuestbookEntry[]>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GUILD_GUESTBOOK_ENTRIES)
+        .select(`
+          *,
+          character:characters!guild_guestbook_entries_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,created_at,updated_at)
+        `)
+        .eq('guild_id', guildId)
+        .order('created_at', { ascending: false })
+        .limit(60);
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: (data || []).map(row => this.transformGuestbookFromDb(row)) };
+    } catch (error) {
+      console.error('Error loading guild guestbook:', error);
+      return { success: false, error: 'Failed to load the guestbook' };
+    }
+  }
+
+  async signGuestbook(guildId: string, characterId: string | undefined, message: string): Promise<ApiResponse<boolean>> {
+    const normalizedMessage = message.trim();
+    if (!normalizedMessage || normalizedMessage.length > 1200) {
+      return { success: false, error: 'Guestbook messages must be between 1 and 1,200 characters.' };
+    }
+
+    try {
+      const { data, error } = await this.dbService.getClient().rpc('sign_guild_guestbook_command', {
+        p_guild_id: guildId,
+        p_character_id: characterId || null,
+        p_message: normalizedMessage
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: Boolean(data), message: 'Your visit has been recorded.' };
+    } catch (error) {
+      console.error('Error signing guild guestbook:', error);
+      return { success: false, error: 'Failed to sign the guestbook' };
+    }
+  }
+
+  async moderateGuestbookEntry(guildId: string, entryId: string, hidden: boolean): Promise<ApiResponse<boolean>> {
+    try {
+      const { data, error } = await this.dbService.getClient().rpc('moderate_guild_guestbook_command', {
+        p_guild_id: guildId,
+        p_entry_id: entryId,
+        p_hidden: hidden
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: Boolean(data), message: hidden ? 'Guestbook entry hidden.' : 'Guestbook entry restored.' };
+    } catch (error) {
+      console.error('Error moderating guild guestbook:', error);
+      return { success: false, error: 'Failed to moderate the guestbook' };
     }
   }
 
@@ -777,12 +916,18 @@ export class GuildService {
       baseColor: dbGuild.base_color || '#171425',
       accentColor: dbGuild.accent_color || '#d6a84b',
       layoutStyle: dbGuild.layout_style || 'chronicle',
+      rosterDisplay: dbGuild.roster_display || 'ledger',
+      sectionVisibility: { ...defaultGuildSectionVisibility, ...(dbGuild.section_visibility || {}) },
       headquartersName: dbGuild.headquarters_name || '',
       headquartersTitle: dbGuild.headquarters_title || '',
       headquartersTitleHtml: dbGuild.headquarters_title_html || plainTextToRichHtml(dbGuild.headquarters_title || ''),
       headquartersDescription: dbGuild.headquarters_description || '',
       headquartersDescriptionHtml: dbGuild.headquarters_description_html || plainTextToRichHtml(dbGuild.headquarters_description || ''),
       headquartersImageUrl: isSafeExternalImageUrl(dbGuild.headquarters_image_url || '') ? dbGuild.headquarters_image_url : undefined,
+      messageBoardHtml: dbGuild.message_board_html || '',
+      messageBoardUpdatedAt: dbGuild.message_board_updated_at ? new Date(dbGuild.message_board_updated_at) : undefined,
+      guestbookEnabled: dbGuild.guestbook_enabled ?? true,
+      influencePoints: dbGuild.influence_points || 0,
       roleLabels: { ...defaultGuildRoleLabels, ...(dbGuild.role_labels || {}) },
       established: new Date(dbGuild.created_at),
       status: dbGuild.status || 'Recruiting',
@@ -833,6 +978,34 @@ export class GuildService {
       createdAt: new Date(dbApplication.created_at),
       updatedAt: new Date(dbApplication.updated_at),
       character: dbApplication.character ? this.transformCharacterFromDb(dbApplication.character) : undefined
+    };
+  }
+
+  private transformCheckinFromDb(row: GuildCheckinRow): GuildCheckin {
+    return {
+      _id: row.id,
+      guildId: row.guild_id,
+      characterId: row.character_id,
+      userId: row.user_id,
+      checkinDate: row.checkin_date,
+      influenceAwarded: row.influence_awarded,
+      createdAt: new Date(row.created_at),
+      character: row.character ? this.transformCharacterFromDb(row.character) : undefined
+    };
+  }
+
+  private transformGuestbookFromDb(row: GuildGuestbookRow): GuildGuestbookEntry {
+    return {
+      _id: row.id,
+      guildId: row.guild_id,
+      authorUserId: row.author_user_id,
+      characterId: row.character_id,
+      message: row.message,
+      isHidden: Boolean(row.hidden_at),
+      hiddenAt: row.hidden_at ? new Date(row.hidden_at) : undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+      character: row.character ? this.transformCharacterFromDb(row.character) : undefined
     };
   }
 

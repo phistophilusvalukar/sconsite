@@ -23,6 +23,17 @@ export const defaultGuildRoleLabels = {
   Ally: 'Allies'
 } as const;
 
+export const defaultGuildSectionVisibility = {
+  charter: true,
+  requirements: true,
+  headquarters: true,
+  leader: true,
+  roster: true,
+  messageBoard: true,
+  checkIn: true,
+  guestbook: true
+} as const;
+
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Choose a valid six-digit color.');
 export const isSafeExternalImageUrl = (value: string) => {
   if (!value) return true;
@@ -46,6 +57,17 @@ export const guildCustomizationSchema = z.object({
   baseColor: hexColor,
   accentColor: hexColor,
   layoutStyle: z.enum(['chronicle', 'stronghold', 'banner']),
+  rosterDisplay: z.enum(['ledger', 'dossiers', 'cards']),
+  sectionVisibility: z.object({
+    charter: z.boolean(),
+    requirements: z.boolean(),
+    headquarters: z.boolean(),
+    leader: z.boolean(),
+    roster: z.boolean(),
+    messageBoard: z.boolean(),
+    checkIn: z.boolean(),
+    guestbook: z.boolean()
+  }).strict(),
   emblemUrl: externalImageUrl,
   headquartersName: z.string().trim().max(100),
   headquartersTitle: z.string().trim().max(140),
@@ -53,6 +75,9 @@ export const guildCustomizationSchema = z.object({
   headquartersDescription: z.string().trim().max(3000),
   headquartersDescriptionHtml: z.string().trim().max(10000),
   headquartersImageUrl: externalImageUrl,
+  requirements: z.string().trim().max(2000),
+  messageBoardHtml: z.string().trim().max(12000),
+  guestbookEnabled: z.boolean(),
   roleLabels: z.object({
     Leader: z.string().trim().min(1).max(40),
     Subleader: z.string().trim().min(1).max(40),
@@ -79,6 +104,8 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   baseColor: guild.baseColor,
   accentColor: guild.accentColor,
   layoutStyle: guild.layoutStyle,
+  rosterDisplay: guild.rosterDisplay,
+  sectionVisibility: { ...guild.sectionVisibility },
   emblemUrl: guild.emblemUrl || '',
   headquartersName: guild.headquartersName,
   headquartersTitle: guild.headquartersTitle,
@@ -86,5 +113,8 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   headquartersDescription: guild.headquartersDescription,
   headquartersDescriptionHtml: guild.headquartersDescriptionHtml || plainTextToRichHtml(guild.headquartersDescription),
   headquartersImageUrl: guild.headquartersImageUrl || '',
+  requirements: guild.requirements,
+  messageBoardHtml: guild.messageBoardHtml,
+  guestbookEnabled: guild.guestbookEnabled,
   roleLabels: { ...guild.roleLabels }
 });

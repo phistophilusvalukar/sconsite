@@ -114,6 +114,8 @@ export interface Guild {
   baseColor: string;
   accentColor: string;
   layoutStyle: 'chronicle' | 'stronghold' | 'banner';
+  rosterDisplay: 'ledger' | 'dossiers' | 'cards';
+  sectionVisibility: GuildSectionVisibility;
   headquartersName: string;
   headquartersTitle: string;
   headquartersTitleHtml: string;
@@ -125,6 +127,10 @@ export interface Guild {
   status: 'Active' | 'Inactive' | 'Recruiting';
   recruitmentStatus: 'open' | 'selective' | 'closed';
   requirements: string;
+  messageBoardHtml: string;
+  messageBoardUpdatedAt?: Date;
+  guestbookEnabled: boolean;
+  influencePoints: number;
   badges: string[];
   recentActivity: string;
   rank: 'bronze' | 'silver' | 'gold' | 'platinum';
@@ -136,6 +142,17 @@ export interface Guild {
   applications?: GuildApplication[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface GuildSectionVisibility {
+  charter: boolean;
+  requirements: boolean;
+  headquarters: boolean;
+  leader: boolean;
+  roster: boolean;
+  messageBoard: boolean;
+  checkIn: boolean;
+  guestbook: boolean;
 }
 
 export interface GuildRoleLabels {
@@ -245,6 +262,36 @@ export interface GuildApplication {
   createdAt: Date;
   updatedAt: Date;
   user?: UserProfile;
+  character?: Character;
+}
+
+export interface GuildCheckin {
+  _id: string;
+  guildId: string;
+  characterId: string;
+  userId: string;
+  checkinDate: string;
+  influenceAwarded: number;
+  createdAt: Date;
+  character?: Character;
+}
+
+export interface GuildCheckinResult {
+  awarded: boolean;
+  influencePoints: number;
+  checkinDate: string;
+}
+
+export interface GuildGuestbookEntry {
+  _id: string;
+  guildId: string;
+  authorUserId: string;
+  characterId?: string;
+  message: string;
+  isHidden: boolean;
+  hiddenAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
   character?: Character;
 }
 
