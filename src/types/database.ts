@@ -229,18 +229,20 @@ export interface CharacterJournalComment {
   updatedAt: string | Date;
 }
 
-export type CharacterRelationshipType = 'family' | 'rival' | 'romantic' | 'patron' | 'owes_debt' | 'guildmate' | 'ally';
-export type CharacterRelationshipStatus = 'official' | 'unofficial' | 'automatic';
+export type CharacterRelationshipSentiment = 'negative' | 'neutral' | 'positive';
+export type CharacterRelationshipStatus = 'pending' | 'confirmed';
 
 export interface CharacterRelationship {
   id: string;
   sourceCharacterId: string;
   targetCharacterId: string;
-  relationshipTypes: CharacterRelationshipType[];
-  subtype?: string;
-  label?: string;
-  status?: CharacterRelationshipStatus;
-  isAutomatic?: boolean;
+  name: string;
+  tag?: string;
+  sentiment: number;
+  sourceApproved: boolean;
+  targetApproved: boolean;
+  status: CharacterRelationshipStatus;
+  confirmedAt?: string | Date;
   createdAt: string | Date;
   updatedAt: string | Date;
 }

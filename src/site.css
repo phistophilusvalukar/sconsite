@@ -393,3 +393,32 @@ select:focus-visible {
   .site-home-pathways > a > svg:last-child,
   .site-about-steps a svg { transition: none; }
 }
+/* Consent-based character relationship spectrum */
+.relationship-sentiment-slider {
+  width: 100%;
+  height: 8px;
+  margin: 6px 0 2px;
+  border-radius: 999px;
+  appearance: none;
+  background: linear-gradient(90deg, #ff334f 0%, #ffd633 50%, #25e875 100%);
+  cursor: pointer;
+}
+
+.relationship-sentiment-slider::-webkit-slider-thumb {
+  width: 5px;
+  height: 28px;
+  border: 1px solid rgb(255 255 255 / 0.85);
+  border-radius: 999px;
+  appearance: none;
+  background: #171614;
+  box-shadow: 0 0 0 3px rgb(0 0 0 / 0.34), 0 2px 8px rgb(0 0 0 / 0.5);
+}
+
+.relationship-sentiment-slider::-moz-range-thumb {
+  width: 5px;
+  height: 28px;
+  border: 1px solid rgb(255 255 255 / 0.85);
+  border-radius: 999px;
+  background: #171614;
+  box-shadow: 0 0 0 3px rgb(0 0 0 / 0.34), 0 2px 8px rgb(0 0 0 / 0.5);
+}

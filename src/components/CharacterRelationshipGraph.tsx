@@ -1,8 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { Character, CharacterRelationship, CharacterRelationshipType } from '../types/database';
-
-type GraphFilter = 'all' | 'family' | 'guild' | 'ally' | 'selected';
+import {
+  getRelationshipColor,
+  getRelationshipSentimentCategory
+} from '../features/characters/relationshipSentiment';
+import type {
+  Character,
+  CharacterRelationship,
+  CharacterRelationshipSentiment
+} from '../types/database';
 
 interface CharacterRelationshipGraphProps {
   characters: Character[];
@@ -22,14 +28,13 @@ interface GraphLink {
   target: string;
   label: string;
   color: string;
+  sentiment: number;
 }
 
-const filterOptions: Array<{ id: GraphFilter; label: string }> = [
-  { id: 'all', label: 'All relationships' },
-  { id: 'family', label: 'Family only' },
-  { id: 'guild', label: 'Same guild only' },
-  { id: 'ally', label: 'Allies only' },
-  { id: 'selected', label: 'Selected neighborhood' }
+const sentimentOptions: Array<{ id: CharacterRelationshipSentiment; label: string; color: string }> = [
+  { id: 'negative', label: 'Negative', color: getRelationshipColor(-100) },
+  { id: 'neutral', label: 'Neutral', color: getRelationshipColor(0) },
+  { id: 'positive', label: 'Positive', color: getRelationshipColor(100) }
 ];
 
 const CharacterRelationshipGraph: React.FC<CharacterRelationshipGraphProps> = ({
@@ -37,124 +42,133 @@ const CharacterRelationshipGraph: React.FC<CharacterRelationshipGraphProps> = ({
   relationships,
   onSelectCharacter
 }) => {
-  const [filter, setFilter] = useState<GraphFilter>('selected');
-  const [selectedCharacterId, setSelectedCharacterId] = useState(characters[0]?._id || '');
-  const characterById = useMemo(() => new Map(characters.filter(character => character._id).map(character => [character._id as string, character])), [characters]);
-  const graphVersion = useMemo(
-    () => relationships.map(relationship => `${relationship.id}:${relationship.updatedAt}`).join('|'),
+  const graphContainerRef = useRef<HTMLDivElement>(null);
+  const [graphWidth, setGraphWidth] = useState(900);
+  const [visibleSentiments, setVisibleSentiments] = useState<Record<CharacterRelationshipSentiment, boolean>>({
+    negative: true,
+    neutral: true,
+    positive: true
+  });
+
+  useEffect(() => {
+    const container = graphContainerRef.current;
+    if (!container) return;
+
+    const updateWidth = () => setGraphWidth(Math.max(280, Math.floor(container.getBoundingClientRect().width)));
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  const confirmedRelationships = useMemo(
+    () => relationships.filter(relationship => relationship.status === 'confirmed'),
     [relationships]
   );
   const graphData = useMemo(
-    () => buildGraphData(characters, relationships, filter, selectedCharacterId),
-    [characters, relationships, filter, selectedCharacterId]
+    () => buildGraphData(characters, confirmedRelationships, visibleSentiments),
+    [characters, confirmedRelationships, visibleSentiments]
   );
-
-  const selectedCharacter = selectedCharacterId ? characterById.get(selectedCharacterId) : undefined;
+  const graphVersion = useMemo(
+    () => graphData.links.map(link => `${link.source}:${link.target}:${link.sentiment}`).join('|'),
+    [graphData.links]
+  );
 
   if (characters.length === 0) {
     return (
       <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/20 p-8 text-center text-gray-300">
-        No public characters are available for the relationship graph yet.
+        No public characters are available for the relationship map yet.
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/20 p-6">
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <section className="rounded-xl border border-fantasy-700/30 bg-fantasy-900/20 p-4 sm:p-6">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="font-fantasy text-2xl font-bold text-white">Relationships</h2>
-          <p className="text-sm text-gray-400">
-            {selectedCharacter ? `Selected: ${selectedCharacter.name}` : 'Select a character to focus the neighborhood.'}
+          <p className="mb-1 text-xs font-bold uppercase tracking-[0.24em] text-stone-400">The social web</p>
+          <h2 className="font-fantasy text-2xl font-bold text-white">Confirmed relationships</h2>
+          <p className="mt-1 max-w-2xl text-sm text-gray-400">
+            Every line has been approved by both characters. Select which parts of the sentiment spectrum you want to see.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {filterOptions.map(option => (
-            <button
-              key={option.id}
-              onClick={() => setFilter(option.id)}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                filter === option.id
-                  ? 'bg-yellow-500 text-midnight-900'
-                  : 'bg-fantasy-800/50 text-gray-300 hover:text-white'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+
+        <div className="flex flex-wrap gap-2" aria-label="Relationship sentiment filters">
+          {sentimentOptions.map(option => {
+            const isVisible = visibleSentiments[option.id];
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={isVisible}
+                onClick={() => setVisibleSentiments(current => ({ ...current, [option.id]: !current[option.id] }))}
+                className={`flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition-all ${
+                  isVisible
+                    ? 'border-white/25 bg-white/10 text-white shadow-sm'
+                    : 'border-white/10 bg-black/10 text-gray-500 opacity-60'
+                }`}
+              >
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: option.color }} />
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
-        <div className="max-h-[560px] overflow-y-auto rounded-lg bg-midnight-900/60 p-3">
-          {characters.map(character => (
-            <button
-              key={character._id}
-              onClick={() => {
-                setSelectedCharacterId(character._id || '');
-                setFilter('selected');
-              }}
-              className={`mb-2 w-full rounded-lg p-3 text-left transition-colors ${
-                selectedCharacterId === character._id
-                  ? 'bg-yellow-500 text-midnight-900'
-                  : 'bg-fantasy-900/50 text-gray-200 hover:bg-fantasy-800/70'
-              }`}
-            >
-              <p className="font-semibold">{character.name}</p>
-              <p className="text-xs opacity-80">Level {character.level} {character.class}</p>
-            </button>
-          ))}
-        </div>
-
-        <div className="overflow-hidden rounded-lg border border-fantasy-700/30 bg-midnight-950">
-          <ForceGraph2D<GraphNode, GraphLink>
-            key={graphVersion}
-            graphData={graphData}
-            width={920}
-            height={560}
-            backgroundColor="#020617"
-            nodeLabel={node => node.name}
-            nodeColor={node => node.color}
-            linkLabel={link => link.label}
-            linkColor={link => link.color}
-            linkWidth={link => Math.max(1, link.label.includes('official') ? 2.2 : 1.4)}
-            linkDirectionalParticles={2}
-            linkDirectionalParticleWidth={1.5}
-            onNodeClick={node => {
-              setSelectedCharacterId(node.id);
-              onSelectCharacter(node.character);
-            }}
-            nodeCanvasObject={(node, ctx, globalScale) => {
-              const label = node.name;
-              const fontSize = Math.max(10, 13 / globalScale);
-              ctx.beginPath();
-              ctx.arc(node.x || 0, node.y || 0, 6, 0, 2 * Math.PI, false);
-              ctx.fillStyle = node.color;
-              ctx.fill();
-              ctx.font = `${fontSize}px Sans-Serif`;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'top';
-              ctx.fillStyle = '#f8fafc';
-              ctx.fillText(label, node.x || 0, (node.y || 0) + 8);
-            }}
-          />
-        </div>
+      <div ref={graphContainerRef} className="relative min-h-[560px] overflow-hidden rounded-xl border border-white/10 bg-[#11100f]">
+        {graphData.links.length === 0 ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center p-8 text-center text-sm text-stone-400">
+            No confirmed relationships match the selected sentiment filters.
+          </div>
+        ) : null}
+        <ForceGraph2D<GraphNode, GraphLink>
+          key={graphVersion}
+          graphData={graphData}
+          width={graphWidth}
+          height={560}
+          backgroundColor="#11100f"
+          nodeLabel={node => node.name}
+          nodeColor={node => node.color}
+          linkLabel={link => link.label}
+          linkColor={link => link.color}
+          linkWidth={link => 1.8 + (Math.abs(link.sentiment) / 100) * 2.2}
+          onNodeClick={node => onSelectCharacter(node.character)}
+          nodeCanvasObject={(node, ctx, globalScale) => {
+            const fontSize = Math.max(10, 13 / globalScale);
+            ctx.beginPath();
+            ctx.arc(node.x || 0, node.y || 0, 6, 0, 2 * Math.PI, false);
+            ctx.fillStyle = node.color;
+            ctx.fill();
+            ctx.font = `600 ${fontSize}px Sans-Serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillStyle = '#f5f5f4';
+            ctx.fillText(node.name, node.x || 0, (node.y || 0) + 9);
+          }}
+        />
       </div>
-    </div>
+    </section>
   );
 };
 
-function buildGraphData(characters: Character[], relationships: CharacterRelationship[], filter: GraphFilter, selectedCharacterId: string) {
-  const characterById = new Map(characters.filter(character => character._id).map(character => [character._id as string, character]));
-  const filteredRelationships = filterRelationships(relationships, filter, selectedCharacterId);
-  const nodeIds = new Set<string>();
-
-  filteredRelationships.forEach(relationship => {
-    if (characterById.has(relationship.sourceCharacterId)) nodeIds.add(relationship.sourceCharacterId);
-    if (characterById.has(relationship.targetCharacterId)) nodeIds.add(relationship.targetCharacterId);
-  });
-
-  if (selectedCharacterId && characterById.has(selectedCharacterId)) nodeIds.add(selectedCharacterId);
+function buildGraphData(
+  characters: Character[],
+  relationships: CharacterRelationship[],
+  visibleSentiments: Record<CharacterRelationshipSentiment, boolean>
+) {
+  const characterById = new Map(
+    characters.filter(character => character._id).map(character => [character._id as string, character])
+  );
+  const visibleRelationships = relationships.filter(relationship => (
+    visibleSentiments[getRelationshipSentimentCategory(relationship.sentiment)]
+    && characterById.has(relationship.sourceCharacterId)
+    && characterById.has(relationship.targetCharacterId)
+  ));
+  const nodeIds = new Set(visibleRelationships.flatMap(relationship => [
+    relationship.sourceCharacterId,
+    relationship.targetCharacterId
+  ]));
 
   const nodes: GraphNode[] = Array.from(nodeIds).map(id => {
     const character = characterById.get(id) as Character;
@@ -162,83 +176,19 @@ function buildGraphData(characters: Character[], relationships: CharacterRelatio
       id,
       name: character.name,
       character,
-      color: id === selectedCharacterId ? '#facc15' : '#a78bfa'
+      color: '#c4b5a5'
     };
   });
 
-  const links: GraphLink[] = filteredRelationships
-    .filter(relationship => nodeIds.has(relationship.sourceCharacterId) && nodeIds.has(relationship.targetCharacterId))
-    .map(relationship => ({
-      source: relationship.sourceCharacterId,
-      target: relationship.targetCharacterId,
-      label: describeRelationship(relationship, relationships),
-      color: getRelationshipColor(relationship)
-    }));
+  const links: GraphLink[] = visibleRelationships.map(relationship => ({
+    source: relationship.sourceCharacterId,
+    target: relationship.targetCharacterId,
+    label: [relationship.name, relationship.tag].filter(Boolean).join(' · '),
+    color: getRelationshipColor(relationship.sentiment),
+    sentiment: relationship.sentiment
+  }));
 
   return { nodes, links };
-}
-
-function filterRelationships(relationships: CharacterRelationship[], filter: GraphFilter, selectedCharacterId: string) {
-  if (filter === 'family') return relationships.filter(relationship => relationship.relationshipTypes.includes('family'));
-  if (filter === 'guild') return relationships.filter(relationship => relationship.relationshipTypes.includes('guildmate'));
-  if (filter === 'ally') return relationships.filter(relationship => relationship.relationshipTypes.includes('ally'));
-  if (filter !== 'selected' || !selectedCharacterId) return relationships;
-
-  const direct = relationships.filter(relationship =>
-    !relationship.relationshipTypes.includes('guildmate') &&
-    !relationship.relationshipTypes.includes('ally') &&
-    (relationship.sourceCharacterId === selectedCharacterId || relationship.targetCharacterId === selectedCharacterId)
-  );
-  const directIds = new Set(direct.flatMap(relationship => [relationship.sourceCharacterId, relationship.targetCharacterId]));
-  const secondDegree = relationships.filter(relationship =>
-    !relationship.relationshipTypes.includes('guildmate') &&
-    !relationship.relationshipTypes.includes('ally') &&
-    (directIds.has(relationship.sourceCharacterId) || directIds.has(relationship.targetCharacterId))
-  );
-
-  return dedupeRelationships([...direct, ...secondDegree]);
-}
-
-function dedupeRelationships(relationships: CharacterRelationship[]) {
-  const byId = new Map<string, CharacterRelationship>();
-  relationships.forEach(relationship => byId.set(relationship.id, relationship));
-  return Array.from(byId.values());
-}
-
-function describeRelationship(relationship: CharacterRelationship, relationships: CharacterRelationship[]) {
-  const labels = relationship.relationshipTypes.map(type => {
-    const status = getRelationshipStatus(relationship, type, relationships);
-    return `${formatRelationshipType(type)}${status === 'unofficial' ? ' unofficial' : ''}`;
-  });
-  return [labels.join(', '), relationship.subtype].filter(Boolean).join(' - ');
-}
-
-function getRelationshipStatus(relationship: CharacterRelationship, type: CharacterRelationshipType, relationships: CharacterRelationship[]) {
-  if (relationship.isAutomatic || type === 'guildmate' || type === 'ally' || type === 'family') return 'official';
-
-  const reciprocal = relationships.find(candidate =>
-    candidate.sourceCharacterId === relationship.targetCharacterId &&
-    candidate.targetCharacterId === relationship.sourceCharacterId
-  );
-
-  if (!reciprocal) return 'unofficial';
-  if ((type === 'rival' || type === 'romantic') && reciprocal.relationshipTypes.includes(type)) return 'official';
-  if (type === 'patron' && reciprocal.relationshipTypes.includes('owes_debt')) return 'official';
-  if (type === 'owes_debt' && reciprocal.relationshipTypes.includes('patron')) return 'official';
-  return 'unofficial';
-}
-
-function formatRelationshipType(type: CharacterRelationshipType) {
-  return type.split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
-}
-
-function getRelationshipColor(relationship: CharacterRelationship) {
-  if (relationship.relationshipTypes.includes('family')) return '#facc15';
-  if (relationship.relationshipTypes.includes('guildmate')) return '#38bdf8';
-  if (relationship.relationshipTypes.includes('ally')) return '#34d399';
-  if (relationship.relationshipTypes.includes('romantic')) return '#fb7185';
-  if (relationship.relationshipTypes.includes('rival')) return '#f97316';
-  return '#c4b5fd';
 }
 
 export default CharacterRelationshipGraph;

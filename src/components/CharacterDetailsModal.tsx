@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
   BookOpen,
   Download,
@@ -23,11 +22,14 @@ import {
   Character,
   CharacterJournalEntry,
   CharacterRelationship,
-  CharacterRelationshipType,
   FoundryJsonEntry
 } from '../types/database';
 import { CharacterService } from '../services/characterService';
 import { defaultCharacterProfileSectionVisibility } from '../features/characters/characterProfileCustomization';
+import {
+  getRelationshipColor,
+  getRelationshipSentimentLabel
+} from '../features/characters/relationshipSentiment';
 import SafeRichText from '../features/guilds/SafeRichText';
 import { DEFAULT_NPC_PLACEHOLDER, abilityLabels, getAbilityScoresFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
@@ -61,16 +63,17 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const [foundryFiles, setFoundryFiles] = useState<FoundryJsonEntry[]>([]);
   const [journalEntries, setJournalEntries] = useState<CharacterJournalEntry[]>([]);
   const [relationships, setRelationships] = useState<CharacterRelationship[]>([]);
-  const [graphStack, setGraphStack] = useState<string[]>([character._id || '']);
   const [journalDraft, setJournalDraft] = useState({ title: '', body: '' });
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [editingComments, setEditingComments] = useState<Record<string, string>>({});
-  const [relationshipDraft, setRelationshipDraft] = useState<{ targetCharacterId: string; relationshipTypes: CharacterRelationshipType[]; subtype: string }>({
+  const [relationshipDraft, setRelationshipDraft] = useState({
     targetCharacterId: '',
-    relationshipTypes: ['family'],
-    subtype: ''
+    name: '',
+    tag: '',
+    sentiment: 0
   });
   const [relationshipSearch, setRelationshipSearch] = useState('');
+  const [relationshipMessage, setRelationshipMessage] = useState('');
   const [isRelationshipSearchFocused, setIsRelationshipSearchFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -84,27 +87,27 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const visibleTabs: DetailsTab[] = [
     ...(canEdit ? ['foundry' as const] : []),
     ...(sectionVisibility.journal ? ['journal' as const] : []),
-    ...(sectionVisibility.relationships ? ['relationships' as const] : [])
+    ...(canEdit || sectionVisibility.relationships ? ['relationships' as const] : [])
   ];
   const initialTab: DetailsTab = canEdit
     ? 'foundry'
     : sectionVisibility.journal
       ? 'journal'
       : 'relationships';
-  const allCharacterIds = useMemo(
-    () => characters.map(item => item._id).filter(Boolean) as string[],
-    [characters]
-  );
-  const graphRootId = graphStack[graphStack.length - 1] || character._id || '';
-  const graphRoot = characters.find(item => item._id === graphRootId) || character;
-  const graphRelationships = relationships.filter(link => link.sourceCharacterId === graphRootId);
-  const graphDepth = Math.max(0, graphStack.length - 1);
+  const directRelationships = relationships.filter(link => (
+    link.sourceCharacterId === character._id || link.targetCharacterId === character._id
+  ));
+  const confirmedRelationships = directRelationships.filter(link => link.status === 'confirmed');
+  const pendingRelationships = directRelationships.filter(link => link.status === 'pending');
   const otherCharacters = characters.filter(item => item._id && item._id !== character._id);
   const selectedRelationshipTarget = otherCharacters.find(item => item._id === relationshipDraft.targetCharacterId);
   const relationshipSuggestions = otherCharacters
     .filter(item => {
       const term = relationshipSearch.trim().toLowerCase();
-      const alreadyLinked = relationships.some(link => link.sourceCharacterId === character._id && link.targetCharacterId === item._id);
+      const alreadyLinked = relationships.some(link => (
+        (link.sourceCharacterId === character._id && link.targetCharacterId === item._id)
+        || (link.targetCharacterId === character._id && link.sourceCharacterId === item._id)
+      ));
       if (alreadyLinked) return false;
       if (!term) return true;
       return [item.name, item.class, item.ancestry, item.race]
@@ -115,8 +118,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
 
   useEffect(() => {
     setActiveTab(initialTab);
-    setGraphStack([character._id || '']);
     setRelationshipSearch('');
+    setRelationshipMessage('');
   }, [character._id, canEdit, initialTab, sectionVisibility.journal, sectionVisibility.relationships]);
 
   const loadModalData = useCallback(async () => {
@@ -126,7 +129,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     try {
       const [journalResponse, relationshipResponse, foundryResponse] = await Promise.all([
         characterService.getJournalEntries(character._id, currentUserId),
-        characterService.getRelationshipsForCharacters(allCharacterIds),
+        characterService.getRelationshipsForCharacters([character._id], canEdit),
         canEdit ? characterService.getFoundryFiles(character._id) : Promise.resolve({ success: true, data: [] as FoundryJsonEntry[] })
       ]);
 
@@ -136,7 +139,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [allCharacterIds, canEdit, character._id, characterService, currentUserId]);
+  }, [canEdit, character._id, characterService, currentUserId]);
 
   useEffect(() => {
     loadModalData();
@@ -145,8 +148,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   useSupabaseRealtime({
     channelName: `character-details-${character._id || 'unknown'}`,
     tables: [
-      DATABASE_TABLES.CHARACTER_RELATIONSHIPS,
-      DATABASE_TABLES.GUILD_MEMBERSHIPS
+      DATABASE_TABLES.CHARACTER_RELATIONSHIPS
     ],
     onChange: loadModalData,
     enabled: Boolean(character._id),
@@ -321,44 +323,51 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     }
   };
 
-  const handleToggleRelationshipType = (type: CharacterRelationshipType) => {
-    setRelationshipDraft(prev => {
-      const hasType = prev.relationshipTypes.includes(type);
-      const relationshipTypes = hasType
-        ? prev.relationshipTypes.filter(item => item !== type)
-        : [...prev.relationshipTypes, type];
-      return { ...prev, relationshipTypes };
-    });
-  };
-
   const handleAddRelationship = async () => {
-    if (!character._id || !relationshipDraft.targetCharacterId || relationshipDraft.relationshipTypes.length === 0) return;
-    if (relationships.some(link => link.sourceCharacterId === character._id && link.targetCharacterId === relationshipDraft.targetCharacterId)) return;
+    if (!character._id || !relationshipDraft.targetCharacterId || !relationshipDraft.name.trim()) return;
+    if (relationships.some(link => (
+      (link.sourceCharacterId === character._id && link.targetCharacterId === relationshipDraft.targetCharacterId)
+      || (link.targetCharacterId === character._id && link.sourceCharacterId === relationshipDraft.targetCharacterId)
+    ))) return;
 
     const response = await characterService.createRelationship(
       character._id,
-      currentUserId,
       relationshipDraft.targetCharacterId,
-      relationshipDraft.relationshipTypes,
-      relationshipDraft.subtype.trim()
+      relationshipDraft.name.trim(),
+      relationshipDraft.tag.trim(),
+      relationshipDraft.sentiment
     );
     if (response.success && response.data) {
       setRelationships(prev => [...prev, response.data as CharacterRelationship]);
       void onRelationshipsChanged?.();
-      setRelationshipDraft({ targetCharacterId: '', relationshipTypes: ['family'], subtype: '' });
+      setRelationshipDraft({ targetCharacterId: '', name: '', tag: '', sentiment: 0 });
       setRelationshipSearch('');
+      setRelationshipMessage('Request sent. It will remain private until the other character approves it.');
     } else {
       alert(response.error || 'Failed to add relationship');
     }
   };
 
   const handleDeleteRelationship = async (relationshipId: string) => {
-    const response = await characterService.deleteRelationship(relationshipId);
+    if (!character._id) return;
+    const response = await characterService.deleteRelationship(relationshipId, character._id);
     if (response.success) {
       setRelationships(prev => prev.filter(link => link.id !== relationshipId));
       void onRelationshipsChanged?.();
     } else {
       alert(response.error || 'Failed to delete relationship');
+    }
+  };
+
+  const handleRelationshipResponse = async (relationshipId: string, approve: boolean) => {
+    if (!character._id) return;
+    const response = await characterService.respondToRelationship(relationshipId, character._id, approve);
+    if (response.success) {
+      await loadModalData();
+      void onRelationshipsChanged?.();
+      setRelationshipMessage(approve ? 'Relationship approved.' : 'Relationship request declined.');
+    } else {
+      alert(response.error || 'Failed to respond to relationship');
     }
   };
 
@@ -551,8 +560,12 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   {activeTab === 'relationships' && (
                     <div className="space-y-5">
                       {canEdit && (
-                        <div className="rounded-lg bg-fantasy-900/30 p-4">
-                          <div className="grid gap-3">
+                        <div className="rounded-xl border border-white/10 bg-fantasy-900/30 p-4 sm:p-5">
+                          <div className="mb-4">
+                            <h3 className="font-fantasy text-lg font-semibold text-white">Define a relationship</h3>
+                            <p className="mt-1 text-sm text-gray-400">The connection stays private until the other character approves it.</p>
+                          </div>
+                          <div className="grid gap-4">
                             <div className="relative">
                               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                               <input
@@ -595,54 +608,138 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                                 </div>
                               )}
                             </div>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                              {(['family', 'rival', 'romantic', 'patron', 'owes_debt'] as CharacterRelationshipType[]).map(type => (
-                                <label key={type} className="flex items-center gap-2 rounded-lg bg-fantasy-800/40 p-3 text-sm text-gray-200">
-                                  <input type="checkbox" checked={relationshipDraft.relationshipTypes.includes(type)} onChange={() => handleToggleRelationshipType(type)} className="h-4 w-4 rounded border-fantasy-600 bg-fantasy-900 text-yellow-500 focus:ring-yellow-400" />
-                                  <span>{formatRelationshipType(type)}</span>
-                                </label>
-                              ))}
+
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <label className="grid gap-1.5 text-sm font-semibold text-gray-200">
+                                Relationship name
+                                <input
+                                  value={relationshipDraft.name}
+                                  maxLength={80}
+                                  onChange={event => setRelationshipDraft(prev => ({ ...prev, name: event.target.value }))}
+                                  className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 font-normal text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                  placeholder="Trusted confidants"
+                                />
+                              </label>
+                              <label className="grid gap-1.5 text-sm font-semibold text-gray-200">
+                                Optional tag
+                                <input
+                                  value={relationshipDraft.tag}
+                                  maxLength={40}
+                                  onChange={event => setRelationshipDraft(prev => ({ ...prev, tag: event.target.value }))}
+                                  className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 font-normal text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                  placeholder="family, lover, mentor…"
+                                />
+                              </label>
                             </div>
-                            <input value={relationshipDraft.subtype} onChange={event => setRelationshipDraft(prev => ({ ...prev, subtype: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Optional subtype, e.g. sibling, mentor, former flame" />
-                            <button onClick={handleAddRelationship} className="flex items-center justify-center space-x-2 rounded-lg bg-yellow-500 px-4 py-2 font-bold text-midnight-900 transition-colors hover:bg-yellow-400">
+
+                            <label className="grid gap-3 text-sm font-semibold text-gray-200">
+                              <span className="flex items-center justify-between gap-3">
+                                Sentiment
+                                <span
+                                  className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs"
+                                  style={{ color: getRelationshipColor(relationshipDraft.sentiment) }}
+                                >
+                                  {getRelationshipSentimentLabel(relationshipDraft.sentiment)} · {relationshipDraft.sentiment}
+                                </span>
+                              </span>
+                              <input
+                                type="range"
+                                min="-100"
+                                max="100"
+                                step="1"
+                                value={relationshipDraft.sentiment}
+                                onChange={event => setRelationshipDraft(prev => ({ ...prev, sentiment: Number(event.target.value) }))}
+                                className="relationship-sentiment-slider"
+                                aria-label="Relationship sentiment from negative to positive"
+                              />
+                              <span className="flex justify-between text-xs font-normal uppercase tracking-[0.14em] text-gray-400">
+                                <span>Negative</span>
+                                <span>Neutral</span>
+                                <span>Positive</span>
+                              </span>
+                            </label>
+
+                            <button
+                              type="button"
+                              disabled={!relationshipDraft.targetCharacterId || !relationshipDraft.name.trim()}
+                              onClick={handleAddRelationship}
+                              className="flex items-center justify-center space-x-2 rounded-lg bg-yellow-500 px-4 py-2 font-bold text-midnight-900 transition-colors hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
                               <Plus className="h-4 w-4" />
-                              <span>Add</span>
+                              <span>Send approval request</span>
                             </button>
+                            {relationshipMessage && <p className="text-sm text-gray-300" role="status">{relationshipMessage}</p>}
+                          </div>
+                        </div>
+                      )}
+
+                      {canEdit && pendingRelationships.length > 0 && (
+                        <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-4">
+                          <div className="mb-3 flex items-center gap-2 text-white">
+                            <MessageCircle className="h-5 w-5 text-amber-200" />
+                            <h3 className="font-semibold">Pending approval</h3>
+                          </div>
+                          <div className="space-y-2">
+                            {pendingRelationships.map(link => {
+                              const relatedCharacterId = link.sourceCharacterId === character._id
+                                ? link.targetCharacterId
+                                : link.sourceCharacterId;
+                              const relatedCharacter = characters.find(item => item._id === relatedCharacterId);
+                              const characterApproved = link.sourceCharacterId === character._id
+                                ? link.sourceApproved
+                                : link.targetApproved;
+                              return (
+                                <div key={link.id} className="flex flex-col gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+                                  <div className="min-w-0">
+                                    <p className="font-semibold text-white">{relatedCharacter?.name || 'Unknown character'}</p>
+                                    <p className="text-sm" style={{ color: getRelationshipColor(link.sentiment) }}>
+                                      {link.name}{link.tag ? ` · ${link.tag}` : ''}
+                                    </p>
+                                    <p className="mt-1 text-xs text-gray-400">
+                                      {characterApproved ? 'Waiting for the other character.' : 'This character needs your approval.'}
+                                    </p>
+                                  </div>
+                                  {characterApproved ? (
+                                    <button type="button" onClick={() => handleDeleteRelationship(link.id)} className="rounded-lg border border-red-300/20 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/10">
+                                      Cancel request
+                                    </button>
+                                  ) : (
+                                    <div className="flex gap-2">
+                                      <button type="button" onClick={() => handleRelationshipResponse(link.id, false)} className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-gray-200 hover:bg-white/5">Decline</button>
+                                      <button type="button" onClick={() => handleRelationshipResponse(link.id, true)} className="rounded-lg bg-emerald-300 px-3 py-2 text-sm font-bold text-emerald-950 hover:bg-emerald-200">Approve</button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
 
                       <div className="rounded-lg border border-fantasy-700/30 bg-black/30 p-4">
-                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                          <div className="flex items-center space-x-2 text-white">
-                            <Users className="h-5 w-5 text-yellow-300" />
-                            <span className="font-semibold">{graphRoot.name}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {graphDepth > 0 && (
-                              <button onClick={() => setGraphStack(prev => prev.slice(0, -1))} className="flex items-center space-x-2 rounded-lg bg-fantasy-800/60 px-3 py-2 text-sm text-white">
-                                <ArrowLeft className="h-4 w-4" />
-                                <span>Back</span>
-                              </button>
-                            )}
-                            <span className="rounded-lg bg-yellow-500/15 px-3 py-2 text-sm font-semibold text-yellow-200">Depth {graphDepth}</span>
-                          </div>
+                        <div className="mb-4 flex items-center space-x-2 text-white">
+                          <Users className="h-5 w-5 text-yellow-300" />
+                          <span className="font-semibold">Direct relationships</span>
                         </div>
-
                         <div className="space-y-2">
-                          {graphRelationships.map(link => {
-                            const target = characters.find(item => item._id === link.targetCharacterId);
+                          {confirmedRelationships.map(link => {
+                            const relatedCharacterId = link.sourceCharacterId === character._id
+                              ? link.targetCharacterId
+                              : link.sourceCharacterId;
+                            const relatedCharacter = characters.find(item => item._id === relatedCharacterId);
                             return (
                               <div key={link.id} className="flex items-center justify-between gap-3 rounded-lg border border-fantasy-700/30 bg-fantasy-900/30 p-3">
-                                <button disabled={!target} onClick={() => target && setGraphStack(prev => [...prev, target._id || ''])} className="min-w-0 flex-1 text-left">
-                                  <p className="truncate font-semibold text-white">{target?.name || 'Unknown character'}</p>
-                                  <p className="truncate text-sm text-yellow-200">{describeRelationship(link, relationships)}</p>
-                                </button>
-                                {canEdit && link.sourceCharacterId === character._id && <IconButton title="Delete relationship" onClick={() => handleDeleteRelationship(link.id)} icon={<Trash2 className="h-4 w-4" />} danger />}
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate font-semibold text-white">{relatedCharacter?.name || 'Unknown character'}</p>
+                                  <p className="truncate text-sm" style={{ color: getRelationshipColor(link.sentiment) }}>
+                                    {link.name}{link.tag ? ` · ${link.tag}` : ''}
+                                  </p>
+                                </div>
+                                {canEdit && <IconButton title="Delete relationship" onClick={() => handleDeleteRelationship(link.id)} icon={<Trash2 className="h-4 w-4" />} danger />}
                               </div>
                             );
                           })}
-                          {graphRelationships.length === 0 && <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No direct relationships for this character.</p>}
+                          {confirmedRelationships.length === 0 && <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No confirmed direct relationships for this character.</p>}
                         </div>
                       </div>
                     </div>
@@ -781,36 +878,6 @@ function IconButton({ title, icon, onClick, disabled, danger }: { title: string;
       {icon}
     </button>
   );
-}
-
-function formatRelationshipType(type: CharacterRelationshipType) {
-  return type
-    .split('_')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function describeRelationship(relationship: CharacterRelationship, relationships: CharacterRelationship[]) {
-  const labels = relationship.relationshipTypes.map(type => {
-    const status = getRelationshipStatus(relationship, type, relationships);
-    return `${formatRelationshipType(type)}${status === 'unofficial' ? ' (unofficial)' : ''}`;
-  });
-  return [labels.join(', '), relationship.subtype].filter(Boolean).join(' - ');
-}
-
-function getRelationshipStatus(relationship: CharacterRelationship, type: CharacterRelationshipType, relationships: CharacterRelationship[]) {
-  if (relationship.isAutomatic || type === 'guildmate' || type === 'ally' || type === 'family') return 'official';
-
-  const reciprocal = relationships.find(candidate =>
-    candidate.sourceCharacterId === relationship.targetCharacterId &&
-    candidate.targetCharacterId === relationship.sourceCharacterId
-  );
-
-  if (!reciprocal) return 'unofficial';
-  if ((type === 'rival' || type === 'romantic') && reciprocal.relationshipTypes.includes(type)) return 'official';
-  if (type === 'patron' && reciprocal.relationshipTypes.includes('owes_debt')) return 'official';
-  if (type === 'owes_debt' && reciprocal.relationshipTypes.includes('patron')) return 'official';
-  return 'unofficial';
 }
 
 function getCharacterDataFromJson(jsonData: unknown) {
