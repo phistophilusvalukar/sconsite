@@ -10,7 +10,15 @@
 ALTER TABLE characters
   ADD COLUMN IF NOT EXISTS profile_dynamic_portrait_enabled boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS profile_portrait_background_url text,
-  ADD COLUMN IF NOT EXISTS profile_portrait_cutout_url text;
+  ADD COLUMN IF NOT EXISTS profile_portrait_cutout_url text,
+  ADD COLUMN IF NOT EXISTS profile_portrait_focus_x real NOT NULL DEFAULT 50,
+  ADD COLUMN IF NOT EXISTS profile_portrait_focus_y real NOT NULL DEFAULT 0;
+
+ALTER TABLE characters
+  DROP CONSTRAINT IF EXISTS characters_profile_portrait_focus_x_check,
+  DROP CONSTRAINT IF EXISTS characters_profile_portrait_focus_y_check,
+  ADD CONSTRAINT characters_profile_portrait_focus_x_check CHECK (profile_portrait_focus_x BETWEEN 0 AND 100),
+  ADD CONSTRAINT characters_profile_portrait_focus_y_check CHECK (profile_portrait_focus_y BETWEEN 0 AND 100);
 
 ALTER TABLE guilds
   DROP CONSTRAINT IF EXISTS guilds_font_family_check,
@@ -49,6 +57,8 @@ DECLARE
   v_dynamic_portrait_enabled boolean;
   v_portrait_background_url text := NULLIF(trim(COALESCE(p_profile->>'portraitBackgroundImageUrl', '')), '');
   v_portrait_cutout_url text := NULLIF(trim(COALESCE(p_profile->>'portraitCutoutImageUrl', '')), '');
+  v_portrait_focus_x real;
+  v_portrait_focus_y real;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
   IF NOT EXISTS (
@@ -62,6 +72,15 @@ BEGIN
     RAISE EXCEPTION 'Invalid Dynamic Portrait setting';
   END IF;
   v_dynamic_portrait_enabled := (p_profile->>'dynamicPortraitEnabled')::boolean;
+  IF jsonb_typeof(p_profile->'portraitFocusX') IS DISTINCT FROM 'number'
+     OR jsonb_typeof(p_profile->'portraitFocusY') IS DISTINCT FROM 'number' THEN
+    RAISE EXCEPTION 'Invalid Dynamic Portrait focus point';
+  END IF;
+  v_portrait_focus_x := (p_profile->>'portraitFocusX')::real;
+  v_portrait_focus_y := (p_profile->>'portraitFocusY')::real;
+  IF v_portrait_focus_x NOT BETWEEN 0 AND 100 OR v_portrait_focus_y NOT BETWEEN 0 AND 100 THEN
+    RAISE EXCEPTION 'Dynamic Portrait focus must be between 0 and 100';
+  END IF;
 
   IF length(trim(COALESCE(p_profile->>'subtitle', ''))) > 140 THEN
     RAISE EXCEPTION 'Character subtitle is too long';
@@ -111,6 +130,8 @@ BEGIN
       profile_dynamic_portrait_enabled = v_dynamic_portrait_enabled,
       profile_portrait_background_url = v_portrait_background_url,
       profile_portrait_cutout_url = v_portrait_cutout_url,
+      profile_portrait_focus_x = v_portrait_focus_x,
+      profile_portrait_focus_y = v_portrait_focus_y,
       profile_layout_style = v_layout,
       profile_section_visibility = jsonb_build_object(
         'portrait', (v_sections->>'portrait')::boolean,

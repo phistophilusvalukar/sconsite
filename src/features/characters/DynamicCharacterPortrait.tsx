@@ -7,6 +7,8 @@ type PortraitCharacter = Pick<
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
   | 'profilePortraitCutoutImageUrl'
+  | 'profilePortraitFocusX'
+  | 'profilePortraitFocusY'
 >;
 
 interface DynamicCharacterPortraitProps {
@@ -53,8 +55,8 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
         const viewportHeight = window.innerHeight || 1;
         const centerOffset = (bounds.top + bounds.height / 2 - viewportHeight / 2) / (viewportHeight + bounds.height);
         const normalizedOffset = Math.max(-1, Math.min(1, centerOffset * 2));
-        portrait.style.setProperty('--portrait-background-scroll', `${normalizedOffset * -16}px`);
-        portrait.style.setProperty('--portrait-cutout-scroll', `${normalizedOffset * 26}px`);
+        portrait.style.setProperty('--portrait-background-scroll', `${normalizedOffset * -32}px`);
+        portrait.style.setProperty('--portrait-cutout-scroll', `${normalizedOffset * 56}px`);
       });
     };
 
@@ -72,18 +74,23 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
     return <img src={fallbackSrc} alt={alt} title={title} className={className} />;
   }
 
+  const portraitStyle = {
+    '--portrait-focus-x': `${character.profilePortraitFocusX ?? 50}%`,
+    '--portrait-focus-y': `${character.profilePortraitFocusY ?? 0}%`
+  } as React.CSSProperties;
+
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (motion === 'none') return;
     const bounds = event.currentTarget.getBoundingClientRect();
     const horizontal = (event.clientX - bounds.left) / bounds.width - 0.5;
     const vertical = (event.clientY - bounds.top) / bounds.height - 0.5;
-    event.currentTarget.style.setProperty('--portrait-tilt-x', `${vertical * -10}deg`);
-    event.currentTarget.style.setProperty('--portrait-tilt-y', `${horizontal * 12}deg`);
-    event.currentTarget.style.setProperty('--portrait-background-x', `${horizontal * -4}px`);
-    event.currentTarget.style.setProperty('--portrait-background-y', `${vertical * -2.5}px`);
-    event.currentTarget.style.setProperty('--portrait-cutout-x', `${horizontal * 7}px`);
-    event.currentTarget.style.setProperty('--portrait-cutout-y', `${vertical * 4}px`);
-    event.currentTarget.style.setProperty('--portrait-glint-x', `${horizontal * 32}px`);
+    event.currentTarget.style.setProperty('--portrait-tilt-x', `${vertical * -14}deg`);
+    event.currentTarget.style.setProperty('--portrait-tilt-y', `${horizontal * 16}deg`);
+    event.currentTarget.style.setProperty('--portrait-background-x', `${horizontal * -7}px`);
+    event.currentTarget.style.setProperty('--portrait-background-y', `${vertical * -5}px`);
+    event.currentTarget.style.setProperty('--portrait-cutout-x', `${horizontal * 12}px`);
+    event.currentTarget.style.setProperty('--portrait-cutout-y', `${vertical * 8}px`);
+    event.currentTarget.style.setProperty('--portrait-glint-x', `${horizontal * 44}px`);
   };
 
   const resetPointer = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -103,6 +110,7 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
       aria-label={alt || undefined}
       aria-hidden={alt ? undefined : true}
       title={title}
+      style={portraitStyle}
       className={`dynamic-character-portrait dynamic-character-portrait-${motion} ${className}`.trim()}
       onPointerMove={handlePointerMove}
       onPointerLeave={resetPointer}

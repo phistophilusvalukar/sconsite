@@ -14,6 +14,8 @@ const validProfile = {
   dynamicPortraitEnabled: false,
   portraitBackgroundImageUrl: '',
   portraitCutoutImageUrl: '',
+  portraitFocusX: 50,
+  portraitFocusY: 0,
   layoutStyle: 'chronicle' as const,
   sectionVisibility: { ...defaultCharacterProfileSectionVisibility }
 };
@@ -57,6 +59,10 @@ describe('character profile customization', () => {
       fontFamily: 'mystery-quest',
       dynamicPortraitEnabled: true,
       portraitBackgroundImageUrl: 'https://images.example.com/ruins.webp'
+    }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({
+      ...validProfile,
+      portraitFocusY: 140
     }).success).toBe(false);
   });
 });

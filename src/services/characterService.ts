@@ -99,6 +99,8 @@ type CharacterCreateInput = Omit<
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
   | 'profilePortraitCutoutImageUrl'
+  | 'profilePortraitFocusX'
+  | 'profilePortraitFocusY'
   | 'profileLayoutStyle'
   | 'profileSectionVisibility'
 > & Partial<Pick<
@@ -112,6 +114,8 @@ type CharacterCreateInput = Omit<
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
   | 'profilePortraitCutoutImageUrl'
+  | 'profilePortraitFocusX'
+  | 'profilePortraitFocusY'
   | 'profileLayoutStyle'
   | 'profileSectionVisibility'
 >>;
@@ -147,6 +151,8 @@ interface CharacterRow {
   profile_dynamic_portrait_enabled?: boolean | null;
   profile_portrait_background_url?: string | null;
   profile_portrait_cutout_url?: string | null;
+  profile_portrait_focus_x?: number | null;
+  profile_portrait_focus_y?: number | null;
   profile_layout_style?: Character['profileLayoutStyle'] | null;
   profile_section_visibility?: Partial<Character['profileSectionVisibility']> | null;
   created_at: string;
@@ -271,6 +277,8 @@ export class CharacterService {
         profile_dynamic_portrait_enabled: characterData.profileDynamicPortraitEnabled ?? false,
         profile_portrait_background_url: characterData.profilePortraitBackgroundImageUrl || null,
         profile_portrait_cutout_url: characterData.profilePortraitCutoutImageUrl || null,
+        profile_portrait_focus_x: characterData.profilePortraitFocusX ?? 50,
+        profile_portrait_focus_y: characterData.profilePortraitFocusY ?? 0,
         profile_layout_style: characterData.profileLayoutStyle || 'chronicle',
         profile_section_visibility: characterData.profileSectionVisibility || defaultCharacterProfileSectionVisibility,
         created_at: now,
@@ -1085,6 +1093,8 @@ export class CharacterService {
       profilePortraitCutoutImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_portrait_cutout_url || '')
         ? dbCharacter.profile_portrait_cutout_url || undefined
         : undefined,
+      profilePortraitFocusX: dbCharacter.profile_portrait_focus_x ?? 50,
+      profilePortraitFocusY: dbCharacter.profile_portrait_focus_y ?? 0,
       profileLayoutStyle: dbCharacter.profile_layout_style || 'chronicle',
       profileSectionVisibility: {
         ...defaultCharacterProfileSectionVisibility,

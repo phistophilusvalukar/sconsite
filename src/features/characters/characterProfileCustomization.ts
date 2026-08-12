@@ -71,6 +71,8 @@ export const characterProfileCustomizationSchema = z.object({
   dynamicPortraitEnabled: z.boolean(),
   portraitBackgroundImageUrl: externalImageUrl,
   portraitCutoutImageUrl: externalImageUrl,
+  portraitFocusX: z.number().min(0).max(100),
+  portraitFocusY: z.number().min(0).max(100),
   layoutStyle: z.enum(['chronicle', 'dossier', 'spotlight', 'saga']),
   sectionVisibility: z.object({
     portrait: z.boolean(),
@@ -106,6 +108,8 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   dynamicPortraitEnabled: character.profileDynamicPortraitEnabled ?? false,
   portraitBackgroundImageUrl: character.profilePortraitBackgroundImageUrl || '',
   portraitCutoutImageUrl: character.profilePortraitCutoutImageUrl || '',
+  portraitFocusX: character.profilePortraitFocusX ?? 50,
+  portraitFocusY: character.profilePortraitFocusY ?? 0,
   layoutStyle: character.profileLayoutStyle,
   sectionVisibility: { ...character.profileSectionVisibility }
 });

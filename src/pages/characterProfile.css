@@ -382,7 +382,17 @@
 .character-dynamic-toggle small { color: #7f8983; font-size: 10px; line-height: 1.45; }
 .character-dynamic-toggle + .character-field,
 .character-field + .character-field { margin-top: 13px; }
-.character-dynamic-preview { width: 100%; height: 320px; margin-top: 16px; border: 1px solid #4a554f; border-radius: 10px; background: #0d110f; box-shadow: 0 18px 32px rgb(0 0 0 / .3); }
+.character-focus-picker { position: relative; margin-top: 16px; }
+.character-dynamic-preview { width: 100%; height: 320px; border: 1px solid #4a554f; border-radius: 10px; background: #0d110f; box-shadow: 0 18px 32px rgb(0 0 0 / .3); }
+.character-focus-map { position: absolute; z-index: 5; inset: 0; width: 100%; border: 0; border-radius: 10px; padding: 0; background: transparent; cursor: crosshair; }
+.character-focus-map > span { position: absolute; display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid rgb(255 255 255 / .9); border-radius: 50%; background: rgb(10 12 11 / .58); color: #fff; box-shadow: 0 0 0 4px rgb(0 0 0 / .22), 0 0 22px rgb(255 255 255 / .18); transform: translate(-50%, -50%); pointer-events: none; }
+.character-focus-map svg { width: 20px; height: 20px; }
+.character-focus-picker > p { position: absolute; z-index: 6; right: 10px; bottom: 10px; margin: 0; border-radius: 999px; padding: 6px 9px; background: rgb(0 0 0 / .72); color: #f3f0ea; font-size: 10px; font-weight: 750; pointer-events: none; }
+.character-focus-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.character-focus-controls label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; border: 1px solid #38413c; border-radius: 8px; padding: 10px; background: #0e1311; }
+.character-focus-controls span { color: #c7cdc9; font-size: 10px; font-weight: 750; }
+.character-focus-controls input { grid-column: 1 / -1; width: 100%; accent-color: #b99a60; }
+.character-focus-controls output { color: #b99a60; font-size: 10px; font-weight: 800; }
 .character-color-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
 .character-color-grid label { display: grid; gap: 8px; }
 .character-color-grid label > div { display: flex; align-items: center; gap: 7px; padding: 8px; border: 1px solid #38413c; border-radius: 8px; background: #0e1311; }
@@ -435,7 +445,8 @@
   .character-profile-facts { grid-template-columns: 1fr; }
   .character-profile-records > div:last-child { padding: 18px; }
   .character-color-grid,
-  .character-layout-options { grid-template-columns: 1fr; }
+  .character-layout-options,
+  .character-focus-controls { grid-template-columns: 1fr; }
   .character-editor { padding: 20px; }
   .character-editor-actions { bottom: -20px; margin: 0 -20px -20px; padding: 16px 20px; }
 }

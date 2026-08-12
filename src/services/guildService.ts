@@ -62,6 +62,8 @@ interface GuildCharacterRow {
   profile_dynamic_portrait_enabled?: boolean | null;
   profile_portrait_background_url?: string | null;
   profile_portrait_cutout_url?: string | null;
+  profile_portrait_focus_x?: number | null;
+  profile_portrait_focus_y?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -193,8 +195,8 @@ export class GuildService {
         .select(`
           *,
           leader_character:characters!guilds_leader_character_id_fkey(id,name,level,class),
-          memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,created_at,updated_at)),
-          applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,created_at,updated_at))
+          memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at)),
+          applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at))
         `)
         .order('created_at', { ascending: false });
 
@@ -219,8 +221,8 @@ export class GuildService {
         .select(`
           *,
           leader_character:characters!guilds_leader_character_id_fkey(id,name,level,class),
-          memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,created_at,updated_at)),
-          applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,created_at,updated_at))
+          memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at)),
+          applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at))
         `)
         .eq('id', guildId)
         .single();
@@ -383,7 +385,7 @@ export class GuildService {
         .from(DATABASE_TABLES.GUILD_CHECKINS)
         .select(`
           *,
-          character:characters!guild_checkins_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,created_at,updated_at)
+          character:characters!guild_checkins_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at)
         `)
         .eq('guild_id', guildId)
         .eq('checkin_date', today)
@@ -425,7 +427,7 @@ export class GuildService {
         .from(DATABASE_TABLES.GUILD_GUESTBOOK_ENTRIES)
         .select(`
           *,
-          character:characters!guild_guestbook_entries_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,created_at,updated_at)
+          character:characters!guild_guestbook_entries_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at)
         `)
         .eq('guild_id', guildId)
         .order('created_at', { ascending: false })
@@ -1050,6 +1052,8 @@ export class GuildService {
       profilePortraitCutoutImageUrl: isSafeExternalImageUrl(dbCharacter.profile_portrait_cutout_url || '')
         ? dbCharacter.profile_portrait_cutout_url || undefined
         : undefined,
+      profilePortraitFocusX: dbCharacter.profile_portrait_focus_x ?? 50,
+      profilePortraitFocusY: dbCharacter.profile_portrait_focus_y ?? 0,
       profileLayoutStyle: 'chronicle',
       profileSectionVisibility: {
         portrait: true,

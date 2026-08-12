@@ -98,6 +98,8 @@ export interface Character {
   profileDynamicPortraitEnabled?: boolean;
   profilePortraitBackgroundImageUrl?: string;
   profilePortraitCutoutImageUrl?: string;
+  profilePortraitFocusX?: number;
+  profilePortraitFocusY?: number;
   profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight' | 'saga';
   profileSectionVisibility: CharacterProfileSectionVisibility;
   createdAt: Date;
