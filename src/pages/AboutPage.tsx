@@ -1,87 +1,48 @@
 import React from 'react';
+import { ArrowRight, CalendarDays, Shield, Ticket, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, Shield, Ticket, Users } from 'lucide-react';
 
 const AboutPage: React.FC = () => {
   const sections = [
-    {
-      icon: Shield,
-      title: 'Characters',
-      body: 'Create and manage Pathfinder 2e characters, including imported Foundry data where available.',
-      href: '/characters',
-      action: 'Manage Characters'
-    },
-    {
-      icon: Users,
-      title: 'Guilds',
-      body: 'Form guilds, recruit members, review applications, and keep rosters organized.',
-      href: '/guilds',
-      action: 'View Guilds'
-    },
-    {
-      icon: CalendarDays,
-      title: 'Scheduling',
-      body: 'Use schedule polls to find table times that work for players and GMs.',
-      href: '/schedule',
-      action: 'Open Schedule'
-    },
-    {
-      icon: Ticket,
-      title: 'Games',
-      body: 'List upcoming adventures, apply with characters, and archive completed games.',
-      href: '/games',
-      action: 'Browse Games'
-    }
+    { number: '01', icon: Shield, title: 'Make a character', body: 'Create a Pathfinder 2e character or bring in a Foundry record, then keep their public history in one place.', href: '/characters', action: 'Open the character registry' },
+    { number: '02', icon: Users, title: 'Find your people', body: 'Build a guild hall, gather beneath an existing banner, or visit another headquarters as a traveler.', href: '/guilds', action: 'Walk the guild registry' },
+    { number: '03', icon: CalendarDays, title: 'Gather the table', body: 'Compare availability and turn a possible evening into a date everyone can actually keep.', href: '/schedule', action: 'Consult the schedule' },
+    { number: '04', icon: Ticket, title: 'Return with a story', body: 'Apply for expeditions, manage the roster, and preserve completed adventures in the campaign archive.', href: '/games', action: 'Browse expeditions' }
   ];
 
   return (
-    <div className="min-h-screen px-4 py-12 sm:px-6 lg:px-8">
-      <section className="mx-auto max-w-4xl text-center">
-        <Shield className="mx-auto mb-6 h-16 w-16 text-yellow-400" />
-        <h1 className="font-fantasy text-4xl font-bold text-white md:text-6xl">
-          About Pathfinder Westmarch
-        </h1>
-        <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-gray-300 md:text-xl">
-          This site is the campaign hub for a Pathfinder 2e Westmarch community. It keeps player profiles,
-          characters, guilds, schedules, game listings, and news in one place.
-        </p>
+    <div className="site-about">
+      <header className="site-page-hero">
+        <div><p className="site-kicker">The campaign concordance</p><h1>One world.<br /><em>Many hands.</em></h1></div>
+        <p>This is the quiet infrastructure behind a living Pathfinder 2e Westmarch: a place for people to find one another, organize the next journey, and keep what happened from being lost.</p>
+      </header>
+
+      <div className="site-page-rule"><span /></div>
+
+      <section className="site-about-intro">
+        <p className="site-kicker">How to begin</p>
+        <h2>From first character to lasting chronicle</h2>
+        <p>Every tool here supports the same rhythm: arrive with an idea, find companions, make plans, and add what happened back to the shared record.</p>
       </section>
 
-      <section className="mx-auto mt-12 grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2">
-        {sections.map((section) => {
+      <section className="site-about-steps">
+        {sections.map(section => {
           const Icon = section.icon;
-
           return (
-            <article
-              key={section.title}
-              className="border border-fantasy-700/35 bg-fantasy-950/35 p-6"
-            >
-              <Icon className="mb-4 h-10 w-10 text-yellow-400" />
-              <h2 className="text-2xl font-bold text-white">{section.title}</h2>
-              <p className="mt-3 leading-relaxed text-gray-300">{section.body}</p>
-              <Link
-                to={section.href}
-                className="mt-5 inline-flex items-center font-semibold text-yellow-400 transition-colors hover:text-yellow-300"
-              >
-                {section.action}
-              </Link>
+            <article key={section.title}>
+              <span className="site-about-number">{section.number}</span>
+              <div className="site-about-icon"><Icon /></div>
+              <h3>{section.title}</h3>
+              <p>{section.body}</p>
+              <Link to={section.href}>{section.action} <ArrowRight /></Link>
             </article>
           );
         })}
       </section>
 
-      <section className="mx-auto mt-12 max-w-4xl border border-fantasy-700/35 bg-midnight-950/45 p-6 text-center">
-        <h2 className="font-fantasy text-3xl font-bold text-white">Getting Started</h2>
-        <p className="mx-auto mt-4 max-w-2xl leading-relaxed text-gray-300">
-          Sign in, create your profile, add a character, then use the guild, schedule, and games pages to join
-          the community activity already tracked in the database.
-        </p>
-        <Link
-          to="/profile"
-          className="mt-6 inline-flex items-center bg-yellow-500 px-6 py-3 font-bold text-midnight-950 transition-colors hover:bg-yellow-400"
-        >
-          Open Profile
-        </Link>
+      <section className="site-about-cta">
+        <div><p className="site-kicker">Your place in the record</p><h2>The next entry can be yours.</h2><p>Sign in, create a profile, and bring your first character into the Convergence.</p></div>
+        <Link to="/profile" className="site-primary-link">Open your profile <ArrowRight /></Link>
       </section>
     </div>
   );

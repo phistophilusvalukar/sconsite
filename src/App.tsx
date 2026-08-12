@@ -35,8 +35,8 @@ const TacticalPuzzlesPage = lazy(() => import('./features/tactical-puzzles/route
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-[45vh] items-center justify-center px-4 py-16">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-fantasy-700/40 border-t-yellow-400" aria-label="Loading page" />
+    <div className="site-route-fallback">
+      <div className="site-route-loader" aria-label="Loading page" />
     </div>
   );
 }
@@ -116,7 +116,7 @@ function AppLayout() {
 
   if (isStandaloneTicketArchive) {
     return (
-      <div className="min-h-screen bg-fantasy-gradient">
+      <div className="site-app-shell">
         <main>
           <AppRoutes />
         </main>
@@ -125,9 +125,9 @@ function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-fantasy-gradient">
+    <div className="site-app-shell flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1">
+      <main className="site-main flex-1">
         <AppRoutes />
       </main>
       {!hideFooter && <Footer />}
@@ -146,10 +146,11 @@ function PageGate({ children, pageKey }: { children: React.ReactNode; pageKey: S
 
   if (!isAdmin && !isPageEnabled(pageKey)) {
     return (
-      <div className="flex min-h-[55vh] items-center justify-center px-4 py-16">
-        <div className="max-w-xl rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-8 text-center">
-          <h1 className="font-fantasy text-3xl font-bold text-white">Page unavailable</h1>
-          <p className="mt-4 text-gray-300">
+      <div className="site-empty-state">
+        <div className="site-empty-state-card">
+          <p className="site-kicker">The registry</p>
+          <h1>Page unavailable</h1>
+          <p>
             This page is currently hidden from public navigation. Please check back later.
           </p>
         </div>

@@ -21,7 +21,7 @@ const GoogleLogin: React.FC = () => {
     <button
       onClick={handleGoogleLogin}
       disabled={isLoading}
-      className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 disabled:bg-gray-300 disabled:cursor-not-allowed text-midnight-900 rounded-md transition-colors font-medium"
+      className="site-login-button"
     >
       {isLoading ? (
         <Loader2 className="w-4 h-4 animate-spin" />

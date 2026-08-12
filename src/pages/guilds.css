@@ -5,11 +5,11 @@
 }
 
 .guild-directory {
-  --registry-gold: #e1b95d;
-  --registry-paper: #f4efe4;
+  --registry-gold: #a09482;
+  --registry-paper: #f0ede7;
   background:
-    radial-gradient(circle at 76% 4%, rgba(132, 89, 190, .2), transparent 29rem),
-    linear-gradient(180deg, #100e18 0%, #171222 48%, #0c0b12 100%);
+    radial-gradient(circle at 76% 4%, rgba(160, 148, 130, .12), transparent 29rem),
+    linear-gradient(180deg, #111615 0%, #19211f 48%, #0c1211 100%);
   color: #f8f7fb;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
@@ -33,7 +33,7 @@
   min-height: 470px;
   padding: clamp(4rem, 9vw, 8rem) max(1.25rem, calc((100vw - 1240px) / 2));
   overflow: hidden;
-  border-bottom: 1px solid rgba(225, 185, 93, .16);
+  border-bottom: 1px solid rgba(160, 148, 130, .18);
 }
 
 .guild-directory-hero::after {
@@ -54,16 +54,16 @@
   right: max(4vw, calc((100vw - 1240px) / 2));
   width: 480px;
   height: 480px;
-  border: 1px solid rgba(225, 185, 93, .22);
+  border: 1px solid rgba(160, 148, 130, .24);
   border-radius: 50%;
-  box-shadow: 0 0 120px rgba(124, 58, 237, .18), inset 0 0 100px rgba(225, 185, 93, .05);
+  box-shadow: 0 0 120px rgba(83, 99, 92, .16), inset 0 0 100px rgba(160, 148, 130, .05);
 }
 
 .guild-directory-glow::before,
 .guild-directory-glow::after {
   position: absolute;
   inset: 40px;
-  border: 1px solid rgba(225, 185, 93, .1);
+  border: 1px solid rgba(160, 148, 130, .11);
   border-radius: inherit;
   content: '';
 }
@@ -123,7 +123,7 @@
 }
 
 .guild-primary-action {
-  background: var(--registry-gold, #e1b95d);
+  background: var(--registry-gold, #a09482);
   color: #17121e;
   box-shadow: 0 12px 32px rgba(0, 0, 0, .25);
 }
@@ -166,7 +166,7 @@
   align-items: center;
   width: min(100%, 460px);
   gap: .7rem;
-  border: 1px solid rgba(225, 185, 93, .18);
+  border: 1px solid rgba(160, 148, 130, .2);
   border-radius: 5px;
   padding: 0 .9rem;
   background: rgba(255,255,255,.035);
@@ -186,12 +186,12 @@
 .guild-filter-tabs { display: flex; flex-wrap: wrap; gap: .35rem; }
 .guild-filter-tabs button { border: 1px solid transparent; border-radius: 999px; padding: .55rem .9rem; background: transparent; color: #9892a1; font-size: .76rem; cursor: pointer; }
 .guild-filter-tabs button:hover { color: #fff; }
-.guild-filter-tabs button.is-active { border-color: rgba(225,185,93,.24); background: rgba(225,185,93,.09); color: #f2d58f; }
+.guild-filter-tabs button.is-active { border-color: rgba(160,148,130,.28); background: rgba(160,148,130,.1); color: #c4bbad; }
 
 .guild-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
 .guild-directory-card {
-  --guild-card-base: #171425;
-  --guild-card-accent: #d6a84b;
+  --guild-card-base: #1d2321;
+  --guild-card-accent: #a09482;
   position: relative;
   display: flex;
   min-height: 340px;
@@ -240,9 +240,9 @@
 .guild-directory-state svg,
 .guild-profile-state svg { color: #d8b764; }
 .guild-directory-state strong { color: white; font-family: Cinzel, serif; font-size: 1.4rem; }
-.guild-profile-state { min-height: 100vh; padding: 2rem; background: #100e18; color: #c3bec9; }
+.guild-profile-state { min-height: 100vh; padding: 2rem; background: #111615; color: #b4b6b1; }
 .guild-profile-state h1 { font-family: Cinzel, serif; color: white; }
-.guild-profile-state a { color: #e1b95d; }
+.guild-profile-state a { color: #b9afa0; }
 .guild-spin { animation: guild-spin .8s linear infinite; }
 @keyframes guild-spin { to { transform: rotate(360deg); } }
 
@@ -263,7 +263,7 @@
   backdrop-filter: blur(10px);
 }
 .guild-modal-backdrop { align-items: center; justify-content: center; }
-.guild-create-modal { width: min(100%, 720px); max-height: calc(100vh - 2rem); overflow: auto; border: 1px solid rgba(225,185,93,.25); border-radius: 8px; padding: clamp(1.25rem, 4vw, 2rem); background: #181420; box-shadow: 0 35px 90px rgba(0,0,0,.6); }
+.guild-create-modal { width: min(100%, 720px); max-height: calc(100vh - 2rem); overflow: auto; border: 1px solid rgba(160,148,130,.28); border-radius: 8px; padding: clamp(1.25rem, 4vw, 2rem); background: #19211f; box-shadow: 0 35px 90px rgba(0,0,0,.6); }
 .guild-modal-heading,
 .guild-editor-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
 .guild-modal-heading h2,
@@ -275,7 +275,7 @@
 .guild-editor-heading > button:hover { color: #fff; }
 .guild-form-notice,
 .guild-form-error,
-.guild-action-message { margin-bottom: 1rem; border: 1px solid rgba(225,185,93,.25); border-radius: 4px; padding: .75rem .9rem; background: rgba(225,185,93,.08); color: #ecd493; font-size: .78rem; line-height: 1.5; }
+.guild-action-message { margin-bottom: 1rem; border: 1px solid rgba(160,148,130,.28); border-radius: 4px; padding: .75rem .9rem; background: rgba(160,148,130,.09); color: #d1cabf; font-size: .78rem; line-height: 1.5; }
 .guild-form-error { border-color: rgba(248,113,113,.32); background: rgba(127,29,29,.18); color: #fecaca; }
 .guild-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .guild-field { display: grid; gap: .42rem; }
@@ -297,7 +297,7 @@
 }
 .guild-field input:focus,
 .guild-field textarea:focus,
-.guild-field select:focus { border-color: rgba(225,185,93,.6); box-shadow: 0 0 0 3px rgba(225,185,93,.08); }
+.guild-field select:focus { border-color: rgba(160,148,130,.62); box-shadow: 0 0 0 3px rgba(160,148,130,.09); }
 .guild-field textarea { resize: vertical; }
 .guild-field select option,
 .guild-member-edit select option { background: #17131f; color: white; }
@@ -622,7 +622,7 @@
 .guild-rich-surface-inline { min-height: 55px; }
 .guild-rich-source { resize: vertical; border-radius: 4px; color: #d7d0dc; font-family: Consolas, monospace; font-size: .7rem; }
 .guild-rich-surface:focus,
-.guild-rich-source:focus { border-color: rgba(225,185,93,.6); box-shadow: 0 0 0 3px rgba(225,185,93,.08); }
+.guild-rich-source:focus { border-color: rgba(160,148,130,.62); box-shadow: 0 0 0 3px rgba(160,148,130,.09); }
 .guild-rich-surface:empty::before { color: #716b76; content: attr(data-placeholder); pointer-events: none; }
 .guild-rich-surface p { margin: 0 0 .65em; }
 .guild-rich-surface blockquote { margin: .7em 0; border-left: 3px solid #dfb85f; padding-left: .8em; color: #bbb4c0; }
