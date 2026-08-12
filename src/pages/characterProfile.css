@@ -165,6 +165,7 @@
   filter: saturate(.88) contrast(1.03);
   box-shadow: 16px 18px 0 color-mix(in srgb, var(--character-accent) 9%, transparent);
 }
+.dynamic-character-portrait.character-profile-portrait { overflow: visible; }
 
 .character-profile-nameplate {
   margin: 0;

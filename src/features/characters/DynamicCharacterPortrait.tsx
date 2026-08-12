@@ -126,24 +126,26 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
       onPointerLeave={resetPointer}
       onPointerCancel={resetPointer}
     >
-      <img
-        aria-hidden="true"
-        className="dynamic-character-portrait-background"
-        src={character.profilePortraitBackgroundImageUrl}
-        alt=""
-        draggable={false}
-        onError={() => setImageLoadFailed(true)}
-      />
-      <div className="dynamic-character-portrait-depth" aria-hidden="true" />
-      <img
-        aria-hidden="true"
-        className="dynamic-character-portrait-cutout"
-        src={character.profilePortraitCutoutImageUrl}
-        alt=""
-        draggable={false}
-        onError={() => setImageLoadFailed(true)}
-      />
-      <div className="dynamic-character-portrait-glint" aria-hidden="true" />
+      <div className="dynamic-character-portrait-frame" aria-hidden="true">
+        <img
+          className="dynamic-character-portrait-background"
+          src={character.profilePortraitBackgroundImageUrl}
+          alt=""
+          draggable={false}
+          onError={() => setImageLoadFailed(true)}
+        />
+        <div className="dynamic-character-portrait-depth" />
+        <div className="dynamic-character-portrait-glint" />
+      </div>
+      <div className="dynamic-character-portrait-cutout-stage" aria-hidden="true">
+        <img
+          className="dynamic-character-portrait-cutout"
+          src={character.profilePortraitCutoutImageUrl}
+          alt=""
+          draggable={false}
+          onError={() => setImageLoadFailed(true)}
+        />
+      </div>
     </div>
   );
 };

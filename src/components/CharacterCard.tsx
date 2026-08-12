@@ -27,17 +27,18 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 
   // Get character avatar from main file or use default
   const characterAvatar = parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || DEFAULT_CHARACTER_AVATAR;
+  const hasDynamicPortrait = Boolean(character.profileDynamicPortraitEnabled && character.profilePortraitBackgroundImageUrl && character.profilePortraitCutoutImageUrl);
 
   return (
     <div
-      className={`group overflow-hidden rounded-xl border bg-fantasy-900/30 hover:bg-fantasy-800/30 transition-all cursor-pointer ${roleBorderTone(character.mainRole)} ${
+      className={`group relative rounded-xl border bg-fantasy-900/30 hover:bg-fantasy-800/30 transition-all cursor-pointer ${hasDynamicPortrait ? 'overflow-visible hover:z-20' : 'overflow-hidden'} ${roleBorderTone(character.mainRole)} ${
         isSelected ? 'ring-2 ring-yellow-400' : ''
       }`}
       onClick={() => onSelect(character)}
     >
-      <div className="relative min-h-[260px] overflow-hidden">
-        <DynamicCharacterPortrait character={character} fallbackSrc={characterAvatar} alt={character.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" motion="hover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-midnight-950 via-midnight-950/45 to-midnight-950/10" />
+      <div className={`relative min-h-[260px] ${hasDynamicPortrait ? 'overflow-visible' : 'overflow-hidden'}`}>
+        <DynamicCharacterPortrait character={character} fallbackSrc={characterAvatar} alt={character.name} className="absolute inset-0 h-full w-full rounded-xl object-cover transition-transform duration-300 group-hover:scale-105" motion="hover" />
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-midnight-950 via-midnight-950/45 to-midnight-950/10" />
         <div className="absolute left-4 right-4 top-4 flex items-center justify-between">
           <div className={`px-3 py-1 rounded-full text-xs font-semibold backdrop-blur ${
             character.isActive

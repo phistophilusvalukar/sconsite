@@ -448,10 +448,10 @@ select:focus-visible {
   --portrait-focus-y: 0%;
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow: visible;
   min-width: 0;
   min-height: 0;
-  background: #101210;
+  background: transparent;
   perspective: 820px;
   transform: perspective(820px) rotateX(var(--portrait-tilt-x)) rotateY(var(--portrait-tilt-y));
   transform-style: preserve-3d;
@@ -468,6 +468,26 @@ select:focus-visible {
 .dynamic-character-portrait-glint {
   position: absolute;
   pointer-events: none;
+}
+
+.dynamic-character-portrait-frame {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #101210;
+  transform: translateZ(0);
+}
+
+.dynamic-character-portrait-cutout-stage {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: visible;
+  clip-path: inset(-100vmax -100vmax 0 -100vmax);
+  pointer-events: none;
+  transform-style: preserve-3d;
 }
 
 .dynamic-character-portrait-background {

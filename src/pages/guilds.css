@@ -469,10 +469,11 @@
 .guild-requirements-panel p:last-child { margin: .65rem 0 0; color: color-mix(in srgb, var(--guild-ink) 68%, transparent); font-size: .84rem; line-height: 1.7; white-space: pre-wrap; }
 
 .guild-leader-card { overflow: hidden; }
+.guild-leader-card:has(.dynamic-character-portrait) { overflow: visible; }
 .guild-leader-portrait { position: relative; height: 250px; background: color-mix(in srgb, var(--guild-base) 70%, black 30%); }
 .guild-leader-portrait::after { position: absolute; inset: 40% 0 0; background: linear-gradient(transparent, color-mix(in srgb, var(--guild-base) 92%, black 8%)); content: ''; }
 .guild-leader-portrait img,
-.guild-leader-dynamic-portrait { width: 100%; height: 100%; object-fit: cover; }
+.guild-leader-dynamic-portrait { width: 100%; height: 100%; border-radius: 5px 5px 0 0; object-fit: cover; }
 .guild-leader-portrait > svg { position: absolute; z-index: 1; right: 1rem; bottom: .8rem; width: 33px; height: 33px; border: 1px solid color-mix(in srgb, var(--guild-accent) 55%, transparent); border-radius: 50%; padding: .45rem; background: var(--guild-base); color: var(--guild-accent); }
 .guild-leader-copy { position: relative; margin-top: -1rem; padding: 0 1.25rem 1.35rem; }
 .guild-leader-copy h2 { margin: 0; font-size: 1.65rem; line-height: 1.1; }
@@ -519,11 +520,13 @@
 /* Portrait card roster */
 .guild-character-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
 .guild-character-card { position: relative; min-height: 330px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--guild-accent) 24%, transparent); border-radius: 7px; background: color-mix(in srgb, var(--guild-base) 75%, black); box-shadow: 0 15px 30px rgba(0,0,0,.2); }
+.guild-character-card:has(.dynamic-character-portrait) { overflow: visible; }
+.guild-character-card:has(.dynamic-character-portrait):hover { z-index: 3; }
 .guild-character-card > img,
-.guild-character-card > .guild-character-card-portrait { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
+.guild-character-card > .guild-character-card-portrait { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; transition: transform .35s ease; }
 .guild-character-card:hover > img,
 .guild-character-card:hover > .guild-character-card-portrait { transform: scale(1.035); }
-.guild-character-card-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.06) 30%, color-mix(in srgb, var(--guild-base) 92%, transparent) 89%); }
+.guild-character-card-shade { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(0,0,0,.06) 30%, color-mix(in srgb, var(--guild-base) 92%, transparent) 89%); }
 .guild-character-card-role { position: absolute; top: .7rem; left: .7rem; display: flex; align-items: center; gap: .3rem; border: 1px solid color-mix(in srgb, var(--guild-accent) 35%, transparent); border-radius: 999px; padding: .35rem .55rem; background: color-mix(in srgb, var(--guild-base) 80%, transparent); color: var(--guild-accent); font-size: .56rem; font-weight: 800; backdrop-filter: blur(8px); }
 .guild-character-card-copy { position: absolute; right: 0; bottom: 0; left: 0; padding: 1.1rem; }
 .guild-character-card-copy small { color: var(--guild-accent); font-size: .58rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
