@@ -29,6 +29,35 @@ const guildCheckinResultSchema = z.object({
   checkinDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 }).strict();
 
+const GUILD_CHARACTER_COLUMNS = 'id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url';
+const GUILD_CHARACTER_DATE_COLUMNS = 'created_at,updated_at';
+const guildCharacterColumns = (includeFocus: boolean) => [
+  GUILD_CHARACTER_COLUMNS,
+  includeFocus ? 'profile_portrait_focus_x,profile_portrait_focus_y' : '',
+  GUILD_CHARACTER_DATE_COLUMNS
+].filter(Boolean).join(',');
+
+const guildGraphSelect = (includeFocus: boolean) => `
+  *,
+  leader_character:characters!guilds_leader_character_id_fkey(id,name,level,class),
+  memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(${guildCharacterColumns(includeFocus)})),
+  applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(${guildCharacterColumns(includeFocus)}))
+`;
+
+const checkinSelect = (includeFocus: boolean) => `
+  *,
+  character:characters!guild_checkins_character_id_fkey(${guildCharacterColumns(includeFocus)})
+`;
+
+const guestbookSelect = (includeFocus: boolean) => `
+  *,
+  character:characters!guild_guestbook_entries_character_id_fkey(${guildCharacterColumns(includeFocus)})
+`;
+
+const isMissingPortraitFocusColumn = (error?: { code?: string; message?: string } | null) =>
+  error?.code === '42703'
+  && Boolean(error.message?.includes('profile_portrait_focus_'));
+
 export interface CreateGuildInput {
   name: string;
   subtitle?: string;
@@ -190,15 +219,13 @@ export class GuildService {
   async getGuilds(): Promise<ApiResponse<Guild[]>> {
     try {
       const supabase = this.dbService.getClient();
-      const { data, error } = await supabase
+      const loadGuilds = (includeFocus: boolean) => supabase
         .from(DATABASE_TABLES.GUILDS)
-        .select(`
-          *,
-          leader_character:characters!guilds_leader_character_id_fkey(id,name,level,class),
-          memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at)),
-          applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at))
-        `)
+        .select(guildGraphSelect(includeFocus))
         .order('created_at', { ascending: false });
+      let response = await loadGuilds(true);
+      if (isMissingPortraitFocusColumn(response.error)) response = await loadGuilds(false);
+      const { data, error } = response;
 
       if (error) {
         return { success: false, error: error.message };
@@ -216,16 +243,15 @@ export class GuildService {
 
   async getGuild(guildId: string): Promise<ApiResponse<Guild>> {
     try {
-      const { data, error } = await this.dbService.getClient()
+      const supabase = this.dbService.getClient();
+      const loadGuild = (includeFocus: boolean) => supabase
         .from(DATABASE_TABLES.GUILDS)
-        .select(`
-          *,
-          leader_character:characters!guilds_leader_character_id_fkey(id,name,level,class),
-          memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at)),
-          applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at))
-        `)
+        .select(guildGraphSelect(includeFocus))
         .eq('id', guildId)
         .single();
+      let response = await loadGuild(true);
+      if (isMissingPortraitFocusColumn(response.error)) response = await loadGuild(false);
+      const { data, error } = response;
 
       if (error || !data) {
         return { success: false, error: error?.message || 'Guild not found.' };
@@ -381,15 +407,16 @@ export class GuildService {
   async getTodayCheckins(guildId: string): Promise<ApiResponse<GuildCheckin[]>> {
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const { data, error } = await this.dbService.getClient()
+      const supabase = this.dbService.getClient();
+      const loadCheckins = (includeFocus: boolean) => supabase
         .from(DATABASE_TABLES.GUILD_CHECKINS)
-        .select(`
-          *,
-          character:characters!guild_checkins_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at)
-        `)
+        .select(checkinSelect(includeFocus))
         .eq('guild_id', guildId)
         .eq('checkin_date', today)
         .order('created_at', { ascending: false });
+      let response = await loadCheckins(true);
+      if (isMissingPortraitFocusColumn(response.error)) response = await loadCheckins(false);
+      const { data, error } = response;
 
       if (error) return { success: false, error: error.message };
       return { success: true, data: (data || []).map(row => this.transformCheckinFromDb(row)) };
@@ -423,15 +450,16 @@ export class GuildService {
 
   async getGuestbookEntries(guildId: string): Promise<ApiResponse<GuildGuestbookEntry[]>> {
     try {
-      const { data, error } = await this.dbService.getClient()
+      const supabase = this.dbService.getClient();
+      const loadEntries = (includeFocus: boolean) => supabase
         .from(DATABASE_TABLES.GUILD_GUESTBOOK_ENTRIES)
-        .select(`
-          *,
-          character:characters!guild_guestbook_entries_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url,profile_portrait_focus_x,profile_portrait_focus_y,created_at,updated_at)
-        `)
+        .select(guestbookSelect(includeFocus))
         .eq('guild_id', guildId)
         .order('created_at', { ascending: false })
         .limit(60);
+      let response = await loadEntries(true);
+      if (isMissingPortraitFocusColumn(response.error)) response = await loadEntries(false);
+      const { data, error } = response;
 
       if (error) return { success: false, error: error.message };
       return { success: true, data: (data || []).map(row => this.transformGuestbookFromDb(row)) };
