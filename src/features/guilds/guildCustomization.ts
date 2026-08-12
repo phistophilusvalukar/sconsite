@@ -34,6 +34,13 @@ export const defaultGuildSectionVisibility = {
   guestbook: true
 } as const;
 
+export const defaultGuildPalette = {
+  baseColor: '#111615',
+  fontColor: '#f0ede7',
+  accentColor: '#a09482',
+  surfaceColor: '#1d2321'
+} as const;
+
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Choose a valid six-digit color.');
 export const isSafeExternalImageUrl = (value: string) => {
   if (!value) return true;
@@ -56,6 +63,7 @@ export const guildCustomizationSchema = z.object({
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
+  surfaceColor: hexColor,
   layoutStyle: z.enum(['chronicle', 'stronghold', 'banner']),
   rosterDisplay: z.enum(['ledger', 'dossiers', 'cards']),
   sectionVisibility: z.object({
@@ -103,6 +111,7 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   fontColor: guild.fontColor,
   baseColor: guild.baseColor,
   accentColor: guild.accentColor,
+  surfaceColor: guild.surfaceColor,
   layoutStyle: guild.layoutStyle,
   rosterDisplay: guild.rosterDisplay,
   sectionVisibility: { ...guild.sectionVisibility },

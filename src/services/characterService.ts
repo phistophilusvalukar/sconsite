@@ -16,6 +16,7 @@ import {
 import {
   CharacterProfileCustomizationInput,
   characterProfileCustomizationSchema,
+  defaultCharacterProfilePalette,
   defaultCharacterProfileSectionVisibility
 } from '../features/characters/characterProfileCustomization';
 import { deriveAbilityBoostsFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
@@ -93,6 +94,7 @@ type CharacterCreateInput = Omit<
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
+  | 'profileSurfaceColor'
   | 'profileLayoutStyle'
   | 'profileSectionVisibility'
 > & Partial<Pick<
@@ -102,6 +104,7 @@ type CharacterCreateInput = Omit<
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
+  | 'profileSurfaceColor'
   | 'profileLayoutStyle'
   | 'profileSectionVisibility'
 >>;
@@ -133,6 +136,7 @@ interface CharacterRow {
   profile_font_color?: string | null;
   profile_base_color?: string | null;
   profile_accent_color?: string | null;
+  profile_surface_color?: string | null;
   profile_layout_style?: Character['profileLayoutStyle'] | null;
   profile_section_visibility?: Partial<Character['profileSectionVisibility']> | null;
   created_at: string;
@@ -231,9 +235,10 @@ export class CharacterService {
         guild_id: characterData.guildId || null,
         profile_subtitle: characterData.profileSubtitle || '',
         profile_font_family: characterData.profileFontFamily || 'cinzel',
-        profile_font_color: characterData.profileFontColor || '#f4efe6',
-        profile_base_color: characterData.profileBaseColor || '#18201f',
-        profile_accent_color: characterData.profileAccentColor || '#c9954a',
+        profile_font_color: characterData.profileFontColor || defaultCharacterProfilePalette.fontColor,
+        profile_base_color: characterData.profileBaseColor || defaultCharacterProfilePalette.baseColor,
+        profile_accent_color: characterData.profileAccentColor || defaultCharacterProfilePalette.accentColor,
+        profile_surface_color: characterData.profileSurfaceColor || defaultCharacterProfilePalette.surfaceColor,
         profile_layout_style: characterData.profileLayoutStyle || 'chronicle',
         profile_section_visibility: characterData.profileSectionVisibility || defaultCharacterProfileSectionVisibility,
         created_at: now,
@@ -1058,9 +1063,10 @@ export class CharacterService {
       guildId: dbCharacter.guild_id,
       profileSubtitle: dbCharacter.profile_subtitle || '',
       profileFontFamily: dbCharacter.profile_font_family || 'cinzel',
-      profileFontColor: dbCharacter.profile_font_color || '#f4efe6',
-      profileBaseColor: dbCharacter.profile_base_color || '#18201f',
-      profileAccentColor: dbCharacter.profile_accent_color || '#c9954a',
+      profileFontColor: dbCharacter.profile_font_color || defaultCharacterProfilePalette.fontColor,
+      profileBaseColor: dbCharacter.profile_base_color || defaultCharacterProfilePalette.baseColor,
+      profileAccentColor: dbCharacter.profile_accent_color || defaultCharacterProfilePalette.accentColor,
+      profileSurfaceColor: dbCharacter.profile_surface_color || defaultCharacterProfilePalette.surfaceColor,
       profileLayoutStyle: dbCharacter.profile_layout_style || 'chronicle',
       profileSectionVisibility: {
         ...defaultCharacterProfileSectionVisibility,

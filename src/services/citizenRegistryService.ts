@@ -227,6 +227,7 @@ export class CitizenRegistryService {
       profileFontColor: '#f4efe6',
       profileBaseColor: '#18201f',
       profileAccentColor: '#c9954a',
+      profileSurfaceColor: '#1d2321',
       profileLayoutStyle: 'chronicle',
       profileSectionVisibility: {
         portrait: true,

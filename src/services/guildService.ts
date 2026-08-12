@@ -15,6 +15,7 @@ import {
 } from '../types/database';
 import {
   GuildCustomizationInput,
+  defaultGuildPalette,
   defaultGuildSectionVisibility,
   defaultGuildRoleLabels,
   guildCustomizationSchema,
@@ -112,6 +113,7 @@ interface GuildRow {
   font_color?: string;
   base_color?: string;
   accent_color?: string;
+  surface_color?: string;
   layout_style?: Guild['layoutStyle'];
   roster_display?: Guild['rosterDisplay'];
   section_visibility?: Partial<Guild['sectionVisibility']>;
@@ -273,6 +275,10 @@ export class GuildService {
           status: 'Recruiting',
           requirements: input.requirements || 'Founding members required.',
           region: input.region || '',
+          font_color: defaultGuildPalette.fontColor,
+          base_color: defaultGuildPalette.baseColor,
+          accent_color: defaultGuildPalette.accentColor,
+          surface_color: defaultGuildPalette.surfaceColor,
           rank: 'bronze',
           badges: [],
           recent_activity: 'Guild charter created.',
@@ -912,9 +918,10 @@ export class GuildService {
       emblemUrl: isSafeExternalImageUrl(dbGuild.emblem_url || dbGuild.logo || '') ? dbGuild.emblem_url || dbGuild.logo : undefined,
       region: dbGuild.region || '',
       fontFamily: dbGuild.font_family || 'cinzel',
-      fontColor: dbGuild.font_color || '#f8fafc',
-      baseColor: dbGuild.base_color || '#171425',
-      accentColor: dbGuild.accent_color || '#d6a84b',
+      fontColor: dbGuild.font_color || defaultGuildPalette.fontColor,
+      baseColor: dbGuild.base_color || defaultGuildPalette.baseColor,
+      accentColor: dbGuild.accent_color || defaultGuildPalette.accentColor,
+      surfaceColor: dbGuild.surface_color || defaultGuildPalette.surfaceColor,
       layoutStyle: dbGuild.layout_style || 'chronicle',
       rosterDisplay: dbGuild.roster_display || 'ledger',
       sectionVisibility: { ...defaultGuildSectionVisibility, ...(dbGuild.section_visibility || {}) },
@@ -1034,6 +1041,7 @@ export class GuildService {
       profileFontColor: '#f4efe6',
       profileBaseColor: '#18201f',
       profileAccentColor: '#c9954a',
+      profileSurfaceColor: '#1d2321',
       profileLayoutStyle: 'chronicle',
       profileSectionVisibility: {
         portrait: true,

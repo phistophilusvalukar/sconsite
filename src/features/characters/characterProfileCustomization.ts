@@ -24,6 +24,13 @@ export const defaultCharacterProfileSectionVisibility = {
   relationships: true
 } as const;
 
+export const defaultCharacterProfilePalette = {
+  baseColor: '#111615',
+  fontColor: '#f0ede7',
+  accentColor: '#a09482',
+  surfaceColor: '#1d2321'
+} as const;
+
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Choose a valid six-digit color.');
 
 export const characterProfileCustomizationSchema = z.object({
@@ -32,6 +39,7 @@ export const characterProfileCustomizationSchema = z.object({
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
+  surfaceColor: hexColor,
   layoutStyle: z.enum(['chronicle', 'dossier', 'spotlight']),
   sectionVisibility: z.object({
     portrait: z.boolean(),
@@ -55,6 +63,7 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   fontColor: character.profileFontColor,
   baseColor: character.profileBaseColor,
   accentColor: character.profileAccentColor,
+  surfaceColor: character.profileSurfaceColor,
   layoutStyle: character.profileLayoutStyle,
   sectionVisibility: { ...character.profileSectionVisibility }
 });

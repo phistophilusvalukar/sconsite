@@ -15,6 +15,7 @@ import {
   Palette,
   Pencil,
   Plus,
+  RotateCcw,
   Save,
   Send,
   Shield,
@@ -32,6 +33,7 @@ import GuildRoster, { GuildRoleEdit } from '../features/guilds/GuildRoster';
 import {
   GuildCustomizationInput,
   customizationFromGuild,
+  defaultGuildPalette,
   getGuildFontStack,
   guildFontOptions,
   guildLayoutOptions
@@ -346,6 +348,7 @@ const GuildProfilePage: React.FC = () => {
     '--guild-base': displayGuild.baseColor,
     '--guild-accent': displayGuild.accentColor,
     '--guild-ink': displayGuild.fontColor,
+    '--guild-surface': displayGuild.surfaceColor,
     fontFamily: getGuildFontStack(displayGuild.fontFamily)
   } as CSSProperties;
 
@@ -624,9 +627,10 @@ const GuildProfilePage: React.FC = () => {
             </div>
 
             <div className="guild-editor-section">
-              <h3>Colors</h3>
+              <div className="guild-editor-section-heading"><h3>Colors</h3><button type="button" onClick={() => setDraft(current => current ? { ...current, ...defaultGuildPalette } : current)}><RotateCcw size={14} /> Website default</button></div>
+              <p>Surface controls the translucent panels behind text and records.</p>
               <div className="guild-color-grid">
-                {([['fontColor', 'Text'], ['baseColor', 'Base'], ['accentColor', 'Accent']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
+                {([['baseColor', 'Page'], ['fontColor', 'Text'], ['accentColor', 'Buttons'], ['surfaceColor', 'Text panels']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
               </div>
             </div>
 
