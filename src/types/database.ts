@@ -90,11 +90,14 @@ export interface Character {
   isActive: boolean;
   guildId?: string;
   profileSubtitle: string;
-  profileFontFamily: 'cinzel' | 'cormorant' | 'merriweather' | 'inter' | 'alegreya' | 'im-fell' | 'uncial' | 'pirata' | 'grenze';
+  profileFontFamily: 'cinzel' | 'cormorant' | 'merriweather' | 'inter' | 'alegreya' | 'im-fell' | 'uncial' | 'pirata' | 'grenze' | 'caesar' | 'metal-mania' | 'new-rocker' | 'trade-winds' | 'great-vibes' | 'marcellus' | 'cinzel-decorative' | 'tangerine' | 'almendra-display' | 'henny-penny' | 'macondo' | 'mystery-quest';
   profileFontColor: string;
   profileBaseColor: string;
   profileAccentColor: string;
   profileBannerImageUrl?: string;
+  profileDynamicPortraitEnabled?: boolean;
+  profilePortraitBackgroundImageUrl?: string;
+  profilePortraitCutoutImageUrl?: string;
   profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight' | 'saga';
   profileSectionVisibility: CharacterProfileSectionVisibility;
   createdAt: Date;
@@ -128,7 +131,7 @@ export interface Guild {
   emblemUrl?: string;
   bannerImageUrl?: string;
   region: string;
-  fontFamily: 'cinzel' | 'cormorant' | 'merriweather' | 'inter' | 'alegreya' | 'im-fell' | 'uncial' | 'pirata' | 'grenze';
+  fontFamily: 'cinzel' | 'cormorant' | 'merriweather' | 'inter' | 'alegreya' | 'im-fell' | 'uncial' | 'pirata' | 'grenze' | 'caesar' | 'metal-mania' | 'new-rocker' | 'trade-winds' | 'great-vibes' | 'marcellus' | 'cinzel-decorative' | 'tangerine' | 'almendra-display' | 'henny-penny' | 'macondo' | 'mystery-quest';
   fontColor: string;
   baseColor: string;
   accentColor: string;

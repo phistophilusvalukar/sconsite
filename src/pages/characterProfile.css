@@ -155,6 +155,7 @@
 .character-profile-identity.has-no-portrait { grid-template-columns: 1fr; }
 .character-profile-portrait-column { display: flex; flex-direction: column; gap: 18px; }
 .character-profile-portrait {
+  overflow: hidden;
   width: 100%;
   aspect-ratio: 3 / 4;
   max-height: 620px;
@@ -366,11 +367,22 @@
 .character-banner-preview { position: relative; overflow: hidden; min-height: 130px; border: 1px solid #3c4540; border-radius: 8px; background: #0d110f; }
 .character-banner-preview img { display: block; width: 100%; height: 150px; object-fit: cover; }
 .character-banner-preview span { position: absolute; right: 9px; bottom: 9px; border-radius: 999px; padding: 5px 8px; color: #f0eee9; background: rgb(0 0 0 / .7); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.character-font-groups { display: grid; gap: 20px; }
+.character-font-groups section { display: grid; gap: 9px; }
+.character-font-groups h4 { margin: 0; color: #8f9993; font-size: 10px; font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
 .character-option-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
 .character-option-grid button { display: flex; align-items: center; justify-content: space-between; min-height: 62px; padding: 12px; border: 1px solid #38413c; border-radius: 8px; color: #cacfc9; background: #0e1311; }
 .character-option-grid button span { font-size: 24px; }
 .character-option-grid button.is-selected,
 .character-layout-options button.is-selected { border-color: #b99a60; color: #f3e8cf; background: #252217; box-shadow: inset 0 0 0 1px rgb(185 154 96 / .2); }
+.character-dynamic-toggle { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 16px; border: 1px solid #3b4640; border-radius: 8px; padding: 13px; background: #111714; cursor: pointer; }
+.character-dynamic-toggle input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: #b99a60; }
+.character-dynamic-toggle span { display: grid; gap: 3px; }
+.character-dynamic-toggle strong { color: #e7e9e7; font-size: 12px; }
+.character-dynamic-toggle small { color: #7f8983; font-size: 10px; line-height: 1.45; }
+.character-dynamic-toggle + .character-field,
+.character-field + .character-field { margin-top: 13px; }
+.character-dynamic-preview { width: 100%; height: 320px; margin-top: 16px; border: 1px solid #4a554f; border-radius: 10px; background: #0d110f; box-shadow: 0 18px 32px rgb(0 0 0 / .3); }
 .character-color-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
 .character-color-grid label { display: grid; gap: 8px; }
 .character-color-grid label > div { display: flex; align-items: center; gap: 7px; padding: 8px; border: 1px solid #38413c; border-radius: 8px; background: #0e1311; }

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../context/useAuth';
 import CharacterService from '../../../services/characterService';
+import DynamicCharacterPortrait from '../../characters/DynamicCharacterPortrait';
 import type { Character } from '../../../types/database';
 import CampaignService from '../api/campaignService';
 import {
@@ -52,6 +53,7 @@ export default function CampaignObjectivesPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [details, setDetails] = useState<CampaignDetails | null>(null);
   const [userCharacters, setUserCharacters] = useState<Character[]>([]);
+  const [publicCharacters, setPublicCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,6 +98,20 @@ export default function CampaignObjectivesPage() {
     });
   }, [characterService, user?.id]);
 
+  useEffect(() => {
+    void characterService.getPublicCharacters().then(response => {
+      setPublicCharacters(response.success && response.data ? response.data : []);
+    });
+  }, [characterService]);
+
+  const characterDirectory = useMemo(() => {
+    const byId = new Map<string, Character>();
+    [...publicCharacters, ...userCharacters].forEach(character => {
+      if (character._id) byId.set(character._id, character);
+    });
+    return Array.from(byId.values());
+  }, [publicCharacters, userCharacters]);
+
   async function refreshDetails() {
     if (campaignSlug) await loadDetails(campaignSlug);
   }
@@ -123,7 +139,7 @@ export default function CampaignObjectivesPage() {
   }
 
   if (partyId) {
-    return <PartyPage details={details} partyId={partyId} service={service} refresh={refreshDetails} isAdmin={isAdmin} isAuthenticated={isAuthenticated} currentUserId={user?.id} userCharacters={userCharacters} />;
+    return <PartyPage details={details} partyId={partyId} service={service} refresh={refreshDetails} isAdmin={isAdmin} isAuthenticated={isAuthenticated} currentUserId={user?.id} userCharacters={userCharacters} characterDirectory={characterDirectory} />;
   }
 
   return (
@@ -556,7 +572,7 @@ function JournalLinks({ campaignSlug, journals }: { campaignSlug: string; journa
   );
 }
 
-function PartyPage({ details, partyId, service, refresh, isAdmin, isAuthenticated, currentUserId, userCharacters }: { details: CampaignDetails; partyId: string; service: CampaignService; refresh: () => Promise<void>; isAdmin: boolean; isAuthenticated: boolean; currentUserId?: string; userCharacters: Character[] }) {
+function PartyPage({ details, partyId, service, refresh, isAdmin, isAuthenticated, currentUserId, userCharacters, characterDirectory }: { details: CampaignDetails; partyId: string; service: CampaignService; refresh: () => Promise<void>; isAdmin: boolean; isAuthenticated: boolean; currentUserId?: string; userCharacters: Character[]; characterDirectory: Character[] }) {
   const { campaign, parties, runs, journals } = details;
   const party = parties.find(item => item.id === partyId);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
@@ -626,7 +642,7 @@ function PartyPage({ details, partyId, service, refresh, isAdmin, isAuthenticate
         <header className="campaign-header"><div><Link to={`/campaign-objectives/${campaign.slug}`} className="back-link">Back to {campaign.name}</Link><p className="campaign-kicker">Party Record</p><h1>{party.name}</h1></div><div className="campaign-header-stats"><Stat label="Members" value={party.members.length} /><Stat label="Runs" value={partyRuns.length} /><Stat label="Achievements" value={partyRuns.reduce((total, run) => total + run.achievements.length, 0)} /></div></header>
         <div className="party-page-layout">
           <main className="objective-column">
-            <PartyComposition party={party} activeMemberIds={activeMemberIds} selectedMemberId={selectedMember?.id} onSelectMember={setSelectedMemberId} />
+            <PartyComposition party={party} activeMemberIds={activeMemberIds} selectedMemberId={selectedMember?.id} onSelectMember={setSelectedMemberId} characterDirectory={characterDirectory} />
             <PartyTimeline party={party} runs={partyRuns} />
             <RunList
               runs={partyRuns}
@@ -640,7 +656,7 @@ function PartyPage({ details, partyId, service, refresh, isAdmin, isAuthenticate
           <aside className="campaign-side">
             {isAdmin && <section className="detail-panel"><SectionTitle icon={<Edit3 />} title="Edit Party" compact /><form className="journal-form" onSubmit={savePartyName}><label className="field-label">Party name<input value={editingPartyName} onChange={event => setEditingPartyName(event.target.value)} /></label><button type="submit">Save Party</button></form><form className="journal-form" onSubmit={addMember}><label className="field-label">Player name<input value={memberDraft.name} onChange={event => setMemberDraft({ ...memberDraft, name: event.target.value })} /></label><label className="field-label">Character name<input value={memberDraft.characterName} onChange={event => setMemberDraft({ ...memberDraft, characterName: event.target.value })} /></label><label className="field-label">Profile URL<input value={memberDraft.profileHref} onChange={event => setMemberDraft({ ...memberDraft, profileHref: event.target.value })} /></label><label className="field-label">Art URL<input value={memberDraft.artUrl} onChange={event => setMemberDraft({ ...memberDraft, artUrl: event.target.value })} /></label><button type="submit"><UserPlus className="h-4 w-4" /> Add Member</button></form></section>}
             {isAdmin && <RunRosterEditor party={party} runs={partyRuns} onUpdateRunMembers={updateRunMembers} />}
-            {selectedMember && <MemberPanel key={selectedMember.id} campaignSlug={campaign.slug} member={selectedMember} journals={journals.filter(journal => journal.partyId === party.id && journal.playerName === selectedMember.name)} service={service} refresh={refresh} canEdit={isAdmin} />}
+            {selectedMember && <MemberPanel key={selectedMember.id} campaignSlug={campaign.slug} member={selectedMember} character={findPartyMemberCharacter(selectedMember, characterDirectory)} journals={journals.filter(journal => journal.partyId === party.id && journal.playerName === selectedMember.name)} service={service} refresh={refresh} canEdit={isAdmin} />}
           </aside>
         </div>
       </section>
@@ -648,9 +664,9 @@ function PartyPage({ details, partyId, service, refresh, isAdmin, isAuthenticate
   );
 }
 
-function PartyComposition({ party, activeMemberIds, selectedMemberId, onSelectMember }: { party: Party; activeMemberIds: Set<string>; selectedMemberId?: string; onSelectMember: (id: string) => void }) {
+function PartyComposition({ party, activeMemberIds, selectedMemberId, onSelectMember, characterDirectory }: { party: Party; activeMemberIds: Set<string>; selectedMemberId?: string; onSelectMember: (id: string) => void; characterDirectory: Character[] }) {
   const visibleMembers = party.members.filter(member => activeMemberIds.has(member.id));
-  return <section className="party-composition"><div><p className="campaign-kicker">Current Composition</p><h2>{party.name}</h2></div><div className="character-stage">{visibleMembers.map((member, index) => <button key={member.id} type="button" className={`character-standee ${selectedMemberId === member.id ? 'selected' : ''}`} style={{ '--member-index': index, '--member-count': visibleMembers.length } as React.CSSProperties} onClick={() => onSelectMember(member.id)}><img src={member.artUrl || '/npc-placeholder.png'} alt={member.characterName} /><span>{member.characterName || member.name}</span></button>)}</div></section>;
+  return <section className="party-composition"><div><p className="campaign-kicker">Current Composition</p><h2>{party.name}</h2></div><div className="character-stage">{visibleMembers.map((member, index) => <button key={member.id} type="button" className={`character-standee ${selectedMemberId === member.id ? 'selected' : ''}`} style={{ '--member-index': index, '--member-count': visibleMembers.length } as React.CSSProperties} onClick={() => onSelectMember(member.id)}><DynamicCharacterPortrait character={findPartyMemberCharacter(member, characterDirectory)} fallbackSrc={member.artUrl || '/npc-placeholder.png'} alt={member.characterName} className="campaign-character-portrait" motion="hover" /><span>{member.characterName || member.name}</span></button>)}</div></section>;
 }
 
 function PartyTimeline({ party, runs }: { party: Party; runs: RunSummary[] }) {
@@ -706,7 +722,7 @@ function RunRosterEditor({ party, runs, onUpdateRunMembers }: { party: Party; ru
   return <section className="detail-panel"><SectionTitle icon={<Users />} title="Run Rosters" compact /><div className="run-roster-editor">{runs.map(run => <article key={run.id}><h3>Run {run.runNumber}</h3><div className="check-grid">{party.members.map(member => <label key={`${run.id}-${member.id}`}><input type="checkbox" checked={run.memberIds.includes(member.id)} onChange={() => onUpdateRunMembers(run.id, toggleValue(run.memberIds, member.id))} /><span>{member.name}</span></label>)}</div></article>)}</div></section>;
 }
 
-function MemberPanel({ campaignSlug, member, journals, service, refresh, canEdit }: { campaignSlug: string; member: PartyMember; journals: JournalEntry[]; service: CampaignService; refresh: () => Promise<void>; canEdit: boolean }) {
+function MemberPanel({ campaignSlug, member, character, journals, service, refresh, canEdit }: { campaignSlug: string; member: PartyMember; character?: Character; journals: JournalEntry[]; service: CampaignService; refresh: () => Promise<void>; canEdit: boolean }) {
   const [draft, setDraft] = useState({
     name: member.name,
     characterName: member.characterName,
@@ -726,7 +742,7 @@ function MemberPanel({ campaignSlug, member, journals, service, refresh, canEdit
 
   return (
     <section className="detail-panel member-panel">
-      <img src={member.artUrl || '/npc-placeholder.png'} alt={member.characterName} />
+      <DynamicCharacterPortrait character={character} fallbackSrc={member.artUrl || '/npc-placeholder.png'} alt={member.characterName} className="campaign-member-portrait" motion="hover" />
       <h2>{member.characterName || member.name}</h2>
       <p>{member.name}</p>
       <Link to={member.profileHref}>View character profile</Link>
@@ -780,6 +796,11 @@ function partyName(parties: Party[], partyId: string) {
 
 function memberName(party: Party, memberId: string) {
   return party.members.find(member => member.id === memberId)?.name || memberId;
+}
+
+function findPartyMemberCharacter(member: PartyMember, characters: Character[]) {
+  return characters.find(character => character._id === member.characterId)
+    || characters.find(character => character.name.toLocaleLowerCase() === member.characterName.toLocaleLowerCase());
 }
 
 function canJournalForRun(run: RunSummary, parties: Party[], userCharacters: Character[], userId?: string) {

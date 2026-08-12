@@ -30,11 +30,13 @@ import { Link, useParams } from 'react-router-dom';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import GuildRoster, { GuildRoleEdit } from '../features/guilds/GuildRoster';
+import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
 import {
   GuildCustomizationInput,
   customizationFromGuild,
   defaultGuildPalette,
   getGuildFontStack,
+  guildFontCategories,
   guildFontOptions,
   guildLayoutOptions
 } from '../features/guilds/guildCustomization';
@@ -485,7 +487,7 @@ const GuildProfilePage: React.FC = () => {
                     const checkingIn = checkingInCharacterId === member.characterId;
                     return (
                       <div className={checkedIn ? 'is-checked-in' : ''} key={member._id}>
-                        <img src={characterPortrait(member.character)} alt="" />
+                        <DynamicCharacterPortrait character={member.character} fallbackSrc={characterPortrait(member.character)} alt="" className="guild-checkin-portrait" motion="hover" />
                         <span><strong>{member.character?.name || 'Guild member'}</strong><small>{checkedIn ? 'Checked in today' : 'Ready to check in'}</small></span>
                         <button type="button" onClick={() => void handleCheckIn(member)} disabled={checkedIn || checkingIn}>
                           {checkingIn ? <Loader2 className="guild-spin" size={16} /> : checkedIn ? <UserCheck size={16} /> : <Plus size={16} />}
@@ -499,7 +501,7 @@ const GuildProfilePage: React.FC = () => {
               {todayCheckins.length > 0 && (
                 <div className="guild-checkin-today">
                   <span>Present today</span>
-                  <div>{todayCheckins.slice(0, 12).map(checkin => <img key={checkin._id} src={characterPortrait(checkin.character)} alt={checkin.character?.name || 'Checked-in member'} title={checkin.character?.name} />)}</div>
+                  <div>{todayCheckins.slice(0, 12).map(checkin => <DynamicCharacterPortrait key={checkin._id} character={checkin.character} fallbackSrc={characterPortrait(checkin.character)} alt={checkin.character?.name || 'Checked-in member'} title={checkin.character?.name} className="guild-checkin-today-portrait" motion="none" />)}</div>
                   <strong>{todayCheckins.length}</strong>
                 </div>
               )}
@@ -522,7 +524,7 @@ const GuildProfilePage: React.FC = () => {
               <div className="guild-guestbook-feed">
                 {guestbookEntries.map(entry => (
                   <article className={entry.isHidden ? 'is-hidden' : ''} key={entry._id}>
-                    <img src={characterPortrait(entry.character)} alt="" />
+                    <DynamicCharacterPortrait character={entry.character} fallbackSrc={characterPortrait(entry.character)} alt="" className="guild-guestbook-portrait" motion="hover" />
                     <div>
                       <header><strong>{entry.character?.name || 'A passing traveler'}</strong><time dateTime={entry.createdAt.toISOString()}>{formatTimestamp(entry.createdAt)}</time></header>
                       <p>{entry.isHidden ? 'This entry is hidden from public view.' : entry.message}</p>
@@ -540,7 +542,7 @@ const GuildProfilePage: React.FC = () => {
 
             {displayGuild.sectionVisibility.leader && (
               <div className="guild-leader-card">
-                <div className="guild-leader-portrait"><img src={characterPortrait(leaderCharacter)} alt={`${leaderCharacter?.name || displayGuild.leaderCharacterName || 'Guild leader'} portrait`} /><Crown size={20} /></div>
+                <div className="guild-leader-portrait"><DynamicCharacterPortrait character={leaderCharacter} fallbackSrc={characterPortrait(leaderCharacter)} alt={`${leaderCharacter?.name || displayGuild.leaderCharacterName || 'Guild leader'} portrait`} className="guild-leader-dynamic-portrait" motion="parallax" /><Crown size={20} /></div>
                 <div className="guild-leader-copy">
                   <p className="guild-section-label">Guild leadership</p>
                   <h2>{leaderCharacter?._id ? <Link to={`/characters/${leaderCharacter._id}`}>{leaderCharacter.name}</Link> : displayGuild.leaderCharacterName || 'Unnamed guild leader'}</h2>
@@ -557,7 +559,7 @@ const GuildProfilePage: React.FC = () => {
                 <div className="guild-membership-list">
                   {currentMemberships.map(membership => (
                     <div key={membership._id}>
-                      <img src={characterPortrait(membership.character)} alt="" />
+                      <DynamicCharacterPortrait character={membership.character} fallbackSrc={characterPortrait(membership.character)} alt="" className="guild-membership-portrait" motion="hover" />
                       <span><strong>{membership.character?.name || 'Your character'}</strong><small>{membership.roleTitle || displayGuild.roleLabels[membership.roleCategory]}</small></span>
                       {membership.roleCategory !== 'Leader' && <button type="button" onClick={() => void handleLeave(membership)} aria-label={`Remove ${membership.character?.name || 'character'} from guild`}><LogOut size={15} /></button>}
                     </div>
@@ -626,8 +628,10 @@ const GuildProfilePage: React.FC = () => {
 
             <div className="guild-editor-section">
               <h3>Typography</h3>
-              <div className="guild-option-grid">
-                {guildFontOptions.map(option => <button type="button" className={draft.fontFamily === option.value ? 'is-selected' : ''} style={{ fontFamily: option.stack }} onClick={() => updateDraft('fontFamily', option.value)} key={option.value}><strong>{option.label}</strong><span>Ag</span></button>)}
+              <div className="guild-font-groups">
+                {guildFontCategories.map(category => <section key={category}><h4>{category}</h4><div className="guild-option-grid">
+                  {guildFontOptions.filter(option => option.category === category).map(option => <button type="button" className={draft.fontFamily === option.value ? 'is-selected' : ''} style={{ fontFamily: option.stack }} onClick={() => updateDraft('fontFamily', option.value)} key={option.value}><strong>{option.label}</strong><span>Ag</span></button>)}
+                </div></section>)}
               </div>
             </div>
 

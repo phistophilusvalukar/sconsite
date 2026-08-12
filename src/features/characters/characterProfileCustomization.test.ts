@@ -11,6 +11,9 @@ const validProfile = {
   baseColor: '#18201f',
   accentColor: '#c9954a',
   bannerImageUrl: '',
+  dynamicPortraitEnabled: false,
+  portraitBackgroundImageUrl: '',
+  portraitCutoutImageUrl: '',
   layoutStyle: 'chronicle' as const,
   sectionVisibility: { ...defaultCharacterProfileSectionVisibility }
 };
@@ -38,6 +41,22 @@ describe('character profile customization', () => {
     expect(characterProfileCustomizationSchema.safeParse({
       ...validProfile,
       bannerImageUrl: 'javascript:alert(1)'
+    }).success).toBe(false);
+  });
+
+  it('supports the themed font collections and validates complete Dynamic Portraits', () => {
+    expect(characterProfileCustomizationSchema.safeParse({
+      ...validProfile,
+      fontFamily: 'metal-mania',
+      dynamicPortraitEnabled: true,
+      portraitBackgroundImageUrl: 'https://images.example.com/ruins.webp',
+      portraitCutoutImageUrl: 'https://images.example.com/ranger.png'
+    }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({
+      ...validProfile,
+      fontFamily: 'mystery-quest',
+      dynamicPortraitEnabled: true,
+      portraitBackgroundImageUrl: 'https://images.example.com/ruins.webp'
     }).success).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import { Check, FileText, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Guild, GuildMembership } from '../../types/database';
 import { DEFAULT_NPC_PLACEHOLDER, normalizeFoundryAvatar } from '../../utils/foundryCharacter';
+import DynamicCharacterPortrait from '../characters/DynamicCharacterPortrait';
 
 export type EditableGuildRole = Exclude<GuildMembership['roleCategory'], 'Leader'>;
 export type GuildRoleEdit = { roleCategory: EditableGuildRole; roleTitle: string };
@@ -61,7 +62,7 @@ const GuildRoster: React.FC<GuildRosterProps> = ({ guild, members, canEdit, getE
           <article className="guild-dossier" key={member._id} style={{ '--dossier-tilt': `${index % 2 === 0 ? '-.4deg' : '.45deg'}` } as React.CSSProperties}>
             <div className="guild-dossier-tab">FILE {String(index + 1).padStart(2, '0')}</div>
             <div className="guild-dossier-stamp">{member.roleCategory}</div>
-            <img src={memberPortrait(member)} alt={`${member.character?.name || 'Guild member'} portrait`} />
+            <DynamicCharacterPortrait character={member.character} fallbackSrc={memberPortrait(member)} alt={`${member.character?.name || 'Guild member'} portrait`} className="guild-dossier-portrait" motion="hover" />
             <div className="guild-dossier-copy">
               <small>{member.roleTitle || guild.roleLabels[member.roleCategory]}</small>
               <h3>{member.characterId ? <Link to={`/characters/${member.characterId}`}>{member.character?.name || 'Unknown character'}</Link> : member.character?.name || 'Unknown character'}</h3>
@@ -79,7 +80,7 @@ const GuildRoster: React.FC<GuildRosterProps> = ({ guild, members, canEdit, getE
     <div className="guild-character-card-grid">
       {members.map(member => (
         <article className="guild-character-card" key={member._id}>
-          <img src={memberPortrait(member)} alt={`${member.character?.name || 'Guild member'} portrait`} />
+          <DynamicCharacterPortrait character={member.character} fallbackSrc={memberPortrait(member)} alt={`${member.character?.name || 'Guild member'} portrait`} className="guild-character-card-portrait" motion="hover" />
           <div className="guild-character-card-shade" />
           <div className="guild-character-card-role"><Shield size={13} /> {member.roleTitle || guild.roleLabels[member.roleCategory]}</div>
           <div className="guild-character-card-copy">

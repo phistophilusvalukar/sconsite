@@ -96,6 +96,9 @@ type CharacterCreateInput = Omit<
   | 'profileBaseColor'
   | 'profileAccentColor'
   | 'profileBannerImageUrl'
+  | 'profileDynamicPortraitEnabled'
+  | 'profilePortraitBackgroundImageUrl'
+  | 'profilePortraitCutoutImageUrl'
   | 'profileLayoutStyle'
   | 'profileSectionVisibility'
 > & Partial<Pick<
@@ -106,6 +109,9 @@ type CharacterCreateInput = Omit<
   | 'profileBaseColor'
   | 'profileAccentColor'
   | 'profileBannerImageUrl'
+  | 'profileDynamicPortraitEnabled'
+  | 'profilePortraitBackgroundImageUrl'
+  | 'profilePortraitCutoutImageUrl'
   | 'profileLayoutStyle'
   | 'profileSectionVisibility'
 >>;
@@ -138,6 +144,9 @@ interface CharacterRow {
   profile_base_color?: string | null;
   profile_accent_color?: string | null;
   profile_banner_image_url?: string | null;
+  profile_dynamic_portrait_enabled?: boolean | null;
+  profile_portrait_background_url?: string | null;
+  profile_portrait_cutout_url?: string | null;
   profile_layout_style?: Character['profileLayoutStyle'] | null;
   profile_section_visibility?: Partial<Character['profileSectionVisibility']> | null;
   created_at: string;
@@ -259,6 +268,9 @@ export class CharacterService {
         profile_base_color: characterData.profileBaseColor || defaultCharacterProfilePalette.baseColor,
         profile_accent_color: characterData.profileAccentColor || defaultCharacterProfilePalette.accentColor,
         profile_banner_image_url: characterData.profileBannerImageUrl || null,
+        profile_dynamic_portrait_enabled: characterData.profileDynamicPortraitEnabled ?? false,
+        profile_portrait_background_url: characterData.profilePortraitBackgroundImageUrl || null,
+        profile_portrait_cutout_url: characterData.profilePortraitCutoutImageUrl || null,
         profile_layout_style: characterData.profileLayoutStyle || 'chronicle',
         profile_section_visibility: characterData.profileSectionVisibility || defaultCharacterProfileSectionVisibility,
         created_at: now,
@@ -1065,6 +1077,13 @@ export class CharacterService {
       profileAccentColor: dbCharacter.profile_accent_color || defaultCharacterProfilePalette.accentColor,
       profileBannerImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_banner_image_url || '')
         ? dbCharacter.profile_banner_image_url || undefined
+        : undefined,
+      profileDynamicPortraitEnabled: Boolean(dbCharacter.profile_dynamic_portrait_enabled),
+      profilePortraitBackgroundImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_portrait_background_url || '')
+        ? dbCharacter.profile_portrait_background_url || undefined
+        : undefined,
+      profilePortraitCutoutImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_portrait_cutout_url || '')
+        ? dbCharacter.profile_portrait_cutout_url || undefined
         : undefined,
       profileLayoutStyle: dbCharacter.profile_layout_style || 'chronicle',
       profileSectionVisibility: {

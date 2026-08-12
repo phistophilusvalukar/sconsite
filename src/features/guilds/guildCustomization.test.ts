@@ -58,6 +58,9 @@ describe('guild customization', () => {
     expect(getGuildFontStack('cormorant')).toContain('Cormorant Garamond');
     expect(getGuildFontStack('inter')).toContain('Inter');
     expect(getGuildFontStack('grenze')).toContain('Grenze Gotisch');
+    expect(getGuildFontStack('metal-mania')).toContain('Metal Mania');
+    expect(getGuildFontStack('great-vibes')).toContain('Great Vibes');
+    expect(getGuildFontStack('mystery-quest')).toContain('Mystery Quest');
   });
 
   it('requires an explicit visibility choice for every customizable section', () => {

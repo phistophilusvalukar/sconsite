@@ -18,12 +18,14 @@ import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import {
   CharacterProfileCustomizationInput,
+  characterFontCategories,
   characterFontOptions,
   characterLayoutOptions,
   customizationFromCharacter,
   defaultCharacterProfilePalette,
   getCharacterFontStack
 } from '../features/characters/characterProfileCustomization';
+import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { CharacterService } from '../services/characterService';
 import type { Character } from '../types/database';
@@ -115,6 +117,9 @@ const CharacterProfilePage: React.FC = () => {
       profileBaseColor: draft.baseColor,
       profileAccentColor: draft.accentColor,
       profileBannerImageUrl: draft.bannerImageUrl || undefined,
+      profileDynamicPortraitEnabled: draft.dynamicPortraitEnabled,
+      profilePortraitBackgroundImageUrl: draft.portraitBackgroundImageUrl || undefined,
+      profilePortraitCutoutImageUrl: draft.portraitCutoutImageUrl || undefined,
       profileLayoutStyle: draft.layoutStyle,
       profileSectionVisibility: { ...draft.sectionVisibility }
     };
@@ -230,8 +235,10 @@ const CharacterProfilePage: React.FC = () => {
 
             <div className="character-editor-section">
               <h3>Typography</h3>
-              <div className="character-option-grid">
-                {characterFontOptions.map(option => <button type="button" className={draft.fontFamily === option.value ? 'is-selected' : ''} style={{ fontFamily: option.stack }} onClick={() => updateDraft('fontFamily', option.value)} key={option.value}><strong>{option.label}</strong><span>Ag</span></button>)}
+              <div className="character-font-groups">
+                {characterFontCategories.map(category => <section key={category}><h4>{category}</h4><div className="character-option-grid">
+                  {characterFontOptions.filter(option => option.category === category).map(option => <button type="button" className={draft.fontFamily === option.value ? 'is-selected' : ''} style={{ fontFamily: option.stack }} onClick={() => updateDraft('fontFamily', option.value)} key={option.value}><strong>{option.label}</strong><span>Ag</span></button>)}
+                </div></section>)}
               </div>
             </div>
 
@@ -254,6 +261,15 @@ const CharacterProfilePage: React.FC = () => {
               <p>Use a direct HTTPS image link as the banner behind the character name.</p>
               <label className="character-field"><span>Banner image URL</span><input type="url" value={draft.bannerImageUrl} onChange={event => updateDraft('bannerImageUrl', event.target.value)} placeholder="https://example.com/character-banner.webp" /><small>Wide images work best. A dark veil is added automatically for readable text.</small></label>
               {draft.bannerImageUrl && <div className="character-banner-preview"><img src={draft.bannerImageUrl} alt="Character banner preview" /><span>Banner preview</span></div>}
+            </div>
+
+            <div className="character-editor-section">
+              <h3>Dynamic portrait</h3>
+              <p>Layer a transparent character cutout over a background. The portrait shifts with the page and tilts beneath the pointer anywhere this character appears.</p>
+              <label className="character-dynamic-toggle"><input type="checkbox" checked={draft.dynamicPortraitEnabled} onChange={event => updateDraft('dynamicPortraitEnabled', event.target.checked)} /><span><strong>Use Dynamic Portrait site-wide</strong><small>Both direct HTTPS image links are required when enabled.</small></span></label>
+              <label className="character-field"><span>Background image URL</span><input type="url" value={draft.portraitBackgroundImageUrl} onChange={event => updateDraft('portraitBackgroundImageUrl', event.target.value)} placeholder="https://example.com/forest-background.webp" /><small>A wide or square scenic image works best.</small></label>
+              <label className="character-field"><span>Transparent character cutout URL</span><input type="url" value={draft.portraitCutoutImageUrl} onChange={event => updateDraft('portraitCutoutImageUrl', event.target.value)} placeholder="https://example.com/character-cutout.png" /><small>Use a transparent PNG or WebP with space around the figure.</small></label>
+              {draft.portraitBackgroundImageUrl && draft.portraitCutoutImageUrl && <DynamicCharacterPortrait character={{ name: displayCharacter.name, profileDynamicPortraitEnabled: true, profilePortraitBackgroundImageUrl: draft.portraitBackgroundImageUrl, profilePortraitCutoutImageUrl: draft.portraitCutoutImageUrl }} fallbackSrc={draft.portraitBackgroundImageUrl} alt={`${displayCharacter.name} Dynamic Portrait preview`} className="character-dynamic-preview" motion="hover" />}
             </div>
 
             <div className="character-editor-section">

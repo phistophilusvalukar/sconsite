@@ -7,6 +7,7 @@ import { CharacterService } from '../services/characterService';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import CharacterCard from '../components/CharacterCard';
 import CharacterRoleBadges from '../components/CharacterRoleBadges';
+import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
 import { getRoleCategoryForBadge } from '../utils/characterRoles';
 import { DEFAULT_NPC_PLACEHOLDER, getAvatarFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 import { useNavigate } from 'react-router-dom';
@@ -365,11 +366,12 @@ function PublicCharacterCard({ character, isOwnCharacter, onSelect }: { characte
       onClick={onSelect}
       className="group relative min-h-[210px] overflow-hidden rounded-lg border border-fantasy-700/30 bg-midnight-900/70 p-5 text-left transition-colors hover:border-yellow-400/60"
     >
-      <img
-        src={avatar}
+      <DynamicCharacterPortrait
+        character={character}
+        fallbackSrc={avatar}
         alt=""
-        aria-hidden="true"
         className="absolute inset-y-0 right-0 h-full w-[58%] object-cover opacity-65 transition-transform duration-300 group-hover:scale-105"
+        motion="hover"
       />
       <div className="absolute inset-0 bg-gradient-to-r from-midnight-950 via-midnight-950/90 via-[55%] to-midnight-950/10" />
       <div className="relative z-10 flex min-h-[170px] max-w-[68%] flex-col">

@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, Edit, Shield, Trash2, Users } from 'lucide-react';
 import { Character } from '../types/database';
 import CharacterRoleBadges from './CharacterRoleBadges';
+import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
 import { roleBorderTone, rolePillTone } from '../utils/characterRoles';
 import { DEFAULT_NPC_PLACEHOLDER, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
@@ -35,7 +36,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       onClick={() => onSelect(character)}
     >
       <div className="relative min-h-[260px] overflow-hidden">
-        <img src={characterAvatar} alt={character.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        <DynamicCharacterPortrait character={character} fallbackSrc={characterAvatar} alt={character.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" motion="hover" />
         <div className="absolute inset-0 bg-gradient-to-t from-midnight-950 via-midnight-950/45 to-midnight-950/10" />
         <div className="absolute left-4 right-4 top-4 flex items-center justify-between">
           <div className={`px-3 py-1 rounded-full text-xs font-semibold backdrop-blur ${
