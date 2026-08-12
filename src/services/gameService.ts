@@ -566,6 +566,21 @@ class GameService {
       notes: String(dbCharacter.notes || ''),
       isActive: Boolean(dbCharacter.is_active),
       guildId: dbCharacter.guild_id ? String(dbCharacter.guild_id) : undefined,
+      profileSubtitle: String(dbCharacter.profile_subtitle || ''),
+      profileFontFamily: (dbCharacter.profile_font_family || 'cinzel') as Character['profileFontFamily'],
+      profileFontColor: String(dbCharacter.profile_font_color || '#f4efe6'),
+      profileBaseColor: String(dbCharacter.profile_base_color || '#18201f'),
+      profileAccentColor: String(dbCharacter.profile_accent_color || '#c9954a'),
+      profileLayoutStyle: (dbCharacter.profile_layout_style || 'chronicle') as Character['profileLayoutStyle'],
+      profileSectionVisibility: {
+        portrait: true,
+        details: true,
+        abilityMatrix: true,
+        backstory: true,
+        notes: true,
+        journal: true,
+        relationships: true
+      },
       createdAt: new Date(String(dbCharacter.created_at)),
       updatedAt: new Date(String(dbCharacter.updated_at))
     };

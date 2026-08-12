@@ -13,6 +13,11 @@ import {
   FoundryJsonEntry,
   JsonValue
 } from '../types/database';
+import {
+  CharacterProfileCustomizationInput,
+  characterProfileCustomizationSchema,
+  defaultCharacterProfileSectionVisibility
+} from '../features/characters/characterProfileCustomization';
 import { deriveAbilityBoostsFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
 export interface FoundryCharacterData {
@@ -78,6 +83,29 @@ type CharacterUpdateRow = Partial<{
   updated_at: string;
 }>;
 
+type CharacterCreateInput = Omit<
+  Character,
+  | '_id'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'profileSubtitle'
+  | 'profileFontFamily'
+  | 'profileFontColor'
+  | 'profileBaseColor'
+  | 'profileAccentColor'
+  | 'profileLayoutStyle'
+  | 'profileSectionVisibility'
+> & Partial<Pick<
+  Character,
+  | 'profileSubtitle'
+  | 'profileFontFamily'
+  | 'profileFontColor'
+  | 'profileBaseColor'
+  | 'profileAccentColor'
+  | 'profileLayoutStyle'
+  | 'profileSectionVisibility'
+>>;
+
 interface CharacterRow {
   id: string;
   user_id: string;
@@ -100,6 +128,13 @@ interface CharacterRow {
   notes?: string;
   is_active: boolean;
   guild_id?: string;
+  profile_subtitle?: string | null;
+  profile_font_family?: Character['profileFontFamily'] | null;
+  profile_font_color?: string | null;
+  profile_base_color?: string | null;
+  profile_accent_color?: string | null;
+  profile_layout_style?: Character['profileLayoutStyle'] | null;
+  profile_section_visibility?: Partial<Character['profileSectionVisibility']> | null;
   created_at: string;
   updated_at: string;
 }
@@ -165,7 +200,7 @@ export class CharacterService {
     return CharacterService.instance;
   }
 
-  async createCharacter(characterData: Omit<Character, '_id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Character>> {
+  async createCharacter(characterData: CharacterCreateInput): Promise<ApiResponse<Character>> {
     try {
       const supabase = this.dbService.getClient();
 
@@ -194,6 +229,13 @@ export class CharacterService {
         notes: characterData.notes || '',
         is_active: characterData.isActive !== false,
         guild_id: characterData.guildId || null,
+        profile_subtitle: characterData.profileSubtitle || '',
+        profile_font_family: characterData.profileFontFamily || 'cinzel',
+        profile_font_color: characterData.profileFontColor || '#f4efe6',
+        profile_base_color: characterData.profileBaseColor || '#18201f',
+        profile_accent_color: characterData.profileAccentColor || '#c9954a',
+        profile_layout_style: characterData.profileLayoutStyle || 'chronicle',
+        profile_section_visibility: characterData.profileSectionVisibility || defaultCharacterProfileSectionVisibility,
         created_at: now,
         updated_at: now
       };
@@ -402,6 +444,36 @@ export class CharacterService {
         success: false,
         error: 'Failed to delete character'
       };
+    }
+  }
+
+  async updateCharacterProfile(
+    characterId: string,
+    ownerId: string,
+    input: CharacterProfileCustomizationInput
+  ): Promise<ApiResponse<boolean>> {
+    try {
+      const parsed = characterProfileCustomizationSchema.safeParse(input);
+      if (!parsed.success) {
+        return { success: false, error: parsed.error.issues[0]?.message || 'Invalid character profile.' };
+      }
+
+      const characterResponse = await this.getCharacterById(characterId);
+      if (!characterResponse.success || characterResponse.data?.userId !== ownerId) {
+        return { success: false, error: 'Only the character owner can customize this page.' };
+      }
+
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_command', {
+        p_character_id: characterId,
+        p_profile: parsed.data
+      });
+
+      if (error) return { success: false, error: error.message };
+      if (typeof data !== 'boolean') return { success: false, error: 'Unexpected character profile response.' };
+      return { success: true, data, message: 'Character page updated.' };
+    } catch (error) {
+      console.error('Error updating character profile:', error);
+      return { success: false, error: 'Failed to update character page' };
     }
   }
 
@@ -984,6 +1056,16 @@ export class CharacterService {
       notes: dbCharacter.notes,
       isActive: dbCharacter.is_active,
       guildId: dbCharacter.guild_id,
+      profileSubtitle: dbCharacter.profile_subtitle || '',
+      profileFontFamily: dbCharacter.profile_font_family || 'cinzel',
+      profileFontColor: dbCharacter.profile_font_color || '#f4efe6',
+      profileBaseColor: dbCharacter.profile_base_color || '#18201f',
+      profileAccentColor: dbCharacter.profile_accent_color || '#c9954a',
+      profileLayoutStyle: dbCharacter.profile_layout_style || 'chronicle',
+      profileSectionVisibility: {
+        ...defaultCharacterProfileSectionVisibility,
+        ...(dbCharacter.profile_section_visibility || {})
+      },
       createdAt: new Date(dbCharacter.created_at),
       updatedAt: new Date(dbCharacter.updated_at)
     };

@@ -314,6 +314,21 @@
   background: var(--guild-base);
   color: var(--guild-ink);
 }
+
+.guild-ledger-name a,
+.guild-dossier-copy h3 a,
+.guild-character-card-copy h3 a,
+.guild-leader-copy h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.guild-ledger-name a:hover,
+.guild-dossier-copy h3 a:hover,
+.guild-character-card-copy h3 a:hover,
+.guild-leader-copy h2 a:hover {
+  color: var(--guild-accent);
+}
 .guild-profile-atmosphere { position: absolute; z-index: -1; inset: 0; background: radial-gradient(circle at 15% 3%, color-mix(in srgb, var(--guild-accent) 20%, transparent), transparent 33rem), radial-gradient(circle at 90% 35%, color-mix(in srgb, var(--guild-accent) 10%, transparent), transparent 28rem), linear-gradient(180deg, color-mix(in srgb, var(--guild-base) 82%, black 18%), var(--guild-base)); }
 .guild-profile-atmosphere::after { position: absolute; inset: 0; background-image: linear-gradient(color-mix(in srgb, var(--guild-ink) 2%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--guild-ink) 2%, transparent) 1px, transparent 1px); background-size: 52px 52px; content: ''; mask-image: linear-gradient(black, transparent 75%); }
 .guild-profile-shell { width: min(1260px, calc(100% - 2.5rem)); margin: 0 auto; padding: 1.35rem 0 6rem; }

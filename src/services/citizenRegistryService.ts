@@ -222,6 +222,21 @@ export class CitizenRegistryService {
       notes: dbCharacter.notes,
       isActive: dbCharacter.is_active,
       guildId: dbCharacter.guild_id,
+      profileSubtitle: '',
+      profileFontFamily: 'cinzel',
+      profileFontColor: '#f4efe6',
+      profileBaseColor: '#18201f',
+      profileAccentColor: '#c9954a',
+      profileLayoutStyle: 'chronicle',
+      profileSectionVisibility: {
+        portrait: true,
+        details: true,
+        abilityMatrix: true,
+        backstory: true,
+        notes: true,
+        journal: true,
+        relationships: true
+      },
       createdAt: new Date(dbCharacter.created_at),
       updatedAt: new Date(dbCharacter.updated_at)
     };

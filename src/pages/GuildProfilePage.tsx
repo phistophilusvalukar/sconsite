@@ -535,7 +535,7 @@ const GuildProfilePage: React.FC = () => {
                 <div className="guild-leader-portrait"><img src={characterPortrait(leaderCharacter)} alt={`${leaderCharacter?.name || displayGuild.leaderCharacterName || 'Guild leader'} portrait`} /><Crown size={20} /></div>
                 <div className="guild-leader-copy">
                   <p className="guild-section-label">Guild leadership</p>
-                  <h2>{leaderCharacter?.name || displayGuild.leaderCharacterName || 'Unnamed guild leader'}</h2>
+                  <h2>{leaderCharacter?._id ? <Link to={`/characters/${leaderCharacter._id}`}>{leaderCharacter.name}</Link> : displayGuild.leaderCharacterName || 'Unnamed guild leader'}</h2>
                   <strong>{leaderMembership?.roleTitle || displayGuild.roleLabels.Leader}</strong>
                   {leaderCharacter && <p>Level {leaderCharacter.level} {leaderCharacter.class}<br />{leaderCharacter.ancestry || leaderCharacter.race}{leaderCharacter.background ? ` / ${leaderCharacter.background}` : ''}</p>}
                 </div>

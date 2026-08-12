@@ -89,8 +89,25 @@ export interface Character {
   notes?: string;
   isActive: boolean;
   guildId?: string;
+  profileSubtitle: string;
+  profileFontFamily: 'cinzel' | 'cormorant' | 'merriweather' | 'inter';
+  profileFontColor: string;
+  profileBaseColor: string;
+  profileAccentColor: string;
+  profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight';
+  profileSectionVisibility: CharacterProfileSectionVisibility;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface CharacterProfileSectionVisibility {
+  portrait: boolean;
+  details: boolean;
+  abilityMatrix: boolean;
+  backstory: boolean;
+  notes: boolean;
+  journal: boolean;
+  relationships: boolean;
 }
 
 export interface Guild {

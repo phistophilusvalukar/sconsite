@@ -27,6 +27,8 @@ import {
   FoundryJsonEntry
 } from '../types/database';
 import { CharacterService } from '../services/characterService';
+import { defaultCharacterProfileSectionVisibility } from '../features/characters/characterProfileCustomization';
+import SafeRichText from '../features/guilds/SafeRichText';
 import { DEFAULT_NPC_PLACEHOLDER, abilityLabels, getAbilityScoresFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
 type DetailsTab = 'foundry' | 'journal' | 'relationships';
@@ -36,9 +38,10 @@ interface CharacterDetailsModalProps {
   characters: Character[];
   currentUserId: string;
   canEdit: boolean;
-  onClose: () => void;
-  onEdit: (character: Character) => void;
+  onClose?: () => void;
+  onEdit?: (character: Character) => void;
   onRelationshipsChanged?: () => void | Promise<void>;
+  pageMode?: boolean;
 }
 
 const defaultPortrait = DEFAULT_NPC_PLACEHOLDER;
@@ -50,7 +53,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   canEdit,
   onClose,
   onEdit,
-  onRelationshipsChanged
+  onRelationshipsChanged,
+  pageMode = false
 }) => {
   const characterService = useMemo(() => CharacterService.getInstance(), []);
   const [activeTab, setActiveTab] = useState<DetailsTab>(canEdit ? 'foundry' : 'journal');
@@ -76,7 +80,17 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const characterPortrait = parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
   const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
-  const visibleTabs: DetailsTab[] = canEdit ? ['foundry', 'journal', 'relationships'] : ['journal', 'relationships'];
+  const sectionVisibility = character.profileSectionVisibility || defaultCharacterProfileSectionVisibility;
+  const visibleTabs: DetailsTab[] = [
+    ...(canEdit ? ['foundry' as const] : []),
+    ...(sectionVisibility.journal ? ['journal' as const] : []),
+    ...(sectionVisibility.relationships ? ['relationships' as const] : [])
+  ];
+  const initialTab: DetailsTab = canEdit
+    ? 'foundry'
+    : sectionVisibility.journal
+      ? 'journal'
+      : 'relationships';
   const allCharacterIds = useMemo(
     () => characters.map(item => item._id).filter(Boolean) as string[],
     [characters]
@@ -100,10 +114,10 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     .slice(0, 8);
 
   useEffect(() => {
-    setActiveTab(canEdit ? 'foundry' : 'journal');
+    setActiveTab(initialTab);
     setGraphStack([character._id || '']);
     setRelationshipSearch('');
-  }, [character._id, canEdit]);
+  }, [character._id, canEdit, initialTab, sectionVisibility.journal, sectionVisibility.relationships]);
 
   const loadModalData = useCallback(async () => {
     if (!character._id) return;
@@ -348,39 +362,45 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     }
   };
 
+  const hasPortraitColumn = sectionVisibility.portrait || sectionVisibility.abilityMatrix;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-fantasy-700/40 bg-midnight-950 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-fantasy-700/30 px-6 py-4">
+    <div className={pageMode ? 'character-profile-view' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4'}>
+      <div
+        className={pageMode
+          ? 'character-profile-document'
+          : 'flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-fantasy-700/40 bg-midnight-950 shadow-2xl'}
+        data-layout={character.profileLayoutStyle || 'chronicle'}
+      >
+        <div className={pageMode ? 'character-profile-heading' : 'flex items-center justify-between border-b border-fantasy-700/30 px-6 py-4'}>
           <div>
-            <p className="text-sm uppercase tracking-[0.14em] text-yellow-300">{canEdit ? 'Character Dossier' : 'Public Character'}</p>
-            <h2 className="font-fantasy text-2xl font-bold text-white">{character.name}</h2>
+            <p className={pageMode ? 'character-profile-kicker' : 'text-sm uppercase tracking-[0.14em] text-yellow-300'}>{canEdit ? 'Character Dossier' : 'Public Character'}</p>
+            <h2 className={pageMode ? '' : 'font-fantasy text-2xl font-bold text-white'}>{character.name}</h2>
+            {pageMode && <p className="character-profile-subtitle">{character.profileSubtitle || 'An adventurer of the Shattered Convergence'}</p>}
           </div>
           <div className="flex items-center space-x-2">
-            {canEdit && (
+            {canEdit && onEdit && (
               <button onClick={() => onEdit(character)} className="rounded-lg bg-fantasy-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-fantasy-600">
-                Edit
+                Edit character
               </button>
             )}
-            <button onClick={onClose} className="p-2 text-gray-400 transition-colors hover:text-white" title="Close">
-              <X className="h-6 w-6" />
-            </button>
+            {!pageMode && onClose && <button onClick={onClose} className="p-2 text-gray-400 transition-colors hover:text-white" title="Close"><X className="h-6 w-6" /></button>}
           </div>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-2">
-          <section className="border-b border-fantasy-700/30 lg:border-b-0 lg:border-r">
-            <div className="grid gap-6 p-6 md:grid-cols-[minmax(220px,0.85fr)_1fr] lg:grid-cols-1 xl:grid-cols-[minmax(260px,0.85fr)_1fr]">
-              <div className="space-y-4">
-                <img src={characterPortrait} alt={character.name} className="h-[420px] w-full rounded-lg object-cover" />
-                <AbilityRadarChart scores={abilityScores} />
-              </div>
+        <div className={pageMode ? `character-profile-content${visibleTabs.length === 0 ? ' has-no-records' : ''}` : 'grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-2'}>
+          <section className={pageMode ? 'character-profile-core' : 'border-b border-fantasy-700/30 lg:border-b-0 lg:border-r'}>
+            <div className={pageMode ? `character-profile-identity${hasPortraitColumn ? '' : ' has-no-portrait'}` : 'grid gap-6 p-6 md:grid-cols-[minmax(220px,0.85fr)_1fr] lg:grid-cols-1 xl:grid-cols-[minmax(260px,0.85fr)_1fr]'}>
+              {hasPortraitColumn && <div className={pageMode ? 'character-profile-portrait-column' : 'space-y-4'}>
+                {sectionVisibility.portrait && <img src={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} />}
+                {sectionVisibility.abilityMatrix && <AbilityRadarChart scores={abilityScores} pageMode={pageMode} />}
+              </div>}
               <div className="space-y-5">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300">Level {character.level} {character.class}</p>
-                  <h3 className="font-fantasy text-4xl font-bold text-white">{character.name}</h3>
+                  <p className={pageMode ? 'character-profile-overline' : 'text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300'}>Level {character.level} {character.class}</p>
+                  <h3 className={pageMode ? 'character-profile-nameplate' : 'font-fantasy text-4xl font-bold text-white'}>{character.name}</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                {sectionVisibility.details && <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
                   <Detail label="Ancestry" value={character.ancestry || character.race} />
                   <Detail label="Heritage" value={character.heritage || 'Unknown'} />
                   <Detail label="Background" value={character.background || 'Unrecorded'} />
@@ -389,14 +409,14 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   <Detail label="Height" value={parsedData?.height || character.stats?.height || 'Unknown'} />
                   <Detail label="Weight" value={parsedData?.weight || character.stats?.weight || 'Unknown'} />
                   <Detail label="Wealth" value={parsedData?.wealth !== undefined ? `${parsedData.wealth} gp` : 'Unknown'} />
-                </div>
-                {character.backstory && (
+                </div>}
+                {sectionVisibility.backstory && character.backstory && (
                   <div>
                     <h4 className="mb-2 text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">Backstory</h4>
-                    <div className="max-h-48 overflow-y-auto rounded-lg bg-fantasy-900/30 p-4 text-sm leading-relaxed text-gray-100" dangerouslySetInnerHTML={{ __html: character.backstory }} />
+                    <SafeRichText className="max-h-48 overflow-y-auto rounded-lg bg-fantasy-900/30 p-4 text-sm leading-relaxed text-gray-100" html={character.backstory} />
                   </div>
                 )}
-                {character.notes && (
+                {sectionVisibility.notes && character.notes && (
                   <div>
                     <h4 className="mb-2 text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">Notes</h4>
                     <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm leading-relaxed text-gray-100">{character.notes}</p>
@@ -406,8 +426,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
             </div>
           </section>
 
-          <section className="flex min-h-[620px] flex-col">
-            <div className={`grid border-b border-fantasy-700/30 ${visibleTabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          {visibleTabs.length > 0 && <section className={pageMode ? 'character-profile-records' : 'flex min-h-[620px] flex-col'}>
+            <div className={`grid border-b border-fantasy-700/30 ${visibleTabs.length === 3 ? 'grid-cols-3' : visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {canEdit && <TabButton active={activeTab === 'foundry'} label="Foundry" icon={<FileJson className="h-4 w-4" />} onClick={() => setActiveTab('foundry')} />}
               <TabButton active={activeTab === 'journal'} label="Journal" icon={<BookOpen className="h-4 w-4" />} onClick={() => setActiveTab('journal')} />
               <TabButton active={activeTab === 'relationships'} label="Relations" icon={<Network className="h-4 w-4" />} onClick={() => setActiveTab('relationships')} />
@@ -630,14 +650,14 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                 </>
               )}
             </div>
-          </section>
+          </section>}
         </div>
       </div>
     </div>
   );
 };
 
-function AbilityRadarChart({ scores }: { scores: ReturnType<typeof getAbilityScoresFromFoundryJson> | null }) {
+function AbilityRadarChart({ scores, pageMode = false }: { scores: ReturnType<typeof getAbilityScoresFromFoundryJson> | null; pageMode?: boolean }) {
   const size = 260;
   const center = size / 2;
   const radius = 82;
@@ -675,7 +695,7 @@ function AbilityRadarChart({ scores }: { scores: ReturnType<typeof getAbilitySco
     }).join(' ');
 
   return (
-    <div className="rounded-lg border border-fantasy-700/30 bg-fantasy-900/30 p-4">
+    <div className={pageMode ? 'character-profile-ability' : 'rounded-lg border border-fantasy-700/30 bg-fantasy-900/30 p-4'}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">Ability Matrix</h4>
         <span className="text-xs text-yellow-200">Active Foundry JSON</span>

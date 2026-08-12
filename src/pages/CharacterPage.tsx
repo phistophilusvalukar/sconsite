@@ -9,8 +9,8 @@ import CharacterCard from '../components/CharacterCard';
 import CharacterRoleBadges from '../components/CharacterRoleBadges';
 import { getRoleCategoryForBadge } from '../utils/characterRoles';
 import { DEFAULT_NPC_PLACEHOLDER, getAvatarFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
+import { useNavigate } from 'react-router-dom';
 
-const CharacterDetailsModal = lazy(() => import('../components/CharacterDetailsModal'));
 const CharacterForm = lazy(() => import('../components/CharacterForm'));
 const CharacterRelationshipGraph = lazy(() => import('../components/CharacterRelationshipGraph'));
 
@@ -27,11 +27,10 @@ function CharacterFeatureFallback({ label }: { label: string }) {
 
 const CharacterPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [publicCharacters, setPublicCharacters] = useState<Character[]>([]);
   const [publicRelationships, setPublicRelationships] = useState<CharacterRelationship[]>([]);
-  const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
-  const [selectedCanEdit, setSelectedCanEdit] = useState(false);
   const [activeView, setActiveView] = useState<CharacterView>('characters');
   const [showForm, setShowForm] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState<Character | undefined>(undefined);
@@ -93,18 +92,6 @@ const CharacterPage: React.FC = () => {
     debounceMs: 1500
   });
 
-  useEffect(() => {
-    if (!selectedCharacter?._id) return;
-
-    const refreshedCharacter = mergeCharacters(characters, publicCharacters)
-      .find(character => character._id === selectedCharacter._id);
-    if (refreshedCharacter) {
-      setSelectedCharacter(refreshedCharacter);
-    } else {
-      setSelectedCharacter(null);
-    }
-  }, [characters, publicCharacters, selectedCharacter?._id]);
-
   const handleCreateCharacter = () => {
     setEditingCharacter(undefined);
     setShowForm(true);
@@ -123,9 +110,6 @@ const CharacterPage: React.FC = () => {
         const response = await characterService.deleteCharacter(characterId, user.id);
         if (response.success) {
           await loadCharacters();
-          if (selectedCharacter?._id === characterId) {
-            setSelectedCharacter(null);
-          }
         } else {
           alert(response.error || 'Failed to delete character');
         }
@@ -140,18 +124,15 @@ const CharacterPage: React.FC = () => {
     setShowForm(false);
     setEditingCharacter(undefined);
     await loadCharacters();
-    setSelectedCanEdit(true);
-    setSelectedCharacter(character);
+    if (character._id) navigate(`/characters/${character._id}`);
   };
 
   const handleSelectOwnCharacter = (character: Character) => {
-    setSelectedCanEdit(true);
-    setSelectedCharacter(character);
+    if (character._id) navigate(`/characters/${character._id}`);
   };
 
   const handleSelectPublicCharacter = (character: Character) => {
-    setSelectedCanEdit(false);
-    setSelectedCharacter(character);
+    if (character._id) navigate(`/characters/${character._id}`);
   };
 
   const handleCancelForm = () => {
@@ -251,7 +232,7 @@ const CharacterPage: React.FC = () => {
                 onEdit={handleEditCharacter}
                 onDelete={handleDeleteCharacter}
                 onSelect={handleSelectOwnCharacter}
-                isSelected={selectedCharacter?._id === character._id}
+                isSelected={false}
               />
             ))}
 
@@ -298,20 +279,6 @@ const CharacterPage: React.FC = () => {
               Create Your First Character
             </button>
           </div>
-        )}
-
-        {selectedCharacter && (
-          <Suspense fallback={<CharacterFeatureFallback label="Loading character details..." />}>
-            <CharacterDetailsModal
-              character={selectedCharacter}
-              characters={mergeCharacters(characters, publicCharacters)}
-              currentUserId={user?.id || ''}
-              canEdit={selectedCanEdit}
-              onClose={() => setSelectedCharacter(null)}
-              onEdit={handleEditCharacter}
-              onRelationshipsChanged={loadCharacters}
-            />
-          </Suspense>
         )}
 
         {/* Character Form Modal */}
@@ -417,14 +384,6 @@ function PublicCharacterCard({ character, isOwnCharacter, onSelect }: { characte
       <CharacterRoleBadges badges={character.roleBadges} limit={6} className="absolute bottom-4 right-4 z-10 max-w-[54%]" />
     </button>
   );
-}
-
-function mergeCharacters(primary: Character[], secondary: Character[]) {
-  const byId = new Map<string, Character>();
-  [...primary, ...secondary].forEach(character => {
-    if (character._id) byId.set(character._id, character);
-  });
-  return Array.from(byId.values());
 }
 
 export default CharacterPage;
