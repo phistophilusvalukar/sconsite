@@ -308,7 +308,6 @@
   --guild-base: #111615;
   --guild-accent: #a09482;
   --guild-ink: #f0ede7;
-  --guild-surface: #1d2321;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -343,7 +342,6 @@
 .guild-profile-emblem img { width: 100%; height: 100%; object-fit: cover; }
 .guild-profile-emblem svg { width: 43%; height: 43%; }
 .guild-profile-kicker { margin: 0 0 .65rem; color: var(--guild-accent); font-size: .69rem; font-weight: 800; letter-spacing: .17em; text-transform: uppercase; }
-.guild-profile-title { min-width: 0; padding: clamp(.9rem, 2vw, 1.35rem); border-radius: 4px; background: color-mix(in srgb, var(--guild-surface) 52%, transparent); }
 .guild-profile-title h1 { margin: 0; font-size: clamp(2.8rem, 7vw, 6rem); font-weight: 500; line-height: .96; letter-spacing: -.045em; text-wrap: balance; }
 .guild-profile-title h1 p,
 .guild-profile-title h1 div { display: inline; margin: 0; }
@@ -365,7 +363,7 @@
 .guild-requirements-panel,
 .guild-message-board,
 .guild-checkin-panel,
-.guild-guestbook-panel { border: 1px solid color-mix(in srgb, var(--guild-accent) 17%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--guild-surface) 76%, transparent); box-shadow: 0 18px 50px rgba(0,0,0,.13); }
+.guild-guestbook-panel { border: 1px solid color-mix(in srgb, var(--guild-accent) 17%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--guild-base) 86%, var(--guild-ink) 3%); box-shadow: 0 18px 50px rgba(0,0,0,.13); }
 .guild-story-panel { padding: clamp(1.35rem, 4vw, 2.5rem); }
 .guild-story-panel h2,
 .guild-headquarters-copy h2,
@@ -419,7 +417,7 @@
 .guild-roster-group h3 { display: flex; align-items: center; gap: .5rem; margin: 0 0 .65rem; color: var(--guild-accent); font-size: .68rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .guild-roster-group h3 span { display: grid; min-width: 20px; height: 20px; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--guild-accent) 12%, transparent); font-size: .58rem; }
 .guild-roster-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
-.guild-member-card { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: .7rem; border: 1px solid color-mix(in srgb, var(--guild-ink) 8%, transparent); border-radius: 4px; padding: .75rem; background: color-mix(in srgb, var(--guild-surface) 74%, transparent); }
+.guild-member-card { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: .7rem; border: 1px solid color-mix(in srgb, var(--guild-ink) 8%, transparent); border-radius: 4px; padding: .75rem; background: color-mix(in srgb, var(--guild-base) 90%, black 10%); }
 .guild-member-avatar { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid color-mix(in srgb, var(--guild-accent) 35%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--guild-accent) 8%, transparent); color: var(--guild-accent); font-weight: 800; }
 .guild-member-copy { display: grid; min-width: 0; gap: .08rem; }
 .guild-member-copy strong { overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -478,7 +476,7 @@
 .guild-leader-copy h2 { margin: 0; font-size: 1.65rem; line-height: 1.1; }
 .guild-leader-copy > strong { display: block; margin-top: .35rem; color: var(--guild-accent); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
 .guild-leader-copy > p:last-child { margin: .75rem 0 0; color: color-mix(in srgb, var(--guild-ink) 62%, transparent); font-size: .75rem; line-height: 1.65; }
-.guild-membership-card { background: color-mix(in srgb, var(--guild-accent) 5%, var(--guild-surface)); }
+.guild-membership-card { background: color-mix(in srgb, var(--guild-accent) 5%, var(--guild-base)); }
 .guild-membership-list { display: grid; gap: .45rem; margin-top: .8rem; }
 .guild-membership-list > div { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: .55rem; border-top: 1px solid color-mix(in srgb, var(--guild-accent) 14%, transparent); padding-top: .55rem; }
 .guild-membership-list img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
@@ -488,7 +486,7 @@
 .guild-membership-list button { display: grid; border: 0; border-radius: 3px; padding: .4rem; place-items: center; background: rgba(190,55,55,.12); color: #f7a8a8; cursor: pointer; }
 
 /* Ledger roster */
-.guild-ledger { overflow: hidden; border: 1px solid color-mix(in srgb, var(--guild-accent) 18%, transparent); border-radius: 3px; background: color-mix(in srgb, var(--guild-surface) 76%, transparent); }
+.guild-ledger { overflow: hidden; border: 1px solid color-mix(in srgb, var(--guild-accent) 18%, transparent); border-radius: 3px; background: color-mix(in srgb, var(--guild-ink) 4%, var(--guild-base)); }
 .guild-ledger-head,
 .guild-ledger-row { display: grid; grid-template-columns: minmax(150px, 1.35fr) minmax(110px, 1fr) minmax(150px, 1.1fr) 100px; align-items: center; gap: .8rem; }
 .guild-ledger-head { border-bottom: 1px solid color-mix(in srgb, var(--guild-accent) 28%, transparent); padding: .7rem .85rem; color: var(--guild-accent); font-size: .57rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
@@ -502,7 +500,7 @@
 
 /* Dossier roster */
 .guild-dossier-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem; padding: .4rem; }
-.guild-dossier { position: relative; display: grid; grid-template-columns: 105px minmax(0, 1fr); min-height: 165px; border: 1px solid color-mix(in srgb, var(--guild-accent) 25%, transparent); border-radius: 2px 7px 7px 2px; padding: 1.15rem .8rem .8rem; background: linear-gradient(135deg, color-mix(in srgb, var(--guild-accent) 9%, var(--guild-surface)), color-mix(in srgb, var(--guild-surface) 78%, transparent)); box-shadow: 4px 8px 18px rgba(0,0,0,.18); transform: rotate(var(--dossier-tilt)); }
+.guild-dossier { position: relative; display: grid; grid-template-columns: 105px minmax(0, 1fr); min-height: 165px; border: 1px solid color-mix(in srgb, var(--guild-accent) 25%, transparent); border-radius: 2px 7px 7px 2px; padding: 1.15rem .8rem .8rem; background: linear-gradient(135deg, color-mix(in srgb, var(--guild-accent) 9%, var(--guild-base)), color-mix(in srgb, var(--guild-ink) 5%, var(--guild-base))); box-shadow: 4px 8px 18px rgba(0,0,0,.18); transform: rotate(var(--dossier-tilt)); }
 .guild-dossier::before { position: absolute; top: 0; bottom: 0; left: 12px; border-left: 1px dashed color-mix(in srgb, var(--guild-accent) 25%, transparent); content: ''; }
 .guild-dossier-tab { position: absolute; top: -8px; left: 20px; border: 1px solid color-mix(in srgb, var(--guild-accent) 32%, transparent); border-bottom: 0; border-radius: 4px 4px 0 0; padding: .25rem .55rem; background: color-mix(in srgb, var(--guild-accent) 20%, var(--guild-base)); color: var(--guild-ink); font-size: .5rem; font-weight: 800; letter-spacing: .13em; }
 .guild-dossier-stamp { position: absolute; z-index: 2; right: .6rem; top: .55rem; border: 1px solid color-mix(in srgb, var(--guild-accent) 48%, transparent); padding: .25rem .4rem; color: color-mix(in srgb, var(--guild-accent) 78%, transparent); font-size: .47rem; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; transform: rotate(4deg); }
@@ -516,20 +514,20 @@
 
 /* Portrait card roster */
 .guild-character-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
-.guild-character-card { position: relative; min-height: 330px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--guild-accent) 24%, transparent); border-radius: 7px; background: color-mix(in srgb, var(--guild-surface) 72%, var(--guild-base)); box-shadow: 0 15px 30px rgba(0,0,0,.2); }
+.guild-character-card { position: relative; min-height: 330px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--guild-accent) 24%, transparent); border-radius: 7px; background: color-mix(in srgb, var(--guild-base) 75%, black); box-shadow: 0 15px 30px rgba(0,0,0,.2); }
 .guild-character-card > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
 .guild-character-card:hover > img { transform: scale(1.035); }
 .guild-character-card-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.06) 30%, color-mix(in srgb, var(--guild-base) 92%, transparent) 89%); }
-.guild-character-card-role { position: absolute; top: .7rem; left: .7rem; display: flex; align-items: center; gap: .3rem; border: 1px solid color-mix(in srgb, var(--guild-accent) 35%, transparent); border-radius: 999px; padding: .35rem .55rem; background: color-mix(in srgb, var(--guild-surface) 80%, transparent); color: var(--guild-accent); font-size: .56rem; font-weight: 800; backdrop-filter: blur(8px); }
+.guild-character-card-role { position: absolute; top: .7rem; left: .7rem; display: flex; align-items: center; gap: .3rem; border: 1px solid color-mix(in srgb, var(--guild-accent) 35%, transparent); border-radius: 999px; padding: .35rem .55rem; background: color-mix(in srgb, var(--guild-base) 80%, transparent); color: var(--guild-accent); font-size: .56rem; font-weight: 800; backdrop-filter: blur(8px); }
 .guild-character-card-copy { position: absolute; right: 0; bottom: 0; left: 0; padding: 1.1rem; }
 .guild-character-card-copy small { color: var(--guild-accent); font-size: .58rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .guild-character-card-copy h3 { margin: .28rem 0; font-size: 1.25rem; }
 .guild-character-card-copy p { margin: 0; color: color-mix(in srgb, var(--guild-ink) 62%, transparent); font-size: .68rem; }
-.guild-character-card > .guild-member-edit { position: absolute; z-index: 3; right: .65rem; bottom: .6rem; left: .65rem; padding: .45rem; background: color-mix(in srgb, var(--guild-surface) 88%, transparent); backdrop-filter: blur(9px); }
+.guild-character-card > .guild-member-edit { position: absolute; z-index: 3; right: .65rem; bottom: .6rem; left: .65rem; padding: .45rem; background: color-mix(in srgb, var(--guild-base) 88%, transparent); backdrop-filter: blur(9px); }
 .guild-character-card:has(.guild-member-edit) .guild-character-card-copy { bottom: 83px; }
 
 /* Announcement board */
-.guild-message-board { position: relative; padding: clamp(1.35rem, 4vw, 2.25rem); background: linear-gradient(135deg, color-mix(in srgb, var(--guild-accent) 8%, var(--guild-surface)), color-mix(in srgb, var(--guild-surface) 76%, transparent)); }
+.guild-message-board { position: relative; padding: clamp(1.35rem, 4vw, 2.25rem); background: linear-gradient(135deg, color-mix(in srgb, var(--guild-accent) 8%, var(--guild-base)), color-mix(in srgb, var(--guild-ink) 3%, var(--guild-base))); }
 .guild-message-board::after { position: absolute; inset: 10px; border: 1px solid color-mix(in srgb, var(--guild-accent) 9%, transparent); content: ''; pointer-events: none; }
 .guild-message-board-pin { position: absolute; z-index: 1; top: 13px; left: 50%; width: 9px; height: 9px; border-radius: 50%; background: var(--guild-accent); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 .guild-message-board > *:not(.guild-message-board-pin) { position: relative; z-index: 1; }
@@ -552,7 +550,7 @@
 .guild-checkin-actions button { display: flex; align-items: center; gap: .4rem; border: 1px solid color-mix(in srgb, var(--guild-accent) 30%, transparent); border-radius: 4px; padding: .55rem .7rem; background: var(--guild-accent); color: var(--guild-base); font-size: .67rem; font-weight: 800; cursor: pointer; }
 .guild-checkin-actions button:disabled { cursor: default; opacity: .58; }
 .guild-checkin-note { margin: 0; padding: 0 1.5rem 1.5rem; color: color-mix(in srgb, var(--guild-ink) 52%, transparent); font-size: .76rem; }
-.guild-checkin-today { display: flex; align-items: center; gap: .75rem; border-top: 1px solid color-mix(in srgb, var(--guild-accent) 15%, transparent); padding: .75rem 1.5rem; background: color-mix(in srgb, var(--guild-surface) 76%, transparent); }
+.guild-checkin-today { display: flex; align-items: center; gap: .75rem; border-top: 1px solid color-mix(in srgb, var(--guild-accent) 15%, transparent); padding: .75rem 1.5rem; background: color-mix(in srgb, var(--guild-base) 92%, black); }
 .guild-checkin-today > span { color: color-mix(in srgb, var(--guild-ink) 45%, transparent); font-size: .57rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .guild-checkin-today > div { display: flex; flex: 1; }
 .guild-checkin-today img { width: 28px; height: 28px; margin-right: -7px; border: 2px solid var(--guild-base); border-radius: 50%; object-fit: cover; }
@@ -561,7 +559,7 @@
 /* Guestbook */
 .guild-guestbook-panel { padding: clamp(1.35rem, 4vw, 2.25rem); }
 .guild-guestbook-panel.is-closed { opacity: .78; }
-.guild-guestbook-compose { display: grid; grid-template-columns: minmax(150px, .38fr) minmax(0, 1fr) auto; align-items: end; gap: .7rem; border: 1px solid color-mix(in srgb, var(--guild-accent) 13%, transparent); border-radius: 5px; padding: .9rem; background: color-mix(in srgb, var(--guild-surface) 76%, transparent); }
+.guild-guestbook-compose { display: grid; grid-template-columns: minmax(150px, .38fr) minmax(0, 1fr) auto; align-items: end; gap: .7rem; border: 1px solid color-mix(in srgb, var(--guild-accent) 13%, transparent); border-radius: 5px; padding: .9rem; background: color-mix(in srgb, var(--guild-base) 90%, black); }
 .guild-guestbook-compose .guild-profile-primary { width: auto; margin: 0; }
 .guild-guestbook-compose input,
 .guild-guestbook-compose textarea,
@@ -652,7 +650,7 @@
 .guild-editor-section-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
 .guild-editor-section-heading h3 { margin: 0; }
 .guild-editor-section-heading button { display: inline-flex; align-items: center; gap: .35rem; border: 1px solid rgba(255,255,255,.14); border-radius: 999px; padding: .4rem .6rem; background: rgba(255,255,255,.04); color: #ddd8e0; font-size: .6rem; font-weight: 800; cursor: pointer; }
-.guild-color-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .5rem; }
+.guild-color-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: .5rem; }
 .guild-color-grid > label { display: grid; gap: .35rem; color: #a7a1ab; font-size: .67rem; }
 .guild-color-grid > label > div { display: flex; align-items: center; gap: .35rem; border: 1px solid rgba(255,255,255,.1); border-radius: 4px; padding: .35rem; }
 .guild-color-grid input { width: 30px; height: 30px; border: 0; padding: 0; background: transparent; cursor: pointer; }

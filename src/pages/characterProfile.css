@@ -2,7 +2,6 @@
   --character-base: #111615;
   --character-accent: #a09482;
   --character-ink: #f0ede7;
-  --character-surface: #1d2321;
   position: relative;
   min-height: 100vh;
   overflow: hidden;
@@ -96,12 +95,6 @@
   background: linear-gradient(90deg, transparent, var(--character-accent));
 }
 
-.character-profile-heading > div:first-child {
-  padding: clamp(14px, 2vw, 24px);
-  border-radius: 3px 3px 18px 3px;
-  background: color-mix(in srgb, var(--character-surface) 58%, transparent);
-}
-
 .character-profile-kicker,
 .character-profile-overline {
   margin: 0 0 10px;
@@ -153,11 +146,6 @@
   padding: clamp(28px, 4vw, 58px);
 }
 .character-profile-identity.has-no-portrait { grid-template-columns: 1fr; }
-.character-profile-identity > div:last-child {
-  padding: clamp(16px, 2vw, 26px);
-  border-radius: 3px 3px 20px 3px;
-  background: color-mix(in srgb, var(--character-surface) 48%, transparent);
-}
 .character-profile-portrait-column { display: flex; flex-direction: column; gap: 18px; }
 .character-profile-portrait {
   width: 100%;
@@ -183,7 +171,7 @@
 .character-profile-page .character-profile-facts > div,
 .character-profile-page .character-profile-identity .rounded-lg.bg-fantasy-900\/30 {
   border: 1px solid color-mix(in srgb, var(--character-ink) 10%, transparent);
-  background: color-mix(in srgb, var(--character-surface) 76%, transparent);
+  background: color-mix(in srgb, var(--character-ink) 4%, transparent);
 }
 .character-profile-page .character-profile-facts p:first-child,
 .character-profile-page .character-profile-identity h4 { color: color-mix(in srgb, var(--character-ink) 55%, transparent); }
@@ -194,12 +182,12 @@
   padding: 16px;
   border: 1px solid color-mix(in srgb, var(--character-accent) 24%, transparent);
   border-radius: 2px 2px 18px 2px;
-  background: color-mix(in srgb, var(--character-surface) 76%, transparent);
+  background: color-mix(in srgb, var(--character-ink) 3%, transparent);
 }
 .character-profile-ability h4 { color: color-mix(in srgb, var(--character-ink) 56%, transparent) !important; }
 .character-profile-ability > div span { color: var(--character-accent); }
 
-.character-profile-records { min-width: 0; background: color-mix(in srgb, var(--character-surface) 62%, var(--character-base)); }
+.character-profile-records { min-width: 0; background: color-mix(in srgb, var(--character-base) 83%, #070807); }
 .character-profile-records > div:first-child { border-color: color-mix(in srgb, var(--character-accent) 20%, transparent); }
 .character-profile-records > div:first-child button { color: color-mix(in srgb, var(--character-ink) 58%, transparent); background: transparent; }
 .character-profile-records > div:first-child button.bg-fantasy-800\/60 { color: var(--character-accent); background: color-mix(in srgb, var(--character-accent) 12%, transparent); }
@@ -215,7 +203,7 @@
 .character-profile-records .bg-fantasy-800\/40,
 .character-profile-records .bg-black\/30 {
   border-color: color-mix(in srgb, var(--character-accent) 18%, transparent);
-  background: color-mix(in srgb, var(--character-surface) 76%, transparent);
+  background: color-mix(in srgb, var(--character-ink) 4%, transparent);
 }
 .character-profile-records .border-fantasy-700\/30,
 .character-profile-records .border-fantasy-700\/40,
@@ -226,7 +214,7 @@
   border-radius: 3px;
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--character-accent) 9%, transparent) 1px, transparent 1px) 0 0 / 42px 42px,
-    color-mix(in srgb, var(--character-surface) 35%, var(--character-base));
+    color-mix(in srgb, var(--character-base) 92%, #070807);
 }
 .character-profile-document[data-layout='dossier'] .character-profile-heading { min-height: 180px; padding-block: 42px; }
 .character-profile-document[data-layout='dossier'] .character-profile-heading h2 { font-size: clamp(2.8rem, 6vw, 6rem); letter-spacing: -.025em; }
@@ -298,7 +286,7 @@
 .character-option-grid button span { font-size: 24px; }
 .character-option-grid button.is-selected,
 .character-layout-options button.is-selected { border-color: #b99a60; color: #f3e8cf; background: #252217; box-shadow: inset 0 0 0 1px rgb(185 154 96 / .2); }
-.character-color-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+.character-color-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
 .character-color-grid label { display: grid; gap: 8px; }
 .character-color-grid label > div { display: flex; align-items: center; gap: 7px; padding: 8px; border: 1px solid #38413c; border-radius: 8px; background: #0e1311; }
 .character-color-grid input { width: 34px; height: 34px; padding: 0; border: 0; background: transparent; }

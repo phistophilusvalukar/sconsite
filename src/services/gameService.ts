@@ -571,7 +571,6 @@ class GameService {
       profileFontColor: String(dbCharacter.profile_font_color || '#f4efe6'),
       profileBaseColor: String(dbCharacter.profile_base_color || '#18201f'),
       profileAccentColor: String(dbCharacter.profile_accent_color || '#c9954a'),
-      profileSurfaceColor: String(dbCharacter.profile_surface_color || '#1d2321'),
       profileLayoutStyle: (dbCharacter.profile_layout_style || 'chronicle') as Character['profileLayoutStyle'],
       profileSectionVisibility: {
         portrait: true,

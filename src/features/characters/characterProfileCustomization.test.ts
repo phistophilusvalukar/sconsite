@@ -10,7 +10,6 @@ const validProfile = {
   fontColor: '#f4efe6',
   baseColor: '#18201f',
   accentColor: '#c9954a',
-  surfaceColor: '#1d2321',
   layoutStyle: 'chronicle' as const,
   sectionVisibility: { ...defaultCharacterProfileSectionVisibility }
 };

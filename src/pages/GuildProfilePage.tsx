@@ -348,7 +348,6 @@ const GuildProfilePage: React.FC = () => {
     '--guild-base': displayGuild.baseColor,
     '--guild-accent': displayGuild.accentColor,
     '--guild-ink': displayGuild.fontColor,
-    '--guild-surface': displayGuild.surfaceColor,
     fontFamily: getGuildFontStack(displayGuild.fontFamily)
   } as CSSProperties;
 
@@ -628,9 +627,8 @@ const GuildProfilePage: React.FC = () => {
 
             <div className="guild-editor-section">
               <div className="guild-editor-section-heading"><h3>Colors</h3><button type="button" onClick={() => setDraft(current => current ? { ...current, ...defaultGuildPalette } : current)}><RotateCcw size={14} /> Website default</button></div>
-              <p>Surface controls the translucent panels behind text and records.</p>
               <div className="guild-color-grid">
-                {([['baseColor', 'Page'], ['fontColor', 'Text'], ['accentColor', 'Buttons'], ['surfaceColor', 'Text panels']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
+                {([['baseColor', 'Page'], ['fontColor', 'Text'], ['accentColor', 'Buttons']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
               </div>
             </div>
 

@@ -94,7 +94,6 @@ export interface Character {
   profileFontColor: string;
   profileBaseColor: string;
   profileAccentColor: string;
-  profileSurfaceColor: string;
   profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight';
   profileSectionVisibility: CharacterProfileSectionVisibility;
   createdAt: Date;
@@ -131,7 +130,6 @@ export interface Guild {
   fontColor: string;
   baseColor: string;
   accentColor: string;
-  surfaceColor: string;
   layoutStyle: 'chronicle' | 'stronghold' | 'banner';
   rosterDisplay: 'ledger' | 'dossiers' | 'cards';
   sectionVisibility: GuildSectionVisibility;

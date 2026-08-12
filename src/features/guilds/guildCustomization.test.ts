@@ -13,7 +13,6 @@ const validCustomization = {
   fontColor: '#f8fafc',
   baseColor: '#171425',
   accentColor: '#d6a84b',
-  surfaceColor: '#1d2321',
   layoutStyle: 'chronicle' as const,
   rosterDisplay: 'dossiers' as const,
   sectionVisibility: {

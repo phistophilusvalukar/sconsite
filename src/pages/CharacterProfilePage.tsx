@@ -114,7 +114,6 @@ const CharacterProfilePage: React.FC = () => {
       profileFontColor: draft.fontColor,
       profileBaseColor: draft.baseColor,
       profileAccentColor: draft.accentColor,
-      profileSurfaceColor: draft.surfaceColor,
       profileLayoutStyle: draft.layoutStyle,
       profileSectionVisibility: { ...draft.sectionVisibility }
     };
@@ -186,7 +185,6 @@ const CharacterProfilePage: React.FC = () => {
     '--character-base': displayCharacter.profileBaseColor,
     '--character-accent': displayCharacter.profileAccentColor,
     '--character-ink': displayCharacter.profileFontColor,
-    '--character-surface': displayCharacter.profileSurfaceColor,
     fontFamily: getCharacterFontStack(displayCharacter.profileFontFamily)
   } as CSSProperties;
 
@@ -238,9 +236,8 @@ const CharacterProfilePage: React.FC = () => {
 
             <div className="character-editor-section">
               <div className="character-editor-section-heading"><h3>Colors</h3><button type="button" onClick={() => setDraft(current => current ? { ...current, ...defaultCharacterProfilePalette } : current)}><RotateCcw size={14} /> Website default</button></div>
-              <p>Surface controls the translucent panels behind text and records.</p>
               <div className="character-color-grid">
-                {([['baseColor', 'Page'], ['fontColor', 'Text'], ['accentColor', 'Buttons'], ['surfaceColor', 'Text panels']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
+                {([['baseColor', 'Page'], ['fontColor', 'Text'], ['accentColor', 'Buttons']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
               </div>
             </div>
 
