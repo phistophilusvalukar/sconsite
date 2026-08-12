@@ -96,6 +96,7 @@ export interface Character {
 export interface Guild {
   _id?: string;
   name: string;
+  subtitle: string;
   description: string;
   type: string;
   leaderId: string;
@@ -103,7 +104,18 @@ export interface Guild {
   leaderCharacterId?: string;
   leaderCharacterName?: string;
   logo?: string;
+  emblemUrl?: string;
   region: string;
+  fontFamily: 'cinzel' | 'cormorant' | 'merriweather' | 'inter';
+  fontColor: string;
+  baseColor: string;
+  accentColor: string;
+  layoutStyle: 'chronicle' | 'stronghold' | 'banner';
+  headquartersName: string;
+  headquartersTitle: string;
+  headquartersDescription: string;
+  headquartersImageUrl?: string;
+  roleLabels: GuildRoleLabels;
   established: Date;
   status: 'Active' | 'Inactive' | 'Recruiting';
   recruitmentStatus: 'open' | 'selective' | 'closed';
@@ -119,6 +131,14 @@ export interface Guild {
   applications?: GuildApplication[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface GuildRoleLabels {
+  Leader: string;
+  Subleader: string;
+  Officer: string;
+  Member: string;
+  Ally: string;
 }
 
 export type CharacterRoleCategory = 'Healer' | 'Tank' | 'DPS' | 'Support';
@@ -197,7 +217,7 @@ export interface GuildMembership {
   userId: string;
   characterId?: string;
   role: 'member' | 'officer' | 'leader';
-  roleCategory: 'Leader' | 'Officer' | 'Member' | 'Ally';
+  roleCategory: 'Leader' | 'Subleader' | 'Officer' | 'Member' | 'Ally';
   roleTitle?: string;
   membershipStatus: 'Invited' | 'Applied' | 'Active' | 'Rejected';
   joinDate: Date;

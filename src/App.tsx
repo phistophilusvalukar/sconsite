@@ -17,6 +17,7 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 const CharacterPage = lazy(() => import('./pages/CharacterPage'));
 const CitizenRegistryPage = lazy(() => import('./pages/CitizenRegistryPage'));
 const GuildsPage = lazy(() => import('./pages/GuildsPage'));
+const GuildProfilePage = lazy(() => import('./pages/GuildProfilePage'));
 const NewsPage = lazy(() => import('./pages/NewsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SchedulePage = lazy(() => import('./pages/SchedulePage'));
@@ -61,6 +62,7 @@ function AppRoutes() {
         <Route path="/characters" element={<PageGate pageKey="characters"><CharacterPage /></PageGate>} />
         <Route path="/citizens" element={<PageGate pageKey="citizens"><CitizenRegistryPage /></PageGate>} />
         <Route path="/guilds" element={<PageGate pageKey="guilds"><GuildsPage /></PageGate>} />
+        <Route path="/guilds/:guildId" element={<PageGate pageKey="guilds"><GuildProfilePage /></PageGate>} />
         <Route path="/schedule" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/schedule/:pollId" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/games" element={<PageGate pageKey="games"><GamesPage /></PageGate>} />

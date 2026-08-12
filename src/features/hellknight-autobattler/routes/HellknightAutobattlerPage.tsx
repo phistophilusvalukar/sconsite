@@ -205,6 +205,7 @@ export default function HellknightAutobattlerPage() {
   const activeParticipants = matchParticipants.filter(participant => !participant.eliminated && participant.health > 0).length;
   const localMatchParticipant = matchParticipants.find(participant => participant.isLocalPlayer) ?? null;
   const experienceRequired = getExperienceRequired(playerLevel);
+  const shopRerollCost = getShopRerollCost(shop);
   const benchUnits = bench.filter(unit => !board.some(slot => slot.unitId === unit.instanceId));
   const selectedUnit = bench.find(unit => unit.instanceId === selectedUnitId) ?? null;
   const detailUnit: UnitDefinition | OwnedUnit | null = selectedUnit ?? inspectedShopUnit;
@@ -626,18 +627,43 @@ export default function HellknightAutobattlerPage() {
               decide which verdict survives.
             </p>
           </div>
-          <div className="verdict-panel" aria-label="Match status">
-            <span><Shield className="h-4 w-4" /> Health {health}</span>
-            <span><Coins className="h-4 w-4" /> Gold {gold}</span>
-            <span><Swords className="h-4 w-4" /> Round {round}</span>
-            <span><Sparkles className="h-4 w-4" /> Level {playerLevel} {experienceRequired > 0 ? `(${playerExperience}/${experienceRequired} XP)` : '(Max)'}</span>
-          </div>
         </header>
 
         {phase === 'lobby' ? (
           <LobbyPanel players={lobbyPlayers} onTick={advanceLobby} onStart={startMatch} />
         ) : (
           <div className="autobattler-layout">
+            <aside className="recruit-column">
+              <PlayerEconomyPanel
+                health={health}
+                gold={gold}
+                round={round}
+                level={playerLevel}
+                experience={playerExperience}
+                experienceRequired={experienceRequired}
+                rerollCost={shopRerollCost}
+                canReroll={phase === 'shop' && gold >= shopRerollCost}
+                canBuyExperience={phase !== 'combat' && gold >= EXPERIENCE_PURCHASE_COST && experienceRequired > 0}
+                onReroll={refreshShop}
+                onBuyExperience={buyExperience}
+              />
+
+              {phase === 'item-shop' ? (
+                <ItemShopPanel itemShop={itemShop} gold={gold} onInspect={inspectItem} onBuy={buyItem} onContinue={() => setPhase('shop')} />
+              ) : (
+                <ShopPanel
+                  shop={shop}
+                  gold={gold}
+                  locked={phase === 'combat'}
+                  onInspect={inspectShopUnit}
+                  onBuy={buyUnit}
+                  onHoverUnit={showUnitTooltip}
+                  onMoveTooltip={moveTooltip}
+                  onLeaveTooltip={() => setHoveredUnit(null)}
+                />
+              )}
+            </aside>
+
             <main className="tactics-column">
               <section className="tactics-toolbar">
                 <div>
@@ -659,111 +685,128 @@ export default function HellknightAutobattlerPage() {
                       <Play className="h-4 w-4" /> {matchWinner ? `${matchWinner.name} Wins` : localMatchParticipant?.eliminated ? 'Resolve Remaining Match' : 'Ready for Next Shop'}
                     </button>
                   ) : (
-                    <>
-                      <button type="button" onClick={buyExperience} disabled={gold < EXPERIENCE_PURCHASE_COST || experienceRequired === 0}>
-                        <Sparkles className="h-4 w-4" /> Buy {PURCHASE_EXPERIENCE} XP · {EXPERIENCE_PURCHASE_COST}g
-                      </button>
-                      <button type="button" className="primary-action" onClick={readyForCombat} disabled={army.length === 0 || Boolean(localMatchParticipant?.ready)}>
-                        <Swords className="h-4 w-4" /> {localMatchParticipant?.ready ? 'Waiting for Commanders' : 'Ready for Combat'}
-                      </button>
-                    </>
+                    <button type="button" className="primary-action" onClick={readyForCombat} disabled={army.length === 0 || Boolean(localMatchParticipant?.ready)}>
+                      <Swords className="h-4 w-4" /> {localMatchParticipant?.ready ? 'Waiting for Commanders' : 'Ready for Combat'}
+                    </button>
                   )}
                 </div>
               </section>
 
               {phase === 'combat' && currentCombatFrame ? (
-                <CombatArena
-                  frame={currentCombatFrame}
-                  result={lastResult}
-                  onHoverUnit={showCombatTooltip}
-                  onMoveTooltip={moveTooltip}
-                  onLeaveTooltip={() => setHoveredUnit(null)}
-                />
-              ) : (
-                <section className="square-board" aria-label="Square deployment board">
-                  {board.map((slot, index) => {
-                    const unit = bench.find(candidate => candidate.instanceId === slot.unitId);
-                    const selected = Boolean(unit && selectedUnitId === unit.instanceId);
-                    const effectiveStats = unit ? getEffectiveUnitStats(unit, activeSynergies, true) : null;
-                    return (
-                      <button
-                        key={`${slot.q}:${slot.r}`}
-                        type="button"
-                        className={`square-cell ${unit ? 'occupied' : ''} ${selected ? 'selected' : ''}`}
-                        draggable={Boolean(unit)}
-                        onDragStart={(event) => {
-                          if (unit) startUnitDrag(unit.instanceId, event);
-                        }}
-                        onDragEnd={() => setDraggedUnitId(null)}
-                        onDragOver={(event) => {
-                          if (draggedUnitId) {
-                            event.preventDefault();
-                            event.dataTransfer.dropEffect = 'move';
-                          }
-                        }}
-                        onDrop={(event) => dropUnit(index, event)}
-                        onMouseEnter={(event) => {
-                          if (unit) showUnitTooltip(unit, event);
-                        }}
-                        onMouseMove={moveTooltip}
-                        onMouseLeave={() => setHoveredUnit(null)}
-                        onClick={() => {
-                          if (!unit && selectedUnitId) {
-                            placeUnit(selectedUnitId, index);
-                            return;
-                          }
-                          if (unit) {
-                            setInspectedShopUnit(null);
-                            setInspectedItem(null);
-                            setSelectedUnitId(selected ? null : unit.instanceId);
-                          }
-                        }}
-                        disabled={Boolean(!unit && selectedUnitId && army.length >= teamCapacity)}
-                        aria-label={`Board square ${index + 1}`}
-                      >
-                        {unit ? (
-                          <>
-                            <strong>{unit.pf2Class}</strong>
-                            <span>Tier {unit.tier} / HP {effectiveStats?.health ?? unit.health}</span>
-                            {unit.items.length > 0 && (
-                              <span className="board-item-slots" aria-label={`${unit.items.length} equipped item${unit.items.length === 1 ? '' : 's'}`}>
-                                {unit.items.map((itemId, itemIndex) => {
-                                  const item = getItem(itemId);
-                                  return <span key={`${itemId}-${itemIndex}`} className="board-item-slot" title={item.name}>{item.name}</span>;
-                                })}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span>{selectedUnitId ? 'Place' : `${slot.q},${slot.r}`}</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </section>
-              )}
-
-              <section className="bench-row" aria-label="Unit bench">
-                {benchUnits.length === 0 ? (
-                  <p>No reserves. Buy recruits from the roster.</p>
-                ) : benchUnits.map(unit => (
-                  <UnitChip
-                    key={unit.instanceId}
-                    unit={unit}
-                    selected={selectedUnitId === unit.instanceId}
-                    onSelect={() => {
-                      setInspectedShopUnit(null);
-                      setInspectedItem(null);
-                      setSelectedUnitId(unit.instanceId);
-                    }}
-                    onDragStart={(event) => startUnitDrag(unit.instanceId, event)}
-                    onDragEnd={() => setDraggedUnitId(null)}
-                    onHoverUnit={showUnitTooltip}
+                  <CombatArena
+                    frame={currentCombatFrame}
+                    result={lastResult}
+                    onHoverUnit={showCombatTooltip}
                     onMoveTooltip={moveTooltip}
                     onLeaveTooltip={() => setHoveredUnit(null)}
                   />
-                ))}
+              ) : (
+                  <section className="square-board" aria-label="Square deployment board">
+                    {board.map((slot, index) => {
+                      const unit = bench.find(candidate => candidate.instanceId === slot.unitId);
+                      const selected = Boolean(unit && selectedUnitId === unit.instanceId);
+                      const effectiveStats = unit ? getEffectiveUnitStats(unit, activeSynergies, true) : null;
+                      return (
+                        <button
+                          key={`${slot.q}:${slot.r}`}
+                          type="button"
+                          className={`square-cell ${unit ? 'occupied' : ''} ${selected ? 'selected' : ''}`}
+                          draggable={Boolean(unit)}
+                          onDragStart={(event) => {
+                            if (unit) startUnitDrag(unit.instanceId, event);
+                          }}
+                          onDragEnd={() => setDraggedUnitId(null)}
+                          onDragOver={(event) => {
+                            if (draggedUnitId) {
+                              event.preventDefault();
+                              event.dataTransfer.dropEffect = 'move';
+                            }
+                          }}
+                          onDrop={(event) => dropUnit(index, event)}
+                          onMouseEnter={(event) => {
+                            if (unit) showUnitTooltip(unit, event);
+                          }}
+                          onMouseMove={moveTooltip}
+                          onMouseLeave={() => setHoveredUnit(null)}
+                          onClick={() => {
+                            if (!unit && selectedUnitId) {
+                              placeUnit(selectedUnitId, index);
+                              return;
+                            }
+                            if (unit) {
+                              setInspectedShopUnit(null);
+                              setInspectedItem(null);
+                              setSelectedUnitId(selected ? null : unit.instanceId);
+                            }
+                          }}
+                          disabled={Boolean(!unit && selectedUnitId && army.length >= teamCapacity)}
+                          aria-label={`Board square ${index + 1}`}
+                        >
+                          {unit ? (
+                            <>
+                              <strong>{unit.pf2Class}</strong>
+                              <span>Tier {unit.tier} / HP {effectiveStats?.health ?? unit.health}</span>
+                              {unit.items.length > 0 && (
+                                <span className="board-item-slots" aria-label={`${unit.items.length} equipped item${unit.items.length === 1 ? '' : 's'}`}>
+                                  {unit.items.map((itemId, itemIndex) => {
+                                    const item = getItem(itemId);
+                                    return <span key={`${itemId}-${itemIndex}`} className="board-item-slot" title={item.name}>{item.name}</span>;
+                                  })}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span>{selectedUnitId ? 'Place' : `${slot.q},${slot.r}`}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </section>
+              )}
+
+              <section className="reserves-panel">
+                <header>
+                  <h2>Reserves</h2>
+                  <span>{benchUnits.length} waiting</span>
+                </header>
+                <div className="bench-row" aria-label="Unit reserves">
+                  {benchUnits.length === 0 ? (
+                    <p>No reserves. Buy recruits from the roster.</p>
+                  ) : benchUnits.map(unit => (
+                    <UnitChip
+                      key={unit.instanceId}
+                      unit={unit}
+                      selected={selectedUnitId === unit.instanceId}
+                      onSelect={() => {
+                        setInspectedShopUnit(null);
+                        setInspectedItem(null);
+                        setSelectedUnitId(unit.instanceId);
+                      }}
+                      onDragStart={(event) => startUnitDrag(unit.instanceId, event)}
+                      onDragEnd={() => setDraggedUnitId(null)}
+                      onHoverUnit={showUnitTooltip}
+                      onMoveTooltip={moveTooltip}
+                      onLeaveTooltip={() => setHoveredUnit(null)}
+                    />
+                  ))}
+                </div>
               </section>
+
+              <section className="lower-command-grid">
+                <InventoryPanel
+                  inventory={inventory}
+                  selectedUnit={selectedUnit}
+                  onAssign={assignItem}
+                  onUnequip={removeUnitItem}
+                  onSell={sellItem}
+                />
+                <SynergyPanel activeSynergies={activeSynergies} armyPower={armyPower} />
+                <StandingsPanel participants={matchParticipants} />
+                <LogPanel log={log} wins={wins} losses={losses} streak={streak} />
+              </section>
+            </main>
+
+            <aside className="dossier-column" aria-label="Unit dossier sidebar">
               {inspectedItem ? (
                 <ItemDetailPanel item={inspectedItem} />
               ) : (
@@ -777,33 +820,6 @@ export default function HellknightAutobattlerPage() {
                   activeSynergies={activeSynergies}
                 />
               )}
-            </main>
-
-            <aside className="command-column">
-              {phase === 'item-shop' ? (
-                <ItemShopPanel itemShop={itemShop} gold={gold} onInspect={inspectItem} onBuy={buyItem} onContinue={() => setPhase('shop')} />
-              ) : (
-                <ShopPanel
-                  shop={shop}
-                  gold={gold}
-                  onInspect={inspectShopUnit}
-                  onBuy={buyUnit}
-                  onRefresh={refreshShop}
-                  onHoverUnit={showUnitTooltip}
-                  onMoveTooltip={moveTooltip}
-                  onLeaveTooltip={() => setHoveredUnit(null)}
-                />
-              )}
-              <InventoryPanel
-                inventory={inventory}
-                selectedUnit={selectedUnit}
-                onAssign={assignItem}
-                onUnequip={removeUnitItem}
-                onSell={sellItem}
-              />
-              <SynergyPanel activeSynergies={activeSynergies} armyPower={armyPower} />
-              <StandingsPanel participants={matchParticipants} />
-              <LogPanel log={log} wins={wins} losses={losses} streak={streak} />
             </aside>
           </div>
         )}
@@ -1224,34 +1240,79 @@ function LobbyPanel({ players, onTick, onStart }: { players: LobbyPlayerRecord[]
   );
 }
 
+function PlayerEconomyPanel({
+  health,
+  gold,
+  round,
+  level,
+  experience,
+  experienceRequired,
+  rerollCost,
+  canReroll,
+  canBuyExperience,
+  onReroll,
+  onBuyExperience
+}: {
+  health: number;
+  gold: number;
+  round: number;
+  level: number;
+  experience: number;
+  experienceRequired: number;
+  rerollCost: number;
+  canReroll: boolean;
+  canBuyExperience: boolean;
+  onReroll: () => void;
+  onBuyExperience: () => void;
+}) {
+  return (
+    <section className="player-economy-panel" aria-label="Commander resources">
+      <div className="economy-heading">
+        <p className="hellknight-kicker">Commander</p>
+        <h2>War Chest</h2>
+      </div>
+      <div className="economy-stats">
+        <span><Shield className="h-4 w-4" /> {health} health</span>
+        <span><Coins className="h-4 w-4" /> {gold} gold</span>
+        <span><Swords className="h-4 w-4" /> Round {round}</span>
+        <span><Sparkles className="h-4 w-4" /> Level {level} {experienceRequired > 0 ? `· ${experience}/${experienceRequired} XP` : '· Max'}</span>
+      </div>
+      <div className="economy-actions">
+        <button type="button" onClick={onBuyExperience} disabled={!canBuyExperience}>
+          <Sparkles className="h-4 w-4" /> Buy {PURCHASE_EXPERIENCE} XP · {EXPERIENCE_PURCHASE_COST}g
+        </button>
+        <button type="button" onClick={onReroll} disabled={!canReroll}>
+          <RefreshCw className="h-4 w-4" /> Reroll · {rerollCost}g
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function ShopPanel({
   shop,
   gold,
+  locked,
   onInspect,
   onBuy,
-  onRefresh,
   onHoverUnit,
   onMoveTooltip,
   onLeaveTooltip
 }: {
   shop: ShopOffer[];
   gold: number;
+  locked: boolean;
   onInspect: (unit: UnitDefinition) => void;
   onBuy: (offer: ShopOffer) => void;
-  onRefresh: () => void;
   onHoverUnit: (unit: UnitDefinition, event: MouseEvent<HTMLElement>) => void;
   onMoveTooltip: (event: MouseEvent<HTMLElement>) => void;
   onLeaveTooltip: () => void;
 }) {
-  const rerollCost = getShopRerollCost(shop);
-
   return (
-    <section className="side-section">
+    <section className="side-section roster-panel">
       <header>
         <h2><ShoppingBag className="h-4 w-4" /> Roster</h2>
-        <button type="button" onClick={onRefresh} disabled={gold < rerollCost}>
-          <RefreshCw className="h-4 w-4" /> {rerollCost}g
-        </button>
+        <span>{locked ? 'Locked during combat' : `${shop.length} available`}</span>
       </header>
       <div className="shop-list">
         {shop.length === 0 ? <p>The available unit pool is empty.</p> : shop.map(offer => {
@@ -1272,7 +1333,7 @@ function ShopPanel({
               <small>Rarity {offer.rarity} / {offer.unit.traits.join(' - ')}</small>
               <small className="shop-balance">DPS {balance.rangeAdjustedDps} / EHP {balance.effectiveHealth}</small>
             </button>
-            <button type="button" className="shop-buy" onClick={() => onBuy(offer)} disabled={gold < offer.unit.cost}>
+            <button type="button" className="shop-buy" onClick={() => onBuy(offer)} disabled={locked || gold < offer.unit.cost}>
               Recruit
             </button>
           </article>
@@ -1297,7 +1358,7 @@ function ItemShopPanel({
   onContinue: () => void;
 }) {
   return (
-    <section className="side-section">
+    <section className="side-section roster-panel armory-panel">
       <header>
         <h2><Package className="h-4 w-4" /> Armory</h2>
         <button type="button" onClick={onContinue}>Close</button>

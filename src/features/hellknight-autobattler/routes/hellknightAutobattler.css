@@ -16,7 +16,8 @@
 .lobby-panel,
 .tactics-toolbar,
 .side-section,
-.bench-row {
+.reserves-panel,
+.player-economy-panel {
   border: 1px solid rgba(203, 213, 225, 0.18);
   border-radius: 8px;
   background: rgba(2, 6, 23, 0.72);
@@ -59,14 +60,6 @@
   color: #cbd5e1;
 }
 
-.verdict-panel {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(150px, 1fr));
-  gap: 0.5rem;
-  min-width: min(420px, 100%);
-}
-
-.verdict-panel span,
 .lobby-status span,
 .side-section header span {
   display: inline-flex;
@@ -138,15 +131,40 @@
 
 .autobattler-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-areas: "recruit tactics dossier";
+  grid-template-columns: 270px minmax(0, 1fr) 300px;
   gap: 1rem;
   align-items: start;
 }
 
-.tactics-column,
-.command-column {
+.tactics-column {
+  grid-area: tactics;
   display: grid;
   gap: 1rem;
+}
+
+.recruit-column,
+.dossier-column {
+  position: sticky;
+  top: 4.75rem;
+  display: grid;
+  gap: 1rem;
+  max-height: calc(100vh - 5.75rem);
+}
+
+.recruit-column {
+  grid-area: recruit;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.dossier-column {
+  grid-area: dossier;
+}
+
+.recruit-column > .roster-panel,
+.dossier-column > .unit-detail-panel {
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .tactics-toolbar {
@@ -768,7 +786,31 @@
   flex-wrap: wrap;
   gap: 0.65rem;
   min-height: 108px;
-  padding: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+.reserves-panel {
+  padding: 0.85rem;
+}
+
+.reserves-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.reserves-panel h2,
+.player-economy-panel h2 {
+  margin: 0;
+  font-family: Cinzel, Georgia, serif;
+  font-size: 1rem;
+}
+
+.reserves-panel header span {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
 .bench-row > p,
@@ -1029,6 +1071,84 @@
   padding: 1rem;
 }
 
+.dossier-column .unit-detail-heading {
+  display: grid;
+}
+
+.dossier-column .unit-trait-row {
+  justify-content: flex-start;
+}
+
+.dossier-column .unit-stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dossier-column .unit-detail-columns {
+  grid-template-columns: 1fr;
+}
+
+.player-economy-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem;
+}
+
+.economy-heading .hellknight-kicker {
+  margin-bottom: 0.15rem;
+}
+
+.economy-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.economy-stats span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 36px;
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.62);
+  color: #fef3c7;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.economy-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+}
+
+.economy-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.roster-panel .shop-list {
+  grid-template-columns: 1fr;
+}
+
+.roster-panel .shop-card {
+  min-width: 0;
+}
+
+.lower-command-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
 .unit-detail-panel.empty h2 {
   margin: 0;
   color: #cbd5e1;
@@ -1278,18 +1398,27 @@
   color: #111827;
 }
 
-@media (max-width: 1100px) {
-  .hellknight-hero,
+@media (max-width: 1150px) {
   .autobattler-layout {
-    grid-template-columns: 1fr;
+    grid-template-areas:
+      "recruit dossier"
+      "tactics tactics";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hellknight-hero {
     display: grid;
   }
 
-  .command-column {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .recruit-column,
+  .dossier-column {
+    position: static;
+    max-height: none;
+  }
+
+  .recruit-column > .roster-panel,
+  .dossier-column > .unit-detail-panel {
+    overflow-y: visible;
   }
 }
 
@@ -1298,16 +1427,15 @@
     padding-inline: 0.7rem;
   }
 
-  .verdict-panel,
   .lobby-grid,
-  .command-column {
+  .lower-command-grid {
     grid-template-columns: 1fr;
   }
 
   .square-board {
-    grid-template-columns: repeat(3, minmax(72px, 1fr));
+    grid-template-columns: repeat(5, minmax(52px, 1fr));
     min-height: 0;
-    padding: 0.85rem;
+    padding: 0.65rem;
   }
 
   .square-cell {
@@ -1342,6 +1470,28 @@
   }
 
   .inventory-item {
+    grid-template-columns: 1fr;
+  }
+
+  .dossier-column .unit-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dossier-column .unit-detail-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .autobattler-layout {
+    grid-template-areas:
+      "recruit"
+      "dossier"
+      "tactics";
+    grid-template-columns: 1fr;
+  }
+
+  .economy-stats {
     grid-template-columns: 1fr;
   }
 }

@@ -9,9 +9,15 @@ import {
   GuildMembership,
   JsonValue
 } from '../types/database';
+import {
+  GuildCustomizationInput,
+  defaultGuildRoleLabels,
+  guildCustomizationSchema
+} from '../features/guilds/guildCustomization';
 
 export interface CreateGuildInput {
   name: string;
+  subtitle?: string;
   description: string;
   leaderId: string;
   leaderCharacterId: string;
@@ -76,6 +82,7 @@ interface GuildApplicationRow {
 interface GuildRow {
   id: string;
   name: string;
+  subtitle?: string;
   description: string;
   type?: string;
   leader_id: string;
@@ -83,7 +90,18 @@ interface GuildRow {
   leader_character_id?: string;
   leader_character?: { name?: string } | null;
   logo?: string;
+  emblem_url?: string;
   region?: string;
+  font_family?: Guild['fontFamily'];
+  font_color?: string;
+  base_color?: string;
+  accent_color?: string;
+  layout_style?: Guild['layoutStyle'];
+  headquarters_name?: string;
+  headquarters_title?: string;
+  headquarters_description?: string;
+  headquarters_image_url?: string;
+  role_labels?: Guild['roleLabels'];
   status?: Guild['status'];
   recruitment_status?: Guild['recruitmentStatus'];
   requirements?: string;
@@ -142,6 +160,30 @@ export class GuildService {
     }
   }
 
+  async getGuild(guildId: string): Promise<ApiResponse<Guild>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.GUILDS)
+        .select(`
+          *,
+          leader_character:characters!guilds_leader_character_id_fkey(id,name,level,class),
+          memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,created_at,updated_at)),
+          applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,created_at,updated_at))
+        `)
+        .eq('id', guildId)
+        .single();
+
+      if (error || !data) {
+        return { success: false, error: error?.message || 'Guild not found.' };
+      }
+
+      return { success: true, data: this.transformGuildFromDb(data) };
+    } catch (error) {
+      console.error('Error loading guild:', error);
+      return { success: false, error: 'Failed to load guild' };
+    }
+  }
+
   async createGuild(input: CreateGuildInput): Promise<ApiResponse<Guild>> {
     try {
       const supabase = this.dbService.getClient();
@@ -169,6 +211,7 @@ export class GuildService {
         .from(DATABASE_TABLES.GUILDS)
         .insert({
           name: input.name,
+          subtitle: input.subtitle || '',
           description: input.description,
           type: input.type || 'Adventuring',
           leader_id: input.leaderId,
@@ -228,6 +271,84 @@ export class GuildService {
     } catch (error) {
       console.error('Error creating guild:', error);
       return { success: false, error: 'Failed to create guild' };
+    }
+  }
+
+  async updateGuildCustomization(
+    guildId: string,
+    leaderId: string,
+    input: GuildCustomizationInput
+  ): Promise<ApiResponse<boolean>> {
+    try {
+      const parsed = guildCustomizationSchema.safeParse(input);
+      if (!parsed.success) {
+        return { success: false, error: parsed.error.issues[0]?.message || 'Invalid guild profile.' };
+      }
+
+      const guild = await this.getGuildById(guildId);
+      if (!guild || guild.leaderId !== leaderId) {
+        return { success: false, error: 'Only the guildmaster can customize this page.' };
+      }
+
+      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_command', {
+        p_guild_id: guildId,
+        p_profile: parsed.data
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: Boolean(data), message: 'Guild page updated.' };
+    } catch (error) {
+      console.error('Error updating guild customization:', error);
+      return { success: false, error: 'Failed to update guild page' };
+    }
+  }
+
+  async uploadGuildAsset(
+    guildId: string,
+    leaderId: string,
+    file: File,
+    kind: 'emblem' | 'headquarters'
+  ): Promise<ApiResponse<string>> {
+    const mimeExtensions: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/webp': 'webp'
+    };
+
+    if (!mimeExtensions[file.type]) {
+      return { success: false, error: 'Upload a PNG, JPEG, or WebP image.' };
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: 'Guild images must be 5 MB or smaller.' };
+    }
+
+    try {
+      const guild = await this.getGuildById(guildId);
+      if (!guild || guild.leaderId !== leaderId) {
+        return { success: false, error: 'Only the guildmaster can upload guild artwork.' };
+      }
+
+      const supabase = this.dbService.getClient();
+      const path = `${guildId}/${kind}.${mimeExtensions[file.type]}`;
+      const { error } = await supabase.storage.from('guild-assets').upload(path, file, {
+        cacheControl: '3600',
+        contentType: file.type,
+        upsert: true
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      const { data } = supabase.storage.from('guild-assets').getPublicUrl(path);
+      return { success: true, data: `${data.publicUrl}?v=${Date.now()}` };
+    } catch (error) {
+      console.error('Error uploading guild artwork:', error);
+      return { success: false, error: 'Failed to upload guild artwork' };
     }
   }
 
@@ -378,32 +499,29 @@ export class GuildService {
     }
   }
 
-  async updateMemberRole(guildId: string, leaderId: string, membershipId: string, roleCategory: 'Officer' | 'Member' | 'Ally', roleTitle: string): Promise<ApiResponse<GuildMembership>> {
+  async updateMemberRole(guildId: string, leaderId: string, membershipId: string, roleCategory: 'Subleader' | 'Officer' | 'Member' | 'Ally', roleTitle: string): Promise<ApiResponse<GuildMembership>> {
     try {
       const guild = await this.getGuildById(guildId);
       if (!guild || guild.leaderId !== leaderId) {
         return { success: false, error: 'Only the guild leader can update roles.' };
       }
 
-      const supabase = this.dbService.getClient();
-      const role = roleCategory === 'Officer' ? 'officer' : 'member';
-      const { data, error } = await supabase
-        .from('guild_memberships')
-        .update({
-          role,
-          role_category: roleCategory,
-          role_title: roleTitle
-        })
-        .eq('id', membershipId)
-        .eq('guild_id', guildId)
-        .select()
-        .single();
+      const { data, error } = await this.dbService.getClient().rpc('update_guild_member_role_command', {
+        p_guild_id: guildId,
+        p_membership_id: membershipId,
+        p_role_category: roleCategory,
+        p_role_title: roleTitle
+      });
 
       if (error) {
         return { success: false, error: error.message };
       }
 
-      return { success: true, data: this.transformMembershipFromDb(data) };
+      if (!data) {
+        return { success: false, error: 'Guild membership was not found.' };
+      }
+
+      return { success: true };
     } catch (error) {
       console.error('Error updating member role:', error);
       return { success: false, error: 'Failed to update role' };
@@ -617,7 +735,7 @@ export class GuildService {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('membership_status', 'Active')
-      .in('role_category', ['Leader', 'Officer', 'Member']);
+      .in('role_category', ['Leader', 'Subleader', 'Officer', 'Member']);
 
     return Boolean(count && count > 0);
   }
@@ -641,7 +759,7 @@ export class GuildService {
       .select('*', { count: 'exact', head: true })
       .eq('guild_id', guildId)
       .eq('membership_status', 'Active')
-      .in('role_category', ['Leader', 'Officer', 'Member']);
+      .in('role_category', ['Leader', 'Subleader', 'Officer', 'Member']);
 
     const activeCount = count || 0;
     const guild = await this.getGuildById(guildId);
@@ -664,6 +782,7 @@ export class GuildService {
     return {
       _id: dbGuild.id,
       name: dbGuild.name,
+      subtitle: dbGuild.subtitle || '',
       description: dbGuild.description,
       type: dbGuild.type || 'Adventuring',
       leaderId: dbGuild.leader_id,
@@ -671,7 +790,18 @@ export class GuildService {
       leaderCharacterId: dbGuild.leader_character_id,
       leaderCharacterName: dbGuild.leader_character?.name,
       logo: dbGuild.logo,
+      emblemUrl: dbGuild.emblem_url || dbGuild.logo,
       region: dbGuild.region || '',
+      fontFamily: dbGuild.font_family || 'cinzel',
+      fontColor: dbGuild.font_color || '#f8fafc',
+      baseColor: dbGuild.base_color || '#171425',
+      accentColor: dbGuild.accent_color || '#d6a84b',
+      layoutStyle: dbGuild.layout_style || 'chronicle',
+      headquartersName: dbGuild.headquarters_name || '',
+      headquartersTitle: dbGuild.headquarters_title || '',
+      headquartersDescription: dbGuild.headquarters_description || '',
+      headquartersImageUrl: dbGuild.headquarters_image_url,
+      roleLabels: { ...defaultGuildRoleLabels, ...(dbGuild.role_labels || {}) },
       established: new Date(dbGuild.created_at),
       status: dbGuild.status || 'Recruiting',
       recruitmentStatus: dbGuild.recruitment_status || 'open',
