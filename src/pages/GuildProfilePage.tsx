@@ -5,7 +5,6 @@ import {
   Castle,
   Check,
   Crown,
-  ImagePlus,
   Loader2,
   LogOut,
   Palette,
@@ -31,6 +30,9 @@ import {
   guildFontOptions,
   guildLayoutOptions
 } from '../features/guilds/guildCustomization';
+import RichTextEditor from '../features/guilds/RichTextEditor';
+import SafeRichText from '../features/guilds/SafeRichText';
+import { plainTextToRichHtml, richTextToPlainText, sanitizeRichHtml } from '../features/guilds/richText';
 import './guilds.css';
 
 type EditableRole = Exclude<GuildMembership['roleCategory'], 'Leader'>;
@@ -48,7 +50,6 @@ const GuildProfilePage: React.FC = () => {
   const [draft, setDraft] = useState<GuildCustomizationInput | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [editorMessage, setEditorMessage] = useState('');
-  const [uploading, setUploading] = useState<'emblem' | 'headquarters' | null>(null);
   const [applicationRole, setApplicationRole] = useState<'Officer' | 'Member' | 'Ally'>('Member');
   const [applicationCharacterId, setApplicationCharacterId] = useState('');
   const [applicationMessage, setApplicationMessage] = useState('');
@@ -140,7 +141,21 @@ const GuildProfilePage: React.FC = () => {
     if (!guild?._id || !user?.id || !draft) return;
     setIsSaving(true);
     setEditorMessage('');
-    const response = await guildService.updateGuildCustomization(guild._id, user.id, draft);
+    const titleHtml = sanitizeRichHtml(draft.titleHtml, 'inline');
+    const descriptionHtml = sanitizeRichHtml(draft.descriptionHtml);
+    const headquartersTitleHtml = sanitizeRichHtml(draft.headquartersTitleHtml, 'inline');
+    const headquartersDescriptionHtml = sanitizeRichHtml(draft.headquartersDescriptionHtml);
+    const normalizedDraft: GuildCustomizationInput = {
+      ...draft,
+      titleHtml,
+      description: richTextToPlainText(descriptionHtml).slice(0, 4000),
+      descriptionHtml,
+      headquartersTitle: richTextToPlainText(headquartersTitleHtml).slice(0, 140),
+      headquartersTitleHtml,
+      headquartersDescription: richTextToPlainText(headquartersDescriptionHtml).slice(0, 3000),
+      headquartersDescriptionHtml
+    };
+    const response = await guildService.updateGuildCustomization(guild._id, user.id, normalizedDraft);
     setIsSaving(false);
     if (!response.success) {
       setEditorMessage(response.error || 'Could not save the guild page.');
@@ -149,19 +164,6 @@ const GuildProfilePage: React.FC = () => {
     await loadGuild();
     setIsEditing(false);
     setDraft(null);
-  };
-
-  const handleUpload = async (file: File, kind: 'emblem' | 'headquarters') => {
-    if (!guild?._id || !user?.id || !draft) return;
-    setUploading(kind);
-    setEditorMessage('');
-    const response = await guildService.uploadGuildAsset(guild._id, user.id, file, kind);
-    setUploading(null);
-    if (!response.success || !response.data) {
-      setEditorMessage(response.error || 'Could not upload that image.');
-      return;
-    }
-    updateDraft(kind === 'emblem' ? 'emblemUrl' : 'headquartersImageUrl', response.data);
   };
 
   const handleApply = async () => {
@@ -267,7 +269,12 @@ const GuildProfilePage: React.FC = () => {
           </div>
           <div className="guild-profile-title">
             <p className="guild-profile-kicker">{displayGuild.type}{displayGuild.region ? ` · ${displayGuild.region}` : ''}</p>
-            <h1>{displayGuild.name}</h1>
+            <SafeRichText
+              as="h1"
+              inline
+              className={`guild-animated-title guild-title-animation-${displayGuild.titleAnimation}`}
+              html={displayGuild.titleHtml || plainTextToRichHtml(displayGuild.name)}
+            />
             <p>{displayGuild.subtitle || 'A charter of the Shattered Convergence'}</p>
           </div>
           <div className="guild-profile-seal">
@@ -283,7 +290,10 @@ const GuildProfilePage: React.FC = () => {
           <section className="guild-story-panel">
             <p className="guild-section-label">Our charter</p>
             <h2>About the guild</h2>
-            <p className="guild-story-copy">{displayGuild.description || 'This guild has not yet committed its story to the registry.'}</p>
+            <SafeRichText
+              className="guild-story-copy guild-rich-output"
+              html={displayGuild.descriptionHtml || plainTextToRichHtml(displayGuild.description || 'This guild has not yet committed its story to the registry.')}
+            />
             <div className="guild-charter-facts">
               <div><span>Status</span><strong>{displayGuild.status}</strong></div>
               <div><span>Established</span><strong>{displayGuild.foundedAt ? displayGuild.foundedAt.toLocaleDateString() : 'Forming'}</strong></div>
@@ -301,8 +311,13 @@ const GuildProfilePage: React.FC = () => {
             <div className="guild-headquarters-copy">
               <p className="guild-section-label">Headquarters</p>
               <h2>{displayGuild.headquartersName || 'Stronghold undisclosed'}</h2>
-              {displayGuild.headquartersTitle && <h3>{displayGuild.headquartersTitle}</h3>}
-              <p>{displayGuild.headquartersDescription || 'The guildmaster has not yet entered a headquarters into the registry.'}</p>
+              {(displayGuild.headquartersTitleHtml || displayGuild.headquartersTitle) && (
+                <SafeRichText as="h3" inline html={displayGuild.headquartersTitleHtml || plainTextToRichHtml(displayGuild.headquartersTitle)} />
+              )}
+              <SafeRichText
+                className="guild-headquarters-description guild-rich-output"
+                html={displayGuild.headquartersDescriptionHtml || plainTextToRichHtml(displayGuild.headquartersDescription || 'The guildmaster has not yet entered a headquarters into the registry.')}
+              />
             </div>
           </section>
 
@@ -415,9 +430,11 @@ const GuildProfilePage: React.FC = () => {
 
             <div className="guild-editor-section">
               <h3>Identity</h3>
-              <label className="guild-field"><span>Guild name</span><input maxLength={80} value={draft.name} onChange={event => updateDraft('name', event.target.value)} /></label>
+              <label className="guild-field"><span>Registry name</span><input maxLength={80} value={draft.name} onChange={event => updateDraft('name', event.target.value)} /><small>Plain text used in search, links, and directory cards.</small></label>
+              <RichTextEditor label="Display title" inline value={draft.titleHtml} onChange={value => updateDraft('titleHtml', value)} placeholder="Your guild title" />
+              <label className="guild-field"><span>Title animation</span><select value={draft.titleAnimation} onChange={event => updateDraft('titleAnimation', event.target.value as GuildCustomizationInput['titleAnimation'])}><option value="none">None</option><option value="reveal">Soft reveal</option><option value="shimmer">Shimmer</option><option value="drift">Gentle drift</option><option value="glow">Arcane glow</option></select></label>
               <label className="guild-field"><span>Subtitle</span><input maxLength={140} value={draft.subtitle} onChange={event => updateDraft('subtitle', event.target.value)} /></label>
-              <label className="guild-field"><span>Description</span><textarea rows={5} value={draft.description} onChange={event => updateDraft('description', event.target.value)} /></label>
+              <RichTextEditor label="Guild description" value={draft.descriptionHtml} onChange={value => updateDraft('descriptionHtml', value)} placeholder="Tell the story of your guild…" />
             </div>
 
             <div className="guild-editor-section">
@@ -442,18 +459,19 @@ const GuildProfilePage: React.FC = () => {
             </div>
 
             <div className="guild-editor-section">
-              <h3>Artwork</h3>
-              <div className="guild-upload-grid">
-                <label className="guild-upload-control"><span>{draft.emblemUrl ? <img src={draft.emblemUrl} alt="Current emblem" /> : <Shield />}</span><strong>{uploading === 'emblem' ? 'Uploading…' : 'Upload emblem'}</strong><small>PNG, JPEG, or WebP · 5 MB max</small><input type="file" accept="image/png,image/jpeg,image/webp" disabled={Boolean(uploading)} onChange={event => { const file = event.target.files?.[0]; if (file) void handleUpload(file, 'emblem'); }} /></label>
-                <label className="guild-upload-control"><span>{draft.headquartersImageUrl ? <img src={draft.headquartersImageUrl} alt="Current headquarters" /> : <ImagePlus />}</span><strong>{uploading === 'headquarters' ? 'Uploading…' : 'Upload headquarters'}</strong><small>Landscape images work best</small><input type="file" accept="image/png,image/jpeg,image/webp" disabled={Boolean(uploading)} onChange={event => { const file = event.target.files?.[0]; if (file) void handleUpload(file, 'headquarters'); }} /></label>
-              </div>
+              <h3>Externally hosted artwork</h3>
+              <p>Paste a direct HTTPS link ending in an image resource. Imgur, Discord CDN, Supabase public URLs, and similar hosts work when they allow embedding.</p>
+              <label className="guild-field"><span>Emblem image URL</span><input type="url" value={draft.emblemUrl} onChange={event => updateDraft('emblemUrl', event.target.value)} placeholder="https://example.com/emblem.png" /></label>
+              {draft.emblemUrl && <div className="guild-url-preview guild-url-preview-emblem"><img src={draft.emblemUrl} alt="Emblem URL preview" /><span>Emblem preview</span></div>}
+              <label className="guild-field"><span>Headquarters image URL</span><input type="url" value={draft.headquartersImageUrl} onChange={event => updateDraft('headquartersImageUrl', event.target.value)} placeholder="https://example.com/headquarters.webp" /></label>
+              {draft.headquartersImageUrl && <div className="guild-url-preview"><img src={draft.headquartersImageUrl} alt="Headquarters URL preview" /><span>Headquarters preview</span></div>}
             </div>
 
             <div className="guild-editor-section">
               <h3>Headquarters</h3>
               <label className="guild-field"><span>Name</span><input value={draft.headquartersName} onChange={event => updateDraft('headquartersName', event.target.value)} placeholder="The Gilded Compass" /></label>
-              <label className="guild-field"><span>Title</span><input value={draft.headquartersTitle} onChange={event => updateDraft('headquartersTitle', event.target.value)} placeholder="Hall of the Far Horizon" /></label>
-              <label className="guild-field"><span>Description</span><textarea rows={4} value={draft.headquartersDescription} onChange={event => updateDraft('headquartersDescription', event.target.value)} /></label>
+              <RichTextEditor label="Headquarters title" inline value={draft.headquartersTitleHtml} onChange={value => updateDraft('headquartersTitleHtml', value)} placeholder="Hall of the Far Horizon" />
+              <RichTextEditor label="Headquarters description" value={draft.headquartersDescriptionHtml} onChange={value => updateDraft('headquartersDescriptionHtml', value)} />
             </div>
 
             <div className="guild-editor-section">
@@ -464,7 +482,7 @@ const GuildProfilePage: React.FC = () => {
 
             <div className="guild-editor-actions">
               <button type="button" className="guild-secondary-action" onClick={() => { setIsEditing(false); setDraft(null); }}>Discard</button>
-              <button type="button" className="guild-primary-action" onClick={() => void handleSaveCustomization()} disabled={isSaving || Boolean(uploading)}>{isSaving ? <Loader2 className="guild-spin" size={17} /> : <Save size={17} />} Save page</button>
+              <button type="button" className="guild-primary-action" onClick={() => void handleSaveCustomization()} disabled={isSaving}>{isSaving ? <Loader2 className="guild-spin" size={17} /> : <Save size={17} />} Save page</button>
             </div>
           </aside>
         </div>

@@ -12,8 +12,10 @@ import {
 import {
   GuildCustomizationInput,
   defaultGuildRoleLabels,
-  guildCustomizationSchema
+  guildCustomizationSchema,
+  isSafeExternalImageUrl
 } from '../features/guilds/guildCustomization';
+import { plainTextToRichHtml, richTextToPlainText, sanitizeRichHtml } from '../features/guilds/richText';
 
 export interface CreateGuildInput {
   name: string;
@@ -82,8 +84,11 @@ interface GuildApplicationRow {
 interface GuildRow {
   id: string;
   name: string;
+  title_html?: string;
+  title_animation?: Guild['titleAnimation'];
   subtitle?: string;
   description: string;
+  description_html?: string;
   type?: string;
   leader_id: string;
   created_by?: string;
@@ -99,7 +104,9 @@ interface GuildRow {
   layout_style?: Guild['layoutStyle'];
   headquarters_name?: string;
   headquarters_title?: string;
+  headquarters_title_html?: string;
   headquarters_description?: string;
+  headquarters_description_html?: string;
   headquarters_image_url?: string;
   role_labels?: Guild['roleLabels'];
   status?: Guild['status'];
@@ -196,14 +203,14 @@ export class GuildService {
         return { success: false, error: 'Guild leaders must be at least level 4.' };
       }
 
-      const existingLeadership = await this.userHasActiveLeadership(input.leaderId);
+      const existingLeadership = await this.characterHasActiveLeadership(input.leaderCharacterId);
       if (existingLeadership) {
-        return { success: false, error: 'A user can only lead one active or recruiting guild.' };
+        return { success: false, error: 'A character can only lead one active or recruiting guild.' };
       }
 
-      const coreMembership = await this.userHasCoreMembership(input.leaderId);
+      const coreMembership = await this.characterHasCoreMembership(input.leaderCharacterId);
       if (coreMembership) {
-        return { success: false, error: 'A user can only be a leader, officer, or member of one guild.' };
+        return { success: false, error: 'A character can only be a leader, subleader, officer, or member of one guild.' };
       }
 
       const now = new Date().toISOString();
@@ -211,8 +218,11 @@ export class GuildService {
         .from(DATABASE_TABLES.GUILDS)
         .insert({
           name: input.name,
+          title_html: plainTextToRichHtml(input.name),
+          title_animation: 'none',
           subtitle: input.subtitle || '',
           description: input.description,
+          description_html: plainTextToRichHtml(input.description),
           type: input.type || 'Adventuring',
           leader_id: input.leaderId,
           created_by: input.leaderId,
@@ -290,9 +300,20 @@ export class GuildService {
         return { success: false, error: 'Only the guildmaster can customize this page.' };
       }
 
+      const safeProfile: GuildCustomizationInput = {
+        ...parsed.data,
+        titleHtml: sanitizeRichHtml(parsed.data.titleHtml, 'inline'),
+        descriptionHtml: sanitizeRichHtml(parsed.data.descriptionHtml),
+        headquartersTitleHtml: sanitizeRichHtml(parsed.data.headquartersTitleHtml, 'inline'),
+        headquartersDescriptionHtml: sanitizeRichHtml(parsed.data.headquartersDescriptionHtml)
+      };
+      safeProfile.description = richTextToPlainText(safeProfile.descriptionHtml).slice(0, 4000);
+      safeProfile.headquartersTitle = richTextToPlainText(safeProfile.headquartersTitleHtml).slice(0, 140);
+      safeProfile.headquartersDescription = richTextToPlainText(safeProfile.headquartersDescriptionHtml).slice(0, 3000);
+
       const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_command', {
         p_guild_id: guildId,
-        p_profile: parsed.data
+        p_profile: safeProfile
       });
 
       if (error) {
@@ -303,52 +324,6 @@ export class GuildService {
     } catch (error) {
       console.error('Error updating guild customization:', error);
       return { success: false, error: 'Failed to update guild page' };
-    }
-  }
-
-  async uploadGuildAsset(
-    guildId: string,
-    leaderId: string,
-    file: File,
-    kind: 'emblem' | 'headquarters'
-  ): Promise<ApiResponse<string>> {
-    const mimeExtensions: Record<string, string> = {
-      'image/png': 'png',
-      'image/jpeg': 'jpg',
-      'image/webp': 'webp'
-    };
-
-    if (!mimeExtensions[file.type]) {
-      return { success: false, error: 'Upload a PNG, JPEG, or WebP image.' };
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      return { success: false, error: 'Guild images must be 5 MB or smaller.' };
-    }
-
-    try {
-      const guild = await this.getGuildById(guildId);
-      if (!guild || guild.leaderId !== leaderId) {
-        return { success: false, error: 'Only the guildmaster can upload guild artwork.' };
-      }
-
-      const supabase = this.dbService.getClient();
-      const path = `${guildId}/${kind}.${mimeExtensions[file.type]}`;
-      const { error } = await supabase.storage.from('guild-assets').upload(path, file, {
-        cacheControl: '3600',
-        contentType: file.type,
-        upsert: true
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      const { data } = supabase.storage.from('guild-assets').getPublicUrl(path);
-      return { success: true, data: `${data.publicUrl}?v=${Date.now()}` };
-    } catch (error) {
-      console.error('Error uploading guild artwork:', error);
-      return { success: false, error: 'Failed to upload guild artwork' };
     }
   }
 
@@ -373,7 +348,7 @@ export class GuildService {
       const eligibleCharacters: Character[] = [];
       for (const character of data || []) {
         if (character.user_id === leaderId) continue;
-        const hasCoreMembership = await this.userHasCoreMembership(character.user_id);
+        const hasCoreMembership = await this.characterHasCoreMembership(character.id);
         if (!hasCoreMembership) {
           eligibleCharacters.push(this.transformCharacterFromDb(character));
         }
@@ -399,9 +374,9 @@ export class GuildService {
         return { success: false, error: 'Founding character was not found.' };
       }
 
-      const coreMembership = await this.userHasCoreMembership(foundingCharacter.userId);
+      const coreMembership = await this.characterHasCoreMembership(characterId);
       if (coreMembership) {
-        return { success: false, error: 'That character already belongs to a user with a leader, officer, or member guild role.' };
+        return { success: false, error: 'That character is already a leader, subleader, officer, or member of another guild.' };
       }
 
       const now = new Date().toISOString();
@@ -464,9 +439,9 @@ export class GuildService {
       }
 
       if (requestedRoleCategory !== 'Ally') {
-        const coreMembership = await this.userHasCoreMembership(userId);
+        const coreMembership = await this.characterHasCoreMembership(characterId);
         if (coreMembership) {
-          return { success: false, error: 'You can only be a leader, officer, or member of one guild.' };
+          return { success: false, error: 'That character can only be a leader, subleader, officer, or member of one guild.' };
         }
       }
 
@@ -549,9 +524,11 @@ export class GuildService {
       }
 
       if (application.requested_role_category !== 'Ally') {
-        const coreMembership = await this.userHasCoreMembership(application.user_id);
+        const coreMembership = application.character_id
+          ? await this.characterHasCoreMembership(application.character_id)
+          : true;
         if (coreMembership) {
-          return { success: false, error: 'That user is already a leader, officer, or member of another guild.' };
+          return { success: false, error: 'That character is already a leader, subleader, officer, or member of another guild.' };
         }
       }
 
@@ -717,23 +694,23 @@ export class GuildService {
     return this.transformCharacterFromDb(data);
   }
 
-  private async userHasActiveLeadership(userId: string): Promise<boolean> {
+  private async characterHasActiveLeadership(characterId: string): Promise<boolean> {
     const supabase = this.dbService.getClient();
     const { count } = await supabase
       .from(DATABASE_TABLES.GUILDS)
       .select('*', { count: 'exact', head: true })
-      .eq('leader_id', userId)
+      .eq('leader_character_id', characterId)
       .neq('status', 'Inactive');
 
     return Boolean(count && count > 0);
   }
 
-  private async userHasCoreMembership(userId: string): Promise<boolean> {
+  private async characterHasCoreMembership(characterId: string): Promise<boolean> {
     const supabase = this.dbService.getClient();
     const { count } = await supabase
       .from('guild_memberships')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
+      .eq('character_id', characterId)
       .eq('membership_status', 'Active')
       .in('role_category', ['Leader', 'Subleader', 'Officer', 'Member']);
 
@@ -782,15 +759,18 @@ export class GuildService {
     return {
       _id: dbGuild.id,
       name: dbGuild.name,
+      titleHtml: dbGuild.title_html || plainTextToRichHtml(dbGuild.name),
+      titleAnimation: dbGuild.title_animation || 'none',
       subtitle: dbGuild.subtitle || '',
       description: dbGuild.description,
+      descriptionHtml: dbGuild.description_html || plainTextToRichHtml(dbGuild.description),
       type: dbGuild.type || 'Adventuring',
       leaderId: dbGuild.leader_id,
       createdBy: dbGuild.created_by,
       leaderCharacterId: dbGuild.leader_character_id,
       leaderCharacterName: dbGuild.leader_character?.name,
       logo: dbGuild.logo,
-      emblemUrl: dbGuild.emblem_url || dbGuild.logo,
+      emblemUrl: isSafeExternalImageUrl(dbGuild.emblem_url || dbGuild.logo || '') ? dbGuild.emblem_url || dbGuild.logo : undefined,
       region: dbGuild.region || '',
       fontFamily: dbGuild.font_family || 'cinzel',
       fontColor: dbGuild.font_color || '#f8fafc',
@@ -799,8 +779,10 @@ export class GuildService {
       layoutStyle: dbGuild.layout_style || 'chronicle',
       headquartersName: dbGuild.headquarters_name || '',
       headquartersTitle: dbGuild.headquarters_title || '',
+      headquartersTitleHtml: dbGuild.headquarters_title_html || plainTextToRichHtml(dbGuild.headquarters_title || ''),
       headquartersDescription: dbGuild.headquarters_description || '',
-      headquartersImageUrl: dbGuild.headquarters_image_url,
+      headquartersDescriptionHtml: dbGuild.headquarters_description_html || plainTextToRichHtml(dbGuild.headquarters_description || ''),
+      headquartersImageUrl: isSafeExternalImageUrl(dbGuild.headquarters_image_url || '') ? dbGuild.headquarters_image_url : undefined,
       roleLabels: { ...defaultGuildRoleLabels, ...(dbGuild.role_labels || {}) },
       established: new Date(dbGuild.created_at),
       status: dbGuild.status || 'Recruiting',

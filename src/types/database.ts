@@ -96,8 +96,11 @@ export interface Character {
 export interface Guild {
   _id?: string;
   name: string;
+  titleHtml: string;
+  titleAnimation: 'none' | 'reveal' | 'shimmer' | 'drift' | 'glow';
   subtitle: string;
   description: string;
+  descriptionHtml: string;
   type: string;
   leaderId: string;
   createdBy?: string;
@@ -113,7 +116,9 @@ export interface Guild {
   layoutStyle: 'chronicle' | 'stronghold' | 'banner';
   headquartersName: string;
   headquartersTitle: string;
+  headquartersTitleHtml: string;
   headquartersDescription: string;
+  headquartersDescriptionHtml: string;
   headquartersImageUrl?: string;
   roleLabels: GuildRoleLabels;
   established: Date;
