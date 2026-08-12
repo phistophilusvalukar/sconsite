@@ -55,8 +55,10 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
         const viewportHeight = window.innerHeight || 1;
         const centerOffset = (bounds.top + bounds.height / 2 - viewportHeight / 2) / (viewportHeight + bounds.height);
         const normalizedOffset = Math.max(-1, Math.min(1, centerOffset * 2));
-        portrait.style.setProperty('--portrait-background-scroll', `${normalizedOffset * -32}px`);
-        portrait.style.setProperty('--portrait-cutout-scroll', `${normalizedOffset * 56}px`);
+        const backgroundTravel = Math.min(32, bounds.height * 0.05);
+        const cutoutTravel = Math.min(56, bounds.height * 0.08);
+        portrait.style.setProperty('--portrait-background-scroll', `${normalizedOffset * -backgroundTravel}px`);
+        portrait.style.setProperty('--portrait-cutout-scroll', `${normalizedOffset * cutoutTravel}px`);
       });
     };
 
@@ -84,12 +86,16 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
     const bounds = event.currentTarget.getBoundingClientRect();
     const horizontal = (event.clientX - bounds.left) / bounds.width - 0.5;
     const vertical = (event.clientY - bounds.top) / bounds.height - 0.5;
-    event.currentTarget.style.setProperty('--portrait-tilt-x', `${vertical * -14}deg`);
-    event.currentTarget.style.setProperty('--portrait-tilt-y', `${horizontal * 16}deg`);
-    event.currentTarget.style.setProperty('--portrait-background-x', `${horizontal * -7}px`);
-    event.currentTarget.style.setProperty('--portrait-background-y', `${vertical * -5}px`);
-    event.currentTarget.style.setProperty('--portrait-cutout-x', `${horizontal * 12}px`);
-    event.currentTarget.style.setProperty('--portrait-cutout-y', `${vertical * 8}px`);
+    event.currentTarget.style.setProperty('--portrait-tilt-x', `${vertical * -24}deg`);
+    event.currentTarget.style.setProperty('--portrait-tilt-y', `${horizontal * 28}deg`);
+    event.currentTarget.style.setProperty('--portrait-background-x', `${horizontal * -10}px`);
+    event.currentTarget.style.setProperty('--portrait-background-y', `${vertical * -7}px`);
+    event.currentTarget.style.setProperty('--portrait-background-tilt-x', `${vertical * 7}deg`);
+    event.currentTarget.style.setProperty('--portrait-background-tilt-y', `${horizontal * -9}deg`);
+    event.currentTarget.style.setProperty('--portrait-cutout-x', `${horizontal * 18}px`);
+    event.currentTarget.style.setProperty('--portrait-cutout-y', `${vertical * 12}px`);
+    event.currentTarget.style.setProperty('--portrait-cutout-tilt-x', `${vertical * -9}deg`);
+    event.currentTarget.style.setProperty('--portrait-cutout-tilt-y', `${horizontal * 11}deg`);
     event.currentTarget.style.setProperty('--portrait-glint-x', `${horizontal * 44}px`);
   };
 
@@ -98,8 +104,12 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
     event.currentTarget.style.setProperty('--portrait-tilt-y', '0deg');
     event.currentTarget.style.setProperty('--portrait-background-x', '0px');
     event.currentTarget.style.setProperty('--portrait-background-y', '0px');
+    event.currentTarget.style.setProperty('--portrait-background-tilt-x', '0deg');
+    event.currentTarget.style.setProperty('--portrait-background-tilt-y', '0deg');
     event.currentTarget.style.setProperty('--portrait-cutout-x', '0px');
     event.currentTarget.style.setProperty('--portrait-cutout-y', '0px');
+    event.currentTarget.style.setProperty('--portrait-cutout-tilt-x', '0deg');
+    event.currentTarget.style.setProperty('--portrait-cutout-tilt-y', '0deg');
     event.currentTarget.style.setProperty('--portrait-glint-x', '0px');
   };
 
