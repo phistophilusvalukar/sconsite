@@ -347,6 +347,7 @@
 .guild-profile-nav button { display: inline-flex; align-items: center; gap: .45rem; border: 0; padding: .55rem 0; background: transparent; color: color-mix(in srgb, var(--guild-ink) 62%, transparent); font-size: .73rem; font-weight: 700; text-decoration: none; cursor: pointer; }
 .guild-profile-nav a:hover,
 .guild-profile-nav button:hover { color: var(--guild-accent); }
+.guild-profile-nav-actions { display: flex; align-items: center; gap: 1rem; }
 .guild-profile-hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: clamp(1.25rem, 4vw, 3rem); min-height: 330px; padding: clamp(3rem, 7vw, 6rem) clamp(0rem, 3vw, 2rem); background-position: center; background-size: cover; }
 .guild-profile-hero.has-banner-image { min-height: clamp(390px, 48vw, 610px); border: 1px solid color-mix(in srgb, var(--guild-accent) 26%, transparent); border-radius: 6px; padding-inline: clamp(1.5rem, 5vw, 5rem); box-shadow: inset 0 0 90px rgb(0 0 0 / .28), 0 32px 80px rgb(0 0 0 / .25); text-shadow: 0 3px 20px rgb(0 0 0 / .76); }
 .guild-profile-emblem { display: grid; width: clamp(108px, 16vw, 176px); height: clamp(108px, 16vw, 176px); place-items: center; overflow: hidden; border: 1px solid color-mix(in srgb, var(--guild-accent) 55%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--guild-base) 75%, black 25%); color: var(--guild-accent); box-shadow: 0 0 0 10px color-mix(in srgb, var(--guild-accent) 5%, transparent), 0 28px 70px rgba(0,0,0,.3); }
@@ -361,6 +362,24 @@
 .guild-profile-seal svg { margin-bottom: .4rem; color: var(--guild-accent); }
 .guild-profile-seal span { color: color-mix(in srgb, var(--guild-ink) 55%, transparent); font-size: .6rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .guild-profile-seal strong { font-size: 1rem; }
+.guild-succession-banner { display: grid; grid-template-columns: minmax(0, 1fr) clamp(65px, 10vw, 150px) minmax(0, 1fr); align-items: center; max-width: 900px; margin: -1.2rem auto 2.5rem; border: 1px solid color-mix(in srgb, var(--guild-accent) 24%, transparent); border-radius: 999px; padding: .85rem 1rem; background: color-mix(in srgb, var(--guild-base) 82%, transparent); box-shadow: 0 16px 45px rgb(0 0 0 / .18), inset 0 1px rgb(255 255 255 / .05); backdrop-filter: blur(12px); }
+.guild-succession-member { display: flex; align-items: center; gap: .85rem; min-width: 0; }
+.guild-succession-member.is-next { justify-content: flex-end; text-align: right; }
+.guild-succession-member > span { display: grid; min-width: 0; gap: .12rem; }
+.guild-succession-member small { color: color-mix(in srgb, var(--guild-ink) 56%, transparent); font-size: .65rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.guild-succession-member strong { overflow: hidden; color: var(--guild-ink); font-family: var(--guild-subtitle-font); font-size: clamp(.95rem, 1.7vw, 1.25rem); text-overflow: ellipsis; white-space: nowrap; }
+.guild-succession-portrait,
+.guild-succession-next-portrait,
+.guild-succession-placeholder { position: relative; width: 58px; height: 58px; flex: 0 0 58px; border: 1px solid color-mix(in srgb, var(--guild-accent) 55%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--guild-base) 72%, black); }
+.guild-succession-current-portrait,
+.guild-succession-next-portrait { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+.guild-succession-portrait > svg { position: absolute; top: -13px; left: 50%; z-index: 4; width: 25px; height: 25px; color: var(--guild-accent); filter: drop-shadow(0 2px 3px rgb(0 0 0 / .72)); transform: translateX(-50%) rotate(-5deg); }
+.guild-succession-placeholder { display: grid; place-items: center; color: color-mix(in srgb, var(--guild-ink) 45%, transparent); }
+.guild-succession-line { display: flex; align-items: center; padding-inline: .75rem; }
+.guild-succession-line::before,
+.guild-succession-line::after { width: 5px; height: 5px; border: 1px solid var(--guild-accent); content: ''; transform: rotate(45deg); }
+.guild-succession-line span { height: 1px; flex: 1; background: linear-gradient(90deg, transparent, var(--guild-accent), transparent); opacity: .65; }
+.guild-succession-member.is-waiting strong { color: color-mix(in srgb, var(--guild-ink) 65%, transparent); font-size: .87rem; white-space: normal; }
 .guild-profile-rule { display: flex; align-items: center; gap: 1rem; color: var(--guild-accent); }
 .guild-profile-rule::before,
 .guild-profile-rule::after { height: 1px; flex: 1; background: color-mix(in srgb, var(--guild-accent) 26%, transparent); content: ''; }
@@ -809,6 +828,11 @@
   .guild-field-wide { grid-column: auto; }
   .guild-modal-backdrop { align-items: stretch; padding: .5rem; }
   .guild-profile-shell { width: min(100% - 1.25rem, 1260px); }
+  .guild-profile-nav { align-items: flex-start; }
+  .guild-profile-nav-actions { align-items: flex-end; flex-direction: column; gap: .15rem; }
+  .guild-succession-banner { grid-template-columns: 1fr; gap: .75rem; border-radius: 18px; margin-top: -.5rem; padding: 1rem; }
+  .guild-succession-line { display: none; }
+  .guild-succession-member.is-next { justify-content: flex-start; text-align: left; }
   .guild-profile-hero { grid-template-columns: 1fr; justify-items: center; padding: 3rem .5rem; text-align: center; }
   .guild-profile-seal { grid-column: 1; display: flex; align-items: center; gap: .45rem; }
   .guild-profile-seal svg { margin: 0; }

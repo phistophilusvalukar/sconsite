@@ -161,6 +161,10 @@ export interface Guild {
   rosterDisplay: 'ledger' | 'dossiers' | 'cards';
   sectionVisibility: GuildSectionVisibility;
   sectionHeadings: GuildSectionHeadings;
+  autoLeaderEnabled: boolean;
+  autoLeaderAwaitingCheckin: boolean;
+  nextLeaderCharacterId?: string;
+  leadershipChangedAt?: Date;
   headquartersName: string;
   headquartersTitle: string;
   headquartersTitleHtml: string;
@@ -256,6 +260,13 @@ export interface GuildRoleLabels {
   Ally: string;
 }
 
+export interface GuildManagementPermissions {
+  kickMembers: boolean;
+  setMessageBoard: boolean;
+  acceptApplications: boolean;
+  customizeGuild: boolean;
+}
+
 export type CharacterRoleCategory = 'Healer' | 'Tank' | 'DPS' | 'Support';
 export type CharacterRoleBadge =
   | 'healer_magical'
@@ -343,6 +354,7 @@ export interface GuildMembership {
   invitedBy?: string;
   badges: string[];
   contributions: number;
+  permissions: GuildManagementPermissions;
   user?: UserProfile;
   character?: Character;
 }

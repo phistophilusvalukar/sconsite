@@ -15,6 +15,7 @@ import {
 } from '../types/database';
 import {
   GuildCustomizationInput,
+  defaultGuildManagementPermissions,
   defaultGuildPalette,
   defaultGuildSectionHeadings,
   defaultGuildSectionVisibility,
@@ -112,6 +113,7 @@ interface GuildMembershipRow {
   invited_by?: string;
   badges?: string[];
   contributions?: number;
+  permissions?: Partial<GuildMembership['permissions']>;
   character?: GuildCharacterRow | null;
 }
 
@@ -162,6 +164,10 @@ interface GuildRow {
   roster_display?: Guild['rosterDisplay'];
   section_visibility?: Partial<Guild['sectionVisibility']>;
   section_headings?: Partial<Guild['sectionHeadings']>;
+  auto_leader_enabled?: boolean;
+  auto_leader_awaiting_checkin?: boolean;
+  next_leader_character_id?: string | null;
+  leadership_changed_at?: string | null;
   headquarters_name?: string;
   headquarters_title?: string;
   headquarters_title_html?: string;
@@ -255,6 +261,9 @@ export class GuildService {
   async getGuild(guildId: string): Promise<ApiResponse<Guild>> {
     try {
       const supabase = this.dbService.getClient();
+      // Succession is evaluated by a protected server command on visits as well
+      // as check-ins, so an inactive leader can be replaced without a client write.
+      await supabase.rpc('refresh_guild_succession_command', { p_guild_id: guildId });
       const loadGuild = (includeFocus: boolean) => supabase
         .from(DATABASE_TABLES.GUILDS)
         .select(guildGraphSelect(includeFocus))
@@ -373,18 +382,13 @@ export class GuildService {
 
   async updateGuildCustomization(
     guildId: string,
-    leaderId: string,
+    _actorId: string,
     input: GuildCustomizationInput
   ): Promise<ApiResponse<boolean>> {
     try {
       const parsed = guildCustomizationSchema.safeParse(input);
       if (!parsed.success) {
         return { success: false, error: parsed.error.issues[0]?.message || 'Invalid guild profile.' };
-      }
-
-      const guild = await this.getGuildById(guildId);
-      if (!guild || guild.leaderId !== leaderId) {
-        return { success: false, error: 'Only the guildmaster can customize this page.' };
       }
 
       const safeProfile: GuildCustomizationInput = {
@@ -399,7 +403,7 @@ export class GuildService {
       safeProfile.headquartersTitle = richTextToPlainText(safeProfile.headquartersTitleHtml).slice(0, 140);
       safeProfile.headquartersDescription = richTextToPlainText(safeProfile.headquartersDescriptionHtml).slice(0, 3000);
 
-      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v2_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v3_command', {
         p_guild_id: guildId,
         p_profile: safeProfile
       });
@@ -457,6 +461,71 @@ export class GuildService {
       console.error('Error checking in guild character:', error);
       return { success: false, error: 'Failed to check in' };
     }
+  }
+
+  async updateMemberManagement(
+    guildId: string,
+    membershipId: string,
+    roleCategory: 'Subleader' | 'Officer' | 'Member' | 'Ally',
+    roleTitle: string,
+    permissions: GuildMembership['permissions']
+  ): Promise<ApiResponse<boolean>> {
+    const { data, error } = await this.dbService.getClient().rpc('update_guild_member_management_command', {
+      p_guild_id: guildId,
+      p_membership_id: membershipId,
+      p_role_category: roleCategory,
+      p_role_title: roleTitle,
+      p_permissions: permissions
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: Boolean(data), message: 'Member rank and privileges updated.' };
+  }
+
+  async kickMember(guildId: string, membershipId: string): Promise<ApiResponse<boolean>> {
+    const { data, error } = await this.dbService.getClient().rpc('kick_guild_member_command', {
+      p_guild_id: guildId,
+      p_membership_id: membershipId
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: Boolean(data), message: 'Member removed from the guild.' };
+  }
+
+  async decideApplication(guildId: string, applicationId: string, decision: 'accept' | 'reject'): Promise<ApiResponse<boolean>> {
+    const { data, error } = await this.dbService.getClient().rpc('decide_guild_application_command', {
+      p_guild_id: guildId,
+      p_application_id: applicationId,
+      p_decision: decision
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: Boolean(data), message: decision === 'accept' ? 'Application accepted.' : 'Application declined.' };
+  }
+
+  async setAutoLeader(guildId: string, enabled: boolean): Promise<ApiResponse<boolean>> {
+    const { data, error } = await this.dbService.getClient().rpc('set_guild_auto_leader_command', {
+      p_guild_id: guildId,
+      p_enabled: enabled
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: Boolean(data), message: enabled ? 'Automatic leadership enabled.' : 'Automatic leadership disabled.' };
+  }
+
+  async transferLeadership(guildId: string, membershipId: string): Promise<ApiResponse<boolean>> {
+    const { data, error } = await this.dbService.getClient().rpc('transfer_guild_leader_command', {
+      p_guild_id: guildId,
+      p_membership_id: membershipId
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: Boolean(data), message: 'Guild leadership transferred.' };
+  }
+
+  async updateGuildMessageBoard(guildId: string, messageBoardHtml: string): Promise<ApiResponse<boolean>> {
+    const safeHtml = sanitizeRichHtml(messageBoardHtml);
+    const { data, error } = await this.dbService.getClient().rpc('update_guild_message_board_command', {
+      p_guild_id: guildId,
+      p_message_board_html: safeHtml
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: Boolean(data), message: 'Message board updated.' };
   }
 
   async getGuestbookEntries(guildId: string): Promise<ApiResponse<GuildGuestbookEntry[]>> {
@@ -978,6 +1047,10 @@ export class GuildService {
       rosterDisplay: dbGuild.roster_display || 'ledger',
       sectionVisibility: { ...defaultGuildSectionVisibility, ...(dbGuild.section_visibility || {}) },
       sectionHeadings: { ...defaultGuildSectionHeadings, ...(dbGuild.section_headings || {}) },
+      autoLeaderEnabled: dbGuild.auto_leader_enabled ?? false,
+      autoLeaderAwaitingCheckin: dbGuild.auto_leader_awaiting_checkin ?? false,
+      nextLeaderCharacterId: dbGuild.next_leader_character_id || undefined,
+      leadershipChangedAt: dbGuild.leadership_changed_at ? new Date(dbGuild.leadership_changed_at) : undefined,
       headquartersName: dbGuild.headquarters_name || '',
       headquartersTitle: dbGuild.headquarters_title || '',
       headquartersTitleHtml: dbGuild.headquarters_title_html || plainTextToRichHtml(dbGuild.headquarters_title || ''),
@@ -1022,6 +1095,7 @@ export class GuildService {
       invitedBy: dbMembership.invited_by,
       badges: dbMembership.badges || [],
       contributions: dbMembership.contributions || 0,
+      permissions: { ...defaultGuildManagementPermissions, ...(dbMembership.permissions || {}) },
       character: dbMembership.character ? this.transformCharacterFromDb(dbMembership.character) : undefined
     };
   }

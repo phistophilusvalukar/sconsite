@@ -44,6 +44,13 @@ export const defaultGuildRoleLabels = {
   Ally: 'Allies'
 } as const;
 
+export const defaultGuildManagementPermissions = {
+  kickMembers: false,
+  setMessageBoard: false,
+  acceptApplications: false,
+  customizeGuild: false
+} as const;
+
 export const defaultGuildSectionVisibility = {
   charter: true,
   requirements: true,

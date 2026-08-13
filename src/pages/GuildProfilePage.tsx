@@ -26,11 +26,11 @@ import {
   Users,
   X
 } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import ProfileTypographyControls from '../components/ProfileTypographyControls';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
-import GuildRoster, { GuildRoleEdit } from '../features/guilds/GuildRoster';
+import GuildRoster from '../features/guilds/GuildRoster';
 import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
 import {
   GuildCustomizationInput,
@@ -91,6 +91,7 @@ const characterPortrait = (character?: Character) =>
 
 const GuildProfilePage: React.FC = () => {
   const { guildId } = useParams<{ guildId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuth();
   const [guild, setGuild] = useState<Guild | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -106,10 +107,6 @@ const GuildProfilePage: React.FC = () => {
   const [applicationCharacterId, setApplicationCharacterId] = useState('');
   const [applicationMessage, setApplicationMessage] = useState('');
   const [actionMessage, setActionMessage] = useState('');
-  const [roleEdits, setRoleEdits] = useState<Record<string, GuildRoleEdit>>({});
-  const [founderSearch, setFounderSearch] = useState('');
-  const [founderResults, setFounderResults] = useState<Character[]>([]);
-  const [isSearchingFounders, setIsSearchingFounders] = useState(false);
   const [checkingInCharacterId, setCheckingInCharacterId] = useState('');
   const [guestbookCharacterId, setGuestbookCharacterId] = useState('');
   const [guestbookMessage, setGuestbookMessage] = useState('');
@@ -156,21 +153,6 @@ const GuildProfilePage: React.FC = () => {
     void Promise.all([loadCharacters(), loadCommunity()]);
   }, [loadCharacters, loadCommunity]);
 
-  useEffect(() => {
-    if (!guild || !user?.id || guild.leaderId !== user.id || founderSearch.trim().length < 2) {
-      setFounderResults([]);
-      return;
-    }
-
-    const timer = window.setTimeout(async () => {
-      setIsSearchingFounders(true);
-      const response = await guildService.searchEligibleFoundingCharacters(guild._id || '', user.id, founderSearch);
-      setFounderResults(response.success && response.data ? response.data : []);
-      setIsSearchingFounders(false);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [founderSearch, guild, guildService, user?.id]);
-
   useSupabaseRealtime({
     channelName: `guild-profile-${guildId || 'unknown'}-${user?.id || 'anonymous'}`,
     tables: [
@@ -192,8 +174,21 @@ const GuildProfilePage: React.FC = () => {
     .sort((left, right) => ROLE_ORDER.indexOf(left.roleCategory) - ROLE_ORDER.indexOf(right.roleCategory)), [guild?.memberships]);
   const currentMemberships = activeRoster.filter(member => member.userId === user?.id);
   const leaderMembership = activeRoster.find(member => member.roleCategory === 'Leader' || member.characterId === guild?.leaderCharacterId);
-  const pendingApplications = guild?.applications?.filter(application => application.status === 'Pending') || [];
+  const nextLeaderMembership = activeRoster.find(member => member.characterId === guild?.nextLeaderCharacterId);
+  const canCustomizeGuild = isGuildmaster || currentMemberships.some(member => member.permissions.customizeGuild);
+  const canSetMessageBoard = isGuildmaster || currentMemberships.some(member => member.permissions.setMessageBoard);
+  const canManageGuild = isGuildmaster || currentMemberships.some(member => Object.values(member.permissions).some(Boolean));
   const checkedInCharacterIds = useMemo(() => new Set(todayCheckins.map(checkin => checkin.characterId)), [todayCheckins]);
+
+  useEffect(() => {
+    if (!guild || !canCustomizeGuild || searchParams.get('customize') !== '1') return;
+    setDraft(customizationFromGuild(guild));
+    setEditorMessage('');
+    setIsEditing(true);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('customize');
+    setSearchParams(nextParams, { replace: true });
+  }, [canCustomizeGuild, guild, searchParams, setSearchParams]);
 
   const displayGuild = useMemo(() => {
     if (!guild || !draft || !isEditing) return guild;
@@ -267,54 +262,6 @@ const GuildProfilePage: React.FC = () => {
     const response = await guildService.leaveGuild(guild._id, user.id, membership._id);
     setActionMessage(response.message || response.error || 'Roster updated.');
     if (response.success) await Promise.all([loadGuild(), loadCharacters(), loadCommunity()]);
-  };
-
-  const roleEditFor = (member: GuildMembership): GuildRoleEdit => {
-    if (!member._id) return { roleCategory: 'Member', roleTitle: member.roleTitle || '' };
-    return roleEdits[member._id] || {
-      roleCategory: member.roleCategory === 'Leader' ? 'Member' : member.roleCategory,
-      roleTitle: member.roleTitle || member.roleCategory
-    };
-  };
-
-  const updateRoleEdit = (member: GuildMembership, update: Partial<GuildRoleEdit>) => {
-    if (!member._id || member.roleCategory === 'Leader') return;
-    setRoleEdits(current => ({ ...current, [member._id!]: { ...roleEditFor(member), ...update } }));
-  };
-
-  const handleUpdateRole = async (member: GuildMembership) => {
-    if (!guild?._id || !user?.id || !member._id || member.roleCategory === 'Leader') return;
-    const edit = roleEditFor(member);
-    const response = await guildService.updateMemberRole(guild._id, user.id, member._id, edit.roleCategory, edit.roleTitle);
-    setActionMessage(response.success ? 'Roster role updated.' : response.error || 'Could not update the role.');
-    if (response.success) {
-      setRoleEdits(current => {
-        const next = { ...current };
-        delete next[member._id!];
-        return next;
-      });
-      await loadGuild();
-    }
-  };
-
-  const handleAddFounder = async (character: Character) => {
-    if (!guild?._id || !user?.id || !character._id) return;
-    const response = await guildService.addFoundingMember(guild._id, user.id, character._id);
-    setActionMessage(response.message || response.error || 'Founding roster updated.');
-    if (response.success) {
-      setFounderSearch('');
-      setFounderResults([]);
-      await loadGuild();
-    }
-  };
-
-  const handleApplication = async (applicationId: string | undefined, decision: 'accept' | 'reject') => {
-    if (!guild?._id || !user?.id || !applicationId) return;
-    const response = decision === 'accept'
-      ? await guildService.acceptApplication(guild._id, user.id, applicationId)
-      : await guildService.rejectApplication(guild._id, user.id, applicationId);
-    setActionMessage(response.message || response.error || `Application ${decision}ed.`);
-    if (response.success) await loadGuild();
   };
 
   const handleCheckIn = async (membership: GuildMembership) => {
@@ -396,7 +343,10 @@ const GuildProfilePage: React.FC = () => {
       <div className="guild-profile-shell">
         <nav className="guild-profile-nav">
           <Link to="/guilds"><ArrowLeft size={17} /> Guild registry</Link>
-          {isGuildmaster && <button type="button" onClick={openEditor}><Palette size={17} /> Customize page</button>}
+          <div className="guild-profile-nav-actions">
+            {canManageGuild && <Link to={`/guilds/${displayGuild._id}/manage`}><Shield size={17} /> Manage guild</Link>}
+            {canCustomizeGuild && <button type="button" onClick={openEditor}><Palette size={17} /> Customize page</button>}
+          </div>
         </nav>
 
         <header
@@ -424,6 +374,40 @@ const GuildProfilePage: React.FC = () => {
             <strong>{displayGuild.influencePoints.toLocaleString()}</strong>
           </div>
         </header>
+
+        {displayGuild.autoLeaderEnabled && (
+          <section className="guild-succession-banner" aria-label="Automatic guild leadership succession">
+            <div className="guild-succession-member is-current">
+              <div className="guild-succession-portrait">
+                <DynamicCharacterPortrait
+                  character={leaderCharacter}
+                  fallbackSrc={characterPortrait(leaderCharacter)}
+                  alt={`${leaderCharacter?.name || displayGuild.leaderCharacterName || 'Current guild leader'} portrait`}
+                  className="guild-succession-current-portrait"
+                  motion="hover"
+                />
+                <Crown aria-hidden="true" />
+              </div>
+              <span><small>Current guild leader</small><strong>{leaderCharacter?.name || displayGuild.leaderCharacterName || 'Unnamed leader'}</strong></span>
+            </div>
+            <div className="guild-succession-line" aria-hidden="true"><span /></div>
+            <div className={`guild-succession-member is-next${displayGuild.autoLeaderAwaitingCheckin ? ' is-waiting' : ''}`}>
+              {nextLeaderMembership?.character ? (
+                <DynamicCharacterPortrait
+                  character={nextLeaderMembership.character}
+                  fallbackSrc={characterPortrait(nextLeaderMembership.character)}
+                  alt={`${nextLeaderMembership.character.name} portrait`}
+                  className="guild-succession-next-portrait"
+                  motion="hover"
+                />
+              ) : <div className="guild-succession-placeholder"><Users aria-hidden="true" /></div>}
+              <span>
+                <small>Next in line</small>
+                <strong>{nextLeaderMembership?.character?.name || (displayGuild.autoLeaderAwaitingCheckin ? 'The next member to check in' : 'No eligible successor yet')}</strong>
+              </span>
+            </div>
+          </section>
+        )}
 
         <div className="guild-profile-rule"><span /></div>
 
@@ -479,14 +463,7 @@ const GuildProfilePage: React.FC = () => {
                 <span><Users size={16} /> {activeRoster.length} listed</span>
               </div>
               {activeRoster.length > 0 ? (
-                <GuildRoster
-                  guild={displayGuild}
-                  members={activeRoster}
-                  canEdit={isGuildmaster}
-                  getEdit={roleEditFor}
-                  updateEdit={updateRoleEdit}
-                  saveEdit={member => void handleUpdateRole(member)}
-                />
+                <GuildRoster guild={displayGuild} members={activeRoster} />
               ) : <p className="guild-empty-copy">The roster is waiting for its first names.</p>}
             </section>
           )}
@@ -608,32 +585,6 @@ const GuildProfilePage: React.FC = () => {
               </div>
             )}
 
-            {isGuildmaster && displayGuild.status === 'Recruiting' && (
-              <div className="guild-action-card">
-                {displayGuild.sectionHeadings.foundersLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.foundersLabel}</p>}
-                {displayGuild.sectionHeadings.foundersTitle && <h2>{displayGuild.sectionHeadings.foundersTitle}</h2>}
-                <p>A leader and three founding characters establish an active guild.</p>
-                <label className="guild-field"><span>Character search</span><div className="guild-inline-input"><input value={founderSearch} onChange={event => setFounderSearch(event.target.value)} placeholder="Type at least 2 letters" />{isSearchingFounders && <Loader2 className="guild-spin" size={16} />}</div></label>
-                <div className="guild-founder-results">
-                  {founderResults.map(character => <button type="button" key={character._id} onClick={() => void handleAddFounder(character)}><span><strong>{character.name}</strong><small>Level {character.level} {character.class}</small></span><Plus size={16} /></button>)}
-                </div>
-              </div>
-            )}
-
-            {isGuildmaster && (
-              <div className="guild-action-card">
-                {displayGuild.sectionHeadings.applicationsLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.applicationsLabel}</p>}
-                {displayGuild.sectionHeadings.applicationsTitle && <h2>{displayGuild.sectionHeadings.applicationsTitle}</h2>}
-                {pendingApplications.length === 0 ? <p>No petitions await your decision.</p> : pendingApplications.map(application => (
-                  <div className="guild-application" key={application._id}>
-                    <strong>{application.character?.name || 'Unknown character'}</strong>
-                    <span>{displayGuild.roleLabels[application.requestedRoleCategory]}</span>
-                    {application.message && <p>{application.message}</p>}
-                    <div><button type="button" onClick={() => void handleApplication(application._id, 'accept')}>Accept</button><button type="button" onClick={() => void handleApplication(application._id, 'reject')}>Decline</button></div>
-                  </div>
-                ))}
-              </div>
-            )}
           </aside>
         </div>
       </div>
@@ -718,11 +669,13 @@ const GuildProfilePage: React.FC = () => {
               </div>
             </div>
 
-            <div className="guild-editor-section">
-              <h3>Guild message board</h3>
-              <p>Use this as an announcement, event notice, tavern board, or any custom page content.</p>
-              <RichTextEditor label="Pinned message" value={draft.messageBoardHtml} onChange={value => updateDraft('messageBoardHtml', value)} placeholder="Pin a message for members and visitors..." />
-            </div>
+            {canSetMessageBoard && (
+              <div className="guild-editor-section">
+                <h3>Guild message board</h3>
+                <p>Use this as an announcement, event notice, tavern board, or any custom page content.</p>
+                <RichTextEditor label="Pinned message" value={draft.messageBoardHtml} onChange={value => updateDraft('messageBoardHtml', value)} placeholder="Pin a message for members and visitors..." />
+              </div>
+            )}
 
             <div className="guild-editor-section">
               <h3>Externally hosted artwork</h3>
