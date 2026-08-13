@@ -135,6 +135,15 @@ export function deriveAbilityBoostsFromFoundryJson(jsonData: unknown) {
   };
 }
 
+export function getLevelAbilityBoostsFromFoundryJson(jsonData: unknown): Partial<Record<'1' | '5' | '10' | '15' | '20', AbilityKey[]>> {
+  const data = jsonData as { system?: { build?: { attributes?: { boosts?: Record<string, unknown> } } } } | null;
+  const boosts = data?.system?.build?.attributes?.boosts;
+  return (['1', '5', '10', '15', '20'] as const).reduce<Partial<Record<'1' | '5' | '10' | '15' | '20', AbilityKey[]>>>((byLevel, level) => {
+    if (boosts && Object.prototype.hasOwnProperty.call(boosts, level)) byLevel[level] = extractAbilityChoices(boosts[level]);
+    return byLevel;
+  }, {});
+}
+
 function createAbilityState(): AbilityBoostState {
   return abilityLabels.reduce((state, ability) => {
     state[ability.key] = { value: 0, partial: false, boosts: 0, flaws: 0 };

@@ -37,6 +37,47 @@ const actor = parsePlannerActor({
 });
 
 describe('character planner', () => {
+  it('accepts Foundry ability variants without rejecting the actor', () => {
+    const variant = parsePlannerActor({
+      name: 'Variant Hero',
+      system: {
+        details: { level: { value: 1 } },
+        skills: {},
+        abilities: { str: 18, dex: { value: '16', mod: null }, con: null }
+      },
+      items: []
+    });
+    expect(variant.system.abilities?.str.value).toBe(18);
+    expect(variant.system.abilities?.dex.value).toBe(16);
+    expect(variant.system.abilities?.con.value).toBeUndefined();
+  });
+
+  it('uses modern Foundry build boosts and preserves the imported level-one boost map', () => {
+    const modern = parsePlannerActor({
+      name: 'Modern Hero',
+      system: {
+        details: { level: { value: 20 } },
+        skills: {},
+        build: { attributes: { boosts: {
+          '1': ['str', 'dex', 'con', 'wis'],
+          '5': ['str', 'dex', 'con', 'wis'],
+          '10': ['str', 'dex', 'con', 'wis'],
+          '15': ['str', 'dex', 'con', 'wis'],
+          '20': ['str', 'dex', 'con', 'wis']
+        } } }
+      },
+      items: []
+    });
+    const planner = createDefaultPlanner(modern);
+    expect(abilityScore(modern, 'str', planner, 1)).toBe(12);
+    expect(abilityScore(modern, 'str', planner, 20)).toBe(19);
+
+    const exported = exportActorAtLevel(modern, planner, 10);
+    expect(exported.system.build?.attributes?.boosts?.['1']).toEqual(['str', 'dex', 'con', 'wis']);
+    expect(exported.system.build?.attributes?.boosts?.['10']).toEqual(['str', 'dex', 'con', 'wis']);
+    expect(exported.system.build?.attributes?.boosts?.['15']).toEqual([]);
+  });
+
   it('infers selection levels from slots and parent grants', () => {
     expect(inferFeatLevels(actor)).toEqual({ early: 2, late: 14, grant: 14, 'class-feature': 1 });
   });

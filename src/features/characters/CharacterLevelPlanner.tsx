@@ -83,7 +83,7 @@ const CharacterLevelPlanner: React.FC<CharacterPlannerProps> = ({ characterName,
   const feats = getSelectablePlannerFeats(actor).sort((left, right) => (planner.featLevels[left._id] || 1) - (planner.featLevels[right._id] || 1) || left.name.localeCompare(right.name));
   const classFeatures = getAutomaticClassFeatures(actor).sort((left, right) => automaticClassFeatureLevel(left, inferredFeatLevels) - automaticClassFeatureLevel(right, inferredFeatLevels) || left.name.localeCompare(right.name));
   const availableSkills = Object.keys(actor.system.skills || {}).sort((left, right) => (skillLabels[left] || left).localeCompare(skillLabels[right] || right));
-  const availableAbilities = abilityKeys.filter(ability => actor.system.abilities?.[ability]);
+  const availableAbilities = abilityKeys.filter(ability => abilityScore(actor, ability) !== undefined);
   const issues = validatePlanner(planner, availableAbilities.length > 0);
 
   const updateFeatLevel = (id: string, level: number) => {

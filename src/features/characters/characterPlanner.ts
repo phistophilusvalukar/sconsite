@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { deriveAbilityBoostsFromFoundryJson, getLevelAbilityBoostsFromFoundryJson } from '../../utils/foundryCharacter';
 
 export const proficiencyRanks = ['untrained', 'trained', 'expert', 'master', 'legendary'] as const;
 export type ProficiencyRank = typeof proficiencyRanks[number];
@@ -38,15 +39,36 @@ const plannerSchema = z.object({
 
 export type CharacterPlannerData = z.infer<typeof plannerSchema>;
 
+const optionalFoundryNumber = z.preprocess(value => {
+  if (value === null || value === '') return undefined;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return value;
+}, z.number().finite().optional());
+
+const actorAbilitySchema = z.preprocess(value => {
+  if (value === null || value === undefined) return {};
+  if (typeof value === 'number') return { value };
+  if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return { value: Number(value) };
+  return value;
+}, z.object({
+  value: optionalFoundryNumber,
+  mod: optionalFoundryNumber
+}).passthrough());
+
 const actorSchema = z.object({
   name: z.string().optional(),
   system: z.object({
     details: z.object({ level: z.object({ value: z.number() }).passthrough() }).passthrough(),
     skills: z.record(z.string(), z.object({ rank: z.number().int().min(0).max(4) }).passthrough()).optional(),
-    abilities: z.record(z.string(), z.object({
-      value: z.number().optional(),
-      mod: z.number().optional()
-    }).passthrough()).optional()
+    abilities: z.record(z.string(), actorAbilitySchema).optional(),
+    build: z.object({
+      attributes: z.object({
+        boosts: z.record(z.string(), z.unknown()).optional()
+      }).passthrough().optional()
+    }).passthrough().optional()
   }).passthrough(),
   items: z.array(z.object({
     _id: z.string(),
@@ -133,10 +155,15 @@ export function createDefaultPlanner(actor: PlannerActor): CharacterPlannerData 
     }
   });
   const preferredAbilities = abilityKeys
-    .filter(ability => actor.system.abilities?.[ability])
+    .filter(ability => abilityScore(actor, ability) !== undefined)
     .sort((left, right) => (abilityScore(actor, right) ?? -Infinity) - (abilityScore(actor, left) ?? -Infinity))
     .slice(0, 4);
-  const abilityBoosts = abilityBoostLevels.flatMap(level => preferredAbilities.map(ability => ({ level, ability })));
+  const importedBoosts = getLevelAbilityBoostsFromFoundryJson(actor);
+  const abilityBoosts = abilityBoostLevels.flatMap(level => {
+    const imported = importedBoosts[String(level) as '5' | '10' | '15' | '20'];
+    const abilities = imported?.length ? [...new Set(imported)].slice(0, 4) : preferredAbilities;
+    return abilities.map(ability => ({ level, ability }));
+  });
   const abilityBaseScores = inferAbilityBaseScores(actor, abilityBoosts);
   return { version: 1, featLevels: inferFeatLevels(actor), skillUpgrades, abilityBoosts, abilityBaseScores };
 }
@@ -180,8 +207,12 @@ export function setAbilityBoost(planner: CharacterPlannerData, ability: AbilityK
 
 function sourceAbilityScore(actor: PlannerActor, ability: AbilityKey): number | undefined {
   const data = actor.system.abilities?.[ability];
-  if (!data) return undefined;
-  return data.value ?? (data.mod === undefined ? undefined : 10 + data.mod * 2);
+  if (data) {
+    const legacyScore = data.value ?? (data.mod === undefined ? undefined : 10 + data.mod * 2);
+    if (legacyScore !== undefined) return legacyScore;
+  }
+  const derived = deriveAbilityBoostsFromFoundryJson(actor)?.details[ability];
+  return derived ? 10 + derived.value * 2 + (derived.partial ? 1 : 0) : undefined;
 }
 
 export function inferAbilityBaseScores(actor: PlannerActor, abilityBoosts: CharacterPlannerData['abilityBoosts']): CharacterPlannerData['abilityBaseScores'] {
@@ -251,6 +282,14 @@ export function exportActorAtLevel(actor: PlannerActor, planner: CharacterPlanne
     if (data.value !== undefined) data.value = score;
     if (data.mod !== undefined) data.mod = abilityModifier(score);
   });
+  const buildBoosts = copy.system.build?.attributes?.boosts;
+  if (buildBoosts) {
+    abilityBoostLevels.forEach(boostLevel => {
+      buildBoosts[String(boostLevel)] = boostLevel <= level
+        ? planner.abilityBoosts.filter(boost => boost.level === boostLevel).map(boost => boost.ability)
+        : [];
+    });
+  }
 
   const inferredFeatLevels = inferFeatLevels(copy);
   const removed = new Set(
