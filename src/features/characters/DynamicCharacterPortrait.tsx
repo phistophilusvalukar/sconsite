@@ -7,6 +7,12 @@ type PortraitCharacter = Pick<
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
   | 'profilePortraitCutoutImageUrl'
+  | 'profilePortraitBackgroundScale'
+  | 'profilePortraitBackgroundPositionX'
+  | 'profilePortraitBackgroundPositionY'
+  | 'profilePortraitCutoutScale'
+  | 'profilePortraitCutoutPositionX'
+  | 'profilePortraitCutoutPositionY'
   | 'profilePortraitFocusX'
   | 'profilePortraitFocusY'
 >;
@@ -88,7 +94,13 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
 
   const portraitStyle = {
     '--portrait-focus-x': `${character.profilePortraitFocusX ?? 50}%`,
-    '--portrait-focus-y': `${character.profilePortraitFocusY ?? 0}%`
+    '--portrait-focus-y': `${character.profilePortraitFocusY ?? 0}%`,
+    '--portrait-background-user-scale': (character.profilePortraitBackgroundScale ?? 100) / 100,
+    '--portrait-background-position-x': `${character.profilePortraitBackgroundPositionX ?? 0}%`,
+    '--portrait-background-position-y': `${character.profilePortraitBackgroundPositionY ?? 0}%`,
+    '--portrait-cutout-user-scale': (character.profilePortraitCutoutScale ?? 100) / 100,
+    '--portrait-cutout-position-x': `${character.profilePortraitCutoutPositionX ?? 0}%`,
+    '--portrait-cutout-position-y': `${character.profilePortraitCutoutPositionY ?? 0}%`
   } as React.CSSProperties;
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {

@@ -435,6 +435,9 @@ select:focus-visible {
   --portrait-background-hover-tilt: 0deg;
   --portrait-background-depth: -40px;
   --portrait-background-scale: 1.12;
+  --portrait-background-user-scale: 1;
+  --portrait-background-position-x: 0%;
+  --portrait-background-position-y: 0%;
   --portrait-cutout-x: 0px;
   --portrait-cutout-y: 0px;
   --portrait-cutout-floor: 0%;
@@ -443,6 +446,9 @@ select:focus-visible {
   --portrait-cutout-hover-tilt: 0deg;
   --portrait-cutout-depth: 55px;
   --portrait-cutout-scale: 1.12;
+  --portrait-cutout-user-scale: 1;
+  --portrait-cutout-position-x: 0%;
+  --portrait-cutout-position-y: 0%;
   --portrait-glint-x: 0px;
   --portrait-focus-x: 50%;
   --portrait-focus-y: 0%;
@@ -539,10 +545,10 @@ select:focus-visible {
   height: 118%;
   object-fit: cover;
   transform: translate3d(
-    var(--portrait-background-x),
-    calc(var(--portrait-background-scroll) + var(--portrait-background-y)),
+    calc(var(--portrait-background-position-x) + var(--portrait-background-x)),
+    calc(var(--portrait-background-position-y) + var(--portrait-background-scroll) + var(--portrait-background-y)),
     var(--portrait-background-depth)
-  ) rotateX(calc(var(--portrait-background-tilt-x) + var(--portrait-background-hover-tilt))) rotateY(var(--portrait-background-tilt-y)) scale(var(--portrait-background-scale));
+  ) rotateX(calc(var(--portrait-background-tilt-x) + var(--portrait-background-hover-tilt))) rotateY(var(--portrait-background-tilt-y)) scale(var(--portrait-background-scale)) scale(var(--portrait-background-user-scale));
   transition: transform 180ms ease-out;
   will-change: transform;
 }
@@ -564,10 +570,10 @@ select:focus-visible {
   object-position: var(--portrait-focus-x) var(--portrait-focus-y);
   filter: drop-shadow(0 18px 18px rgb(0 0 0 / .48));
   transform: translate3d(
-    var(--portrait-cutout-x),
-    calc(var(--portrait-cutout-floor) + var(--portrait-cutout-scroll) + var(--portrait-cutout-y)),
+    calc(var(--portrait-cutout-position-x) + var(--portrait-cutout-x)),
+    calc(var(--portrait-cutout-floor) + var(--portrait-cutout-position-y) + var(--portrait-cutout-scroll) + var(--portrait-cutout-y)),
     var(--portrait-cutout-depth)
-  ) rotateX(calc(var(--portrait-cutout-tilt-x) + var(--portrait-cutout-hover-tilt))) rotateY(var(--portrait-cutout-tilt-y)) scale(var(--portrait-cutout-scale));
+  ) rotateX(calc(var(--portrait-cutout-tilt-x) + var(--portrait-cutout-hover-tilt))) rotateY(var(--portrait-cutout-tilt-y)) scale(var(--portrait-cutout-scale)) scale(var(--portrait-cutout-user-scale));
   transition: filter 220ms ease, transform 180ms ease-out;
   will-change: transform;
 }
@@ -617,10 +623,26 @@ select:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .dynamic-character-portrait,
-  .dynamic-character-portrait-background,
-  .dynamic-character-portrait-cutout,
   .dynamic-character-portrait-glint {
     transition: none !important;
     transform: none !important;
+  }
+
+  .dynamic-character-portrait-background {
+    transition: none !important;
+    transform:
+      translate3d(var(--portrait-background-position-x), var(--portrait-background-position-y), 0)
+      scale(var(--portrait-background-user-scale)) !important;
+  }
+
+  .dynamic-character-portrait-cutout {
+    transition: none !important;
+    transform:
+      translate3d(
+        var(--portrait-cutout-position-x),
+        calc(var(--portrait-cutout-floor) + var(--portrait-cutout-position-y)),
+        0
+      )
+      scale(var(--portrait-cutout-user-scale)) !important;
   }
 }

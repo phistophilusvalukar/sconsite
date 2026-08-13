@@ -32,33 +32,44 @@ const guildCheckinResultSchema = z.object({
 }).strict();
 
 const GUILD_CHARACTER_COLUMNS = 'id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url';
+const GUILD_CHARACTER_PLACEMENT_COLUMNS = 'profile_portrait_background_scale,profile_portrait_background_position_x,profile_portrait_background_position_y,profile_portrait_cutout_scale,profile_portrait_cutout_position_x,profile_portrait_cutout_position_y';
 const GUILD_CHARACTER_DATE_COLUMNS = 'created_at,updated_at';
-const guildCharacterColumns = (includeFocus: boolean) => [
+const guildCharacterColumns = (includeFocus: boolean, includePlacement: boolean) => [
   GUILD_CHARACTER_COLUMNS,
+  includePlacement ? GUILD_CHARACTER_PLACEMENT_COLUMNS : '',
   includeFocus ? 'profile_portrait_focus_x,profile_portrait_focus_y' : '',
   GUILD_CHARACTER_DATE_COLUMNS
 ].filter(Boolean).join(',');
 
-const guildGraphSelect = (includeFocus: boolean) => `
+const guildGraphSelect = (includeFocus: boolean, includePlacement: boolean) => `
   *,
   leader_character:characters!guilds_leader_character_id_fkey(id,name,level,class),
-  memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(${guildCharacterColumns(includeFocus)})),
-  applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(${guildCharacterColumns(includeFocus)}))
+  memberships:guild_memberships(*, character:characters!guild_memberships_character_id_fkey(${guildCharacterColumns(includeFocus, includePlacement)})),
+  applications:guild_applications(*, character:characters!guild_applications_character_id_fkey(${guildCharacterColumns(includeFocus, includePlacement)}))
 `;
 
-const checkinSelect = (includeFocus: boolean) => `
+const checkinSelect = (includeFocus: boolean, includePlacement: boolean) => `
   *,
-  character:characters!guild_checkins_character_id_fkey(${guildCharacterColumns(includeFocus)})
+  character:characters!guild_checkins_character_id_fkey(${guildCharacterColumns(includeFocus, includePlacement)})
 `;
 
-const guestbookSelect = (includeFocus: boolean) => `
+const guestbookSelect = (includeFocus: boolean, includePlacement: boolean) => `
   *,
-  character:characters!guild_guestbook_entries_character_id_fkey(${guildCharacterColumns(includeFocus)})
+  character:characters!guild_guestbook_entries_character_id_fkey(${guildCharacterColumns(includeFocus, includePlacement)})
 `;
 
 const isMissingPortraitFocusColumn = (error?: { code?: string; message?: string } | null) =>
   error?.code === '42703'
   && Boolean(error.message?.includes('profile_portrait_focus_'));
+
+const isMissingPortraitPlacementColumn = (error?: { code?: string; message?: string } | null) =>
+  error?.code === '42703'
+  && Boolean(
+    error.message?.includes('profile_portrait_background_scale')
+    || error.message?.includes('profile_portrait_background_position_')
+    || error.message?.includes('profile_portrait_cutout_scale')
+    || error.message?.includes('profile_portrait_cutout_position_')
+  );
 
 export interface CreateGuildInput {
   name: string;
@@ -93,6 +104,12 @@ interface GuildCharacterRow {
   profile_dynamic_portrait_enabled?: boolean | null;
   profile_portrait_background_url?: string | null;
   profile_portrait_cutout_url?: string | null;
+  profile_portrait_background_scale?: number | null;
+  profile_portrait_background_position_x?: number | null;
+  profile_portrait_background_position_y?: number | null;
+  profile_portrait_cutout_scale?: number | null;
+  profile_portrait_cutout_position_x?: number | null;
+  profile_portrait_cutout_position_y?: number | null;
   profile_portrait_focus_x?: number | null;
   profile_portrait_focus_y?: number | null;
   created_at: string;
@@ -240,12 +257,22 @@ export class GuildService {
   async getGuilds(): Promise<ApiResponse<Guild[]>> {
     try {
       const supabase = this.dbService.getClient();
-      const loadGuilds = (includeFocus: boolean) => supabase
+      const loadGuilds = (includeFocus: boolean, includePlacement: boolean) => supabase
         .from(DATABASE_TABLES.GUILDS)
-        .select(guildGraphSelect(includeFocus))
+        .select(guildGraphSelect(includeFocus, includePlacement))
         .order('created_at', { ascending: false });
-      let response = await loadGuilds(true);
-      if (isMissingPortraitFocusColumn(response.error)) response = await loadGuilds(false);
+      let includeFocus = true;
+      let includePlacement = true;
+      let response = await loadGuilds(includeFocus, includePlacement);
+      if (isMissingPortraitPlacementColumn(response.error)) {
+        includePlacement = false;
+        response = await loadGuilds(includeFocus, includePlacement);
+      }
+      if (isMissingPortraitFocusColumn(response.error)) {
+        includeFocus = false;
+        response = await loadGuilds(includeFocus, includePlacement);
+      }
+      if (isMissingPortraitPlacementColumn(response.error)) response = await loadGuilds(includeFocus, false);
       const { data, error } = response;
 
       if (error) {
@@ -254,7 +281,7 @@ export class GuildService {
 
       return {
         success: true,
-        data: (data || []).map(guild => this.transformGuildFromDb(guild))
+        data: (data || []).map(guild => this.transformGuildFromDb(guild as unknown as GuildRow))
       };
     } catch (error) {
       console.error('Error loading guilds:', error);
@@ -268,20 +295,30 @@ export class GuildService {
       // Succession is evaluated by a protected server command on visits as well
       // as check-ins, so an inactive leader can be replaced without a client write.
       await supabase.rpc('refresh_guild_succession_command', { p_guild_id: guildId });
-      const loadGuild = (includeFocus: boolean) => supabase
+      const loadGuild = (includeFocus: boolean, includePlacement: boolean) => supabase
         .from(DATABASE_TABLES.GUILDS)
-        .select(guildGraphSelect(includeFocus))
+        .select(guildGraphSelect(includeFocus, includePlacement))
         .eq('id', guildId)
         .single();
-      let response = await loadGuild(true);
-      if (isMissingPortraitFocusColumn(response.error)) response = await loadGuild(false);
+      let includeFocus = true;
+      let includePlacement = true;
+      let response = await loadGuild(includeFocus, includePlacement);
+      if (isMissingPortraitPlacementColumn(response.error)) {
+        includePlacement = false;
+        response = await loadGuild(includeFocus, includePlacement);
+      }
+      if (isMissingPortraitFocusColumn(response.error)) {
+        includeFocus = false;
+        response = await loadGuild(includeFocus, includePlacement);
+      }
+      if (isMissingPortraitPlacementColumn(response.error)) response = await loadGuild(includeFocus, false);
       const { data, error } = response;
 
       if (error || !data) {
         return { success: false, error: error?.message || 'Guild not found.' };
       }
 
-      return { success: true, data: this.transformGuildFromDb(data) };
+      return { success: true, data: this.transformGuildFromDb(data as unknown as GuildRow) };
     } catch (error) {
       console.error('Error loading guild:', error);
       return { success: false, error: 'Failed to load guild' };
@@ -431,18 +468,31 @@ export class GuildService {
     try {
       const today = new Date().toISOString().slice(0, 10);
       const supabase = this.dbService.getClient();
-      const loadCheckins = (includeFocus: boolean) => supabase
+      const loadCheckins = (includeFocus: boolean, includePlacement: boolean) => supabase
         .from(DATABASE_TABLES.GUILD_CHECKINS)
-        .select(checkinSelect(includeFocus))
+        .select(checkinSelect(includeFocus, includePlacement))
         .eq('guild_id', guildId)
         .eq('checkin_date', today)
         .order('created_at', { ascending: false });
-      let response = await loadCheckins(true);
-      if (isMissingPortraitFocusColumn(response.error)) response = await loadCheckins(false);
+      let includeFocus = true;
+      let includePlacement = true;
+      let response = await loadCheckins(includeFocus, includePlacement);
+      if (isMissingPortraitPlacementColumn(response.error)) {
+        includePlacement = false;
+        response = await loadCheckins(includeFocus, includePlacement);
+      }
+      if (isMissingPortraitFocusColumn(response.error)) {
+        includeFocus = false;
+        response = await loadCheckins(includeFocus, includePlacement);
+      }
+      if (isMissingPortraitPlacementColumn(response.error)) response = await loadCheckins(includeFocus, false);
       const { data, error } = response;
 
       if (error) return { success: false, error: error.message };
-      return { success: true, data: (data || []).map(row => this.transformCheckinFromDb(row)) };
+      return {
+        success: true,
+        data: (data || []).map(row => this.transformCheckinFromDb(row as unknown as GuildCheckinRow))
+      };
     } catch (error) {
       console.error('Error loading guild check-ins:', error);
       return { success: false, error: 'Failed to load guild check-ins' };
@@ -539,18 +589,31 @@ export class GuildService {
   async getGuestbookEntries(guildId: string): Promise<ApiResponse<GuildGuestbookEntry[]>> {
     try {
       const supabase = this.dbService.getClient();
-      const loadEntries = (includeFocus: boolean) => supabase
+      const loadEntries = (includeFocus: boolean, includePlacement: boolean) => supabase
         .from(DATABASE_TABLES.GUILD_GUESTBOOK_ENTRIES)
-        .select(guestbookSelect(includeFocus))
+        .select(guestbookSelect(includeFocus, includePlacement))
         .eq('guild_id', guildId)
         .order('created_at', { ascending: false })
         .limit(60);
-      let response = await loadEntries(true);
-      if (isMissingPortraitFocusColumn(response.error)) response = await loadEntries(false);
+      let includeFocus = true;
+      let includePlacement = true;
+      let response = await loadEntries(includeFocus, includePlacement);
+      if (isMissingPortraitPlacementColumn(response.error)) {
+        includePlacement = false;
+        response = await loadEntries(includeFocus, includePlacement);
+      }
+      if (isMissingPortraitFocusColumn(response.error)) {
+        includeFocus = false;
+        response = await loadEntries(includeFocus, includePlacement);
+      }
+      if (isMissingPortraitPlacementColumn(response.error)) response = await loadEntries(includeFocus, false);
       const { data, error } = response;
 
       if (error) return { success: false, error: error.message };
-      return { success: true, data: (data || []).map(row => this.transformGuestbookFromDb(row)) };
+      return {
+        success: true,
+        data: (data || []).map(row => this.transformGuestbookFromDb(row as unknown as GuildGuestbookRow))
+      };
     } catch (error) {
       console.error('Error loading guild guestbook:', error);
       return { success: false, error: 'Failed to load the guestbook' };
@@ -1200,6 +1263,12 @@ export class GuildService {
       profilePortraitCutoutImageUrl: isSafeExternalImageUrl(dbCharacter.profile_portrait_cutout_url || '')
         ? dbCharacter.profile_portrait_cutout_url || undefined
         : undefined,
+      profilePortraitBackgroundScale: dbCharacter.profile_portrait_background_scale ?? 100,
+      profilePortraitBackgroundPositionX: dbCharacter.profile_portrait_background_position_x ?? 0,
+      profilePortraitBackgroundPositionY: dbCharacter.profile_portrait_background_position_y ?? 0,
+      profilePortraitCutoutScale: dbCharacter.profile_portrait_cutout_scale ?? 100,
+      profilePortraitCutoutPositionX: dbCharacter.profile_portrait_cutout_position_x ?? 0,
+      profilePortraitCutoutPositionY: dbCharacter.profile_portrait_cutout_position_y ?? 0,
       profilePortraitFocusX: dbCharacter.profile_portrait_focus_x ?? 50,
       profilePortraitFocusY: dbCharacter.profile_portrait_focus_y ?? 0,
       profileLayoutStyle: 'chronicle',

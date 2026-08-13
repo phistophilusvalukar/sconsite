@@ -27,6 +27,12 @@ const validProfile = {
   dynamicPortraitEnabled: false,
   portraitBackgroundImageUrl: '',
   portraitCutoutImageUrl: '',
+  portraitBackgroundScale: 100,
+  portraitBackgroundPositionX: 0,
+  portraitBackgroundPositionY: 0,
+  portraitCutoutScale: 100,
+  portraitCutoutPositionX: 0,
+  portraitCutoutPositionY: 0,
   portraitFocusX: 50,
   portraitFocusY: 0,
   layoutStyle: 'chronicle' as const,
@@ -100,5 +106,17 @@ describe('character profile customization', () => {
       ...validProfile,
       portraitFocusY: 140
     }).success).toBe(false);
+  });
+
+  it('validates independent Dynamic Portrait layer placement', () => {
+    expect(characterProfileCustomizationSchema.safeParse({
+      ...validProfile,
+      portraitBackgroundScale: 175,
+      portraitBackgroundPositionX: -20,
+      portraitCutoutScale: 85,
+      portraitCutoutPositionY: 30
+    }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, portraitBackgroundScale: 251 }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, portraitCutoutPositionX: -51 }).success).toBe(false);
   });
 });

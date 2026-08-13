@@ -113,6 +113,12 @@ export interface Character {
   profileDynamicPortraitEnabled?: boolean;
   profilePortraitBackgroundImageUrl?: string;
   profilePortraitCutoutImageUrl?: string;
+  profilePortraitBackgroundScale: number;
+  profilePortraitBackgroundPositionX: number;
+  profilePortraitBackgroundPositionY: number;
+  profilePortraitCutoutScale: number;
+  profilePortraitCutoutPositionX: number;
+  profilePortraitCutoutPositionY: number;
   profilePortraitFocusX?: number;
   profilePortraitFocusY?: number;
   profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight' | 'saga';

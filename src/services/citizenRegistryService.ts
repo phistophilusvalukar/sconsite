@@ -240,6 +240,12 @@ export class CitizenRegistryService {
       profileGradientColor: '#27302d',
       profileGradientOrientation: 'diagonal',
       profileGradientTransitionRate: 100,
+      profilePortraitBackgroundScale: 100,
+      profilePortraitBackgroundPositionX: 0,
+      profilePortraitBackgroundPositionY: 0,
+      profilePortraitCutoutScale: 100,
+      profilePortraitCutoutPositionX: 0,
+      profilePortraitCutoutPositionY: 0,
       profileLayoutStyle: 'chronicle',
       profileSectionVisibility: {
         portrait: true,

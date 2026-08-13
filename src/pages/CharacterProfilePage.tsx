@@ -26,6 +26,7 @@ import {
   characterLayoutOptions,
   customizationFromCharacter,
   defaultCharacterProfilePalette,
+  defaultDynamicPortraitPlacement,
   getCharacterFontStack
 } from '../features/characters/characterProfileCustomization';
 import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
@@ -134,6 +135,12 @@ const CharacterProfilePage: React.FC = () => {
       profileDynamicPortraitEnabled: draft.dynamicPortraitEnabled,
       profilePortraitBackgroundImageUrl: draft.portraitBackgroundImageUrl || undefined,
       profilePortraitCutoutImageUrl: draft.portraitCutoutImageUrl || undefined,
+      profilePortraitBackgroundScale: draft.portraitBackgroundScale,
+      profilePortraitBackgroundPositionX: draft.portraitBackgroundPositionX,
+      profilePortraitBackgroundPositionY: draft.portraitBackgroundPositionY,
+      profilePortraitCutoutScale: draft.portraitCutoutScale,
+      profilePortraitCutoutPositionX: draft.portraitCutoutPositionX,
+      profilePortraitCutoutPositionY: draft.portraitCutoutPositionY,
       profilePortraitFocusX: draft.portraitFocusX,
       profilePortraitFocusY: draft.portraitFocusY,
       profileLayoutStyle: draft.layoutStyle,
@@ -366,15 +373,33 @@ const CharacterProfilePage: React.FC = () => {
               <label className="character-dynamic-toggle"><input type="checkbox" checked={draft.dynamicPortraitEnabled} onChange={event => updateDraft('dynamicPortraitEnabled', event.target.checked)} /><span><strong>Use Dynamic Portrait site-wide</strong><small>Both direct HTTPS image links are required when enabled.</small></span></label>
               <label className="character-field"><span>Background image URL</span><input type="url" value={draft.portraitBackgroundImageUrl} onChange={event => updateDraft('portraitBackgroundImageUrl', event.target.value)} placeholder="https://example.com/forest-background.webp" /><small>A wide or square scenic image works best.</small></label>
               <label className="character-field"><span>Transparent character cutout URL</span><input type="url" value={draft.portraitCutoutImageUrl} onChange={event => updateDraft('portraitCutoutImageUrl', event.target.value)} placeholder="https://example.com/character-cutout.png" /><small>Use a transparent PNG or WebP with space around the figure.</small></label>
-              {draft.portraitBackgroundImageUrl && draft.portraitCutoutImageUrl && <div className="character-focus-picker">
-                <DynamicCharacterPortrait character={{ name: displayCharacter.name, profileDynamicPortraitEnabled: true, profilePortraitBackgroundImageUrl: draft.portraitBackgroundImageUrl, profilePortraitCutoutImageUrl: draft.portraitCutoutImageUrl, profilePortraitFocusX: draft.portraitFocusX, profilePortraitFocusY: draft.portraitFocusY }} fallbackSrc={draft.portraitBackgroundImageUrl} alt={`${displayCharacter.name} Dynamic Portrait preview`} className="character-dynamic-preview" motion="hover" />
-                <button type="button" className="character-focus-map" onPointerDown={setPortraitFocusFromPointer} aria-label="Choose the character eye position in the portrait"><span style={{ left: `${draft.portraitFocusX}%`, top: `${draft.portraitFocusY}%` }}><Crosshair /></span></button>
-                <p>Click the character's eyes to choose the crop focus.</p>
-              </div>}
-              <div className="character-focus-controls">
-                <label><span>Horizontal focus</span><input type="range" min="0" max="100" value={draft.portraitFocusX} onChange={event => updateDraft('portraitFocusX', Number(event.target.value))} /><output>{draft.portraitFocusX}%</output></label>
-                <label><span>Vertical focus</span><input type="range" min="0" max="100" value={draft.portraitFocusY} onChange={event => updateDraft('portraitFocusY', Number(event.target.value))} /><output>{draft.portraitFocusY}%</output></label>
-              </div>
+              {draft.portraitBackgroundImageUrl && draft.portraitCutoutImageUrl && <>
+                <div className="character-focus-picker">
+                  <DynamicCharacterPortrait character={{ name: displayCharacter.name, profileDynamicPortraitEnabled: true, profilePortraitBackgroundImageUrl: draft.portraitBackgroundImageUrl, profilePortraitCutoutImageUrl: draft.portraitCutoutImageUrl, profilePortraitBackgroundScale: draft.portraitBackgroundScale, profilePortraitBackgroundPositionX: draft.portraitBackgroundPositionX, profilePortraitBackgroundPositionY: draft.portraitBackgroundPositionY, profilePortraitCutoutScale: draft.portraitCutoutScale, profilePortraitCutoutPositionX: draft.portraitCutoutPositionX, profilePortraitCutoutPositionY: draft.portraitCutoutPositionY, profilePortraitFocusX: draft.portraitFocusX, profilePortraitFocusY: draft.portraitFocusY }} fallbackSrc={draft.portraitBackgroundImageUrl} alt={`${displayCharacter.name} Dynamic Portrait preview`} className="character-dynamic-preview" motion="none" />
+                  <button type="button" className="character-focus-map" onPointerDown={setPortraitFocusFromPointer} aria-label="Choose the character eye position in the portrait"><span style={{ left: `${draft.portraitFocusX}%`, top: `${draft.portraitFocusY}%` }}><Crosshair /></span></button>
+                  <p>Click the character's eyes to choose the crop focus.</p>
+                </div>
+                <div className="character-placement-heading"><div><strong>Layer placement</strong><small>Resize and move each image independently.</small></div><button type="button" onClick={() => setDraft(current => current ? { ...current, ...defaultDynamicPortraitPlacement } : current)}><RotateCcw size={13} /> Reset placement</button></div>
+                <div className="character-layer-placement">
+                  <fieldset>
+                    <legend>Background layer</legend>
+                    <label><span>Size</span><input type="range" min="50" max="250" value={draft.portraitBackgroundScale} onChange={event => updateDraft('portraitBackgroundScale', Number(event.target.value))} /><output>{draft.portraitBackgroundScale}%</output></label>
+                    <label><span>Move left / right</span><input type="range" min="-50" max="50" value={draft.portraitBackgroundPositionX} onChange={event => updateDraft('portraitBackgroundPositionX', Number(event.target.value))} /><output>{draft.portraitBackgroundPositionX}%</output></label>
+                    <label><span>Move up / down</span><input type="range" min="-50" max="50" value={draft.portraitBackgroundPositionY} onChange={event => updateDraft('portraitBackgroundPositionY', Number(event.target.value))} /><output>{draft.portraitBackgroundPositionY}%</output></label>
+                  </fieldset>
+                  <fieldset>
+                    <legend>Character cutout</legend>
+                    <label><span>Size</span><input type="range" min="50" max="250" value={draft.portraitCutoutScale} onChange={event => updateDraft('portraitCutoutScale', Number(event.target.value))} /><output>{draft.portraitCutoutScale}%</output></label>
+                    <label><span>Move left / right</span><input type="range" min="-50" max="50" value={draft.portraitCutoutPositionX} onChange={event => updateDraft('portraitCutoutPositionX', Number(event.target.value))} /><output>{draft.portraitCutoutPositionX}%</output></label>
+                    <label><span>Move up / down</span><input type="range" min="-50" max="50" value={draft.portraitCutoutPositionY} onChange={event => updateDraft('portraitCutoutPositionY', Number(event.target.value))} /><output>{draft.portraitCutoutPositionY}%</output></label>
+                  </fieldset>
+                </div>
+                <div className="character-crop-heading"><strong>Card crop focus</strong><small>This keeps the character's face visible when a small card must crop the portrait.</small></div>
+                <div className="character-focus-controls">
+                  <label><span>Horizontal focus</span><input type="range" min="0" max="100" value={draft.portraitFocusX} onChange={event => updateDraft('portraitFocusX', Number(event.target.value))} /><output>{draft.portraitFocusX}%</output></label>
+                  <label><span>Vertical focus</span><input type="range" min="0" max="100" value={draft.portraitFocusY} onChange={event => updateDraft('portraitFocusY', Number(event.target.value))} /><output>{draft.portraitFocusY}%</output></label>
+                </div>
+              </>}
             </div>
 
             <div className="character-editor-section">

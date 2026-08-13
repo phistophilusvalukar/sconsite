@@ -62,6 +62,15 @@ export const defaultCharacterProfileTypography = {
   textFontSize: 16
 } as const;
 
+export const defaultDynamicPortraitPlacement = {
+  portraitBackgroundScale: 100,
+  portraitBackgroundPositionX: 0,
+  portraitBackgroundPositionY: 0,
+  portraitCutoutScale: 100,
+  portraitCutoutPositionX: 0,
+  portraitCutoutPositionY: 0
+} as const;
+
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Choose a valid six-digit color.');
 export const isSafeCharacterBannerImageUrl = (value: string) => {
   if (!value) return true;
@@ -96,6 +105,12 @@ export const characterProfileCustomizationSchema = z.object({
   dynamicPortraitEnabled: z.boolean(),
   portraitBackgroundImageUrl: externalImageUrl,
   portraitCutoutImageUrl: externalImageUrl,
+  portraitBackgroundScale: z.number().int().min(50).max(250),
+  portraitBackgroundPositionX: z.number().int().min(-50).max(50),
+  portraitBackgroundPositionY: z.number().int().min(-50).max(50),
+  portraitCutoutScale: z.number().int().min(50).max(250),
+  portraitCutoutPositionX: z.number().int().min(-50).max(50),
+  portraitCutoutPositionY: z.number().int().min(-50).max(50),
   portraitFocusX: z.number().min(0).max(100),
   portraitFocusY: z.number().min(0).max(100),
   layoutStyle: z.enum(['chronicle', 'dossier', 'spotlight', 'saga']),
@@ -146,6 +161,12 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   dynamicPortraitEnabled: character.profileDynamicPortraitEnabled ?? false,
   portraitBackgroundImageUrl: character.profilePortraitBackgroundImageUrl || '',
   portraitCutoutImageUrl: character.profilePortraitCutoutImageUrl || '',
+  portraitBackgroundScale: character.profilePortraitBackgroundScale ?? defaultDynamicPortraitPlacement.portraitBackgroundScale,
+  portraitBackgroundPositionX: character.profilePortraitBackgroundPositionX ?? defaultDynamicPortraitPlacement.portraitBackgroundPositionX,
+  portraitBackgroundPositionY: character.profilePortraitBackgroundPositionY ?? defaultDynamicPortraitPlacement.portraitBackgroundPositionY,
+  portraitCutoutScale: character.profilePortraitCutoutScale ?? defaultDynamicPortraitPlacement.portraitCutoutScale,
+  portraitCutoutPositionX: character.profilePortraitCutoutPositionX ?? defaultDynamicPortraitPlacement.portraitCutoutPositionX,
+  portraitCutoutPositionY: character.profilePortraitCutoutPositionY ?? defaultDynamicPortraitPlacement.portraitCutoutPositionY,
   portraitFocusX: character.profilePortraitFocusX ?? 50,
   portraitFocusY: character.profilePortraitFocusY ?? 0,
   layoutStyle: character.profileLayoutStyle,

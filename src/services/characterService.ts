@@ -112,6 +112,12 @@ type CharacterCreateInput = Omit<
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
   | 'profilePortraitCutoutImageUrl'
+  | 'profilePortraitBackgroundScale'
+  | 'profilePortraitBackgroundPositionX'
+  | 'profilePortraitBackgroundPositionY'
+  | 'profilePortraitCutoutScale'
+  | 'profilePortraitCutoutPositionX'
+  | 'profilePortraitCutoutPositionY'
   | 'profilePortraitFocusX'
   | 'profilePortraitFocusY'
   | 'profileLayoutStyle'
@@ -140,6 +146,12 @@ type CharacterCreateInput = Omit<
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
   | 'profilePortraitCutoutImageUrl'
+  | 'profilePortraitBackgroundScale'
+  | 'profilePortraitBackgroundPositionX'
+  | 'profilePortraitBackgroundPositionY'
+  | 'profilePortraitCutoutScale'
+  | 'profilePortraitCutoutPositionX'
+  | 'profilePortraitCutoutPositionY'
   | 'profilePortraitFocusX'
   | 'profilePortraitFocusY'
   | 'profileLayoutStyle'
@@ -190,6 +202,12 @@ interface CharacterRow {
   profile_dynamic_portrait_enabled?: boolean | null;
   profile_portrait_background_url?: string | null;
   profile_portrait_cutout_url?: string | null;
+  profile_portrait_background_scale?: number | null;
+  profile_portrait_background_position_x?: number | null;
+  profile_portrait_background_position_y?: number | null;
+  profile_portrait_cutout_scale?: number | null;
+  profile_portrait_cutout_position_x?: number | null;
+  profile_portrait_cutout_position_y?: number | null;
   profile_portrait_focus_x?: number | null;
   profile_portrait_focus_y?: number | null;
   profile_layout_style?: Character['profileLayoutStyle'] | null;
@@ -330,6 +348,12 @@ export class CharacterService {
         profile_dynamic_portrait_enabled: characterData.profileDynamicPortraitEnabled ?? false,
         profile_portrait_background_url: characterData.profilePortraitBackgroundImageUrl || null,
         profile_portrait_cutout_url: characterData.profilePortraitCutoutImageUrl || null,
+        profile_portrait_background_scale: characterData.profilePortraitBackgroundScale ?? 100,
+        profile_portrait_background_position_x: characterData.profilePortraitBackgroundPositionX ?? 0,
+        profile_portrait_background_position_y: characterData.profilePortraitBackgroundPositionY ?? 0,
+        profile_portrait_cutout_scale: characterData.profilePortraitCutoutScale ?? 100,
+        profile_portrait_cutout_position_x: characterData.profilePortraitCutoutPositionX ?? 0,
+        profile_portrait_cutout_position_y: characterData.profilePortraitCutoutPositionY ?? 0,
         profile_portrait_focus_x: characterData.profilePortraitFocusX ?? 50,
         profile_portrait_focus_y: characterData.profilePortraitFocusY ?? 0,
         profile_layout_style: characterData.profileLayoutStyle || 'chronicle',
@@ -561,7 +585,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v2_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v3_command', {
         p_character_id: characterId,
         p_profile: parsed.data
       });
@@ -1160,6 +1184,12 @@ export class CharacterService {
       profilePortraitCutoutImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_portrait_cutout_url || '')
         ? dbCharacter.profile_portrait_cutout_url || undefined
         : undefined,
+      profilePortraitBackgroundScale: dbCharacter.profile_portrait_background_scale ?? 100,
+      profilePortraitBackgroundPositionX: dbCharacter.profile_portrait_background_position_x ?? 0,
+      profilePortraitBackgroundPositionY: dbCharacter.profile_portrait_background_position_y ?? 0,
+      profilePortraitCutoutScale: dbCharacter.profile_portrait_cutout_scale ?? 100,
+      profilePortraitCutoutPositionX: dbCharacter.profile_portrait_cutout_position_x ?? 0,
+      profilePortraitCutoutPositionY: dbCharacter.profile_portrait_cutout_position_y ?? 0,
       profilePortraitFocusX: dbCharacter.profile_portrait_focus_x ?? 50,
       profilePortraitFocusY: dbCharacter.profile_portrait_focus_y ?? 0,
       profileLayoutStyle: dbCharacter.profile_layout_style || 'chronicle',
@@ -1182,7 +1212,7 @@ export class CharacterService {
       isActive: dbFile.is_active,
       sortOrder: dbFile.sort_order,
       createdAt: new Date(dbFile.created_at),
-      updatedAt: new Date(dbFile.updated_at)
+      updatedAt: new Date(dbFile.updated_at ?? dbFile.created_at)
     };
   }
 
