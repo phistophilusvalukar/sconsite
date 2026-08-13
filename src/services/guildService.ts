@@ -160,6 +160,10 @@ interface GuildRow {
   font_color?: string;
   base_color?: string;
   accent_color?: string;
+  background_mode?: Guild['backgroundMode'];
+  gradient_color?: string;
+  gradient_orientation?: Guild['gradientOrientation'];
+  gradient_transition_rate?: number;
   layout_style?: Guild['layoutStyle'];
   roster_display?: Guild['rosterDisplay'];
   section_visibility?: Partial<Guild['sectionVisibility']>;
@@ -329,6 +333,10 @@ export class GuildService {
           font_color: defaultGuildPalette.fontColor,
           base_color: defaultGuildPalette.baseColor,
           accent_color: defaultGuildPalette.accentColor,
+          background_mode: defaultGuildPalette.backgroundMode,
+          gradient_color: defaultGuildPalette.gradientColor,
+          gradient_orientation: defaultGuildPalette.gradientOrientation,
+          gradient_transition_rate: defaultGuildPalette.gradientTransitionRate,
           rank: 'bronze',
           badges: [],
           recent_activity: 'Guild charter created.',
@@ -403,7 +411,7 @@ export class GuildService {
       safeProfile.headquartersTitle = richTextToPlainText(safeProfile.headquartersTitleHtml).slice(0, 140);
       safeProfile.headquartersDescription = richTextToPlainText(safeProfile.headquartersDescriptionHtml).slice(0, 3000);
 
-      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v3_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v4_command', {
         p_guild_id: guildId,
         p_profile: safeProfile
       });
@@ -1043,6 +1051,10 @@ export class GuildService {
       fontColor: dbGuild.font_color || defaultGuildPalette.fontColor,
       baseColor: dbGuild.base_color || defaultGuildPalette.baseColor,
       accentColor: dbGuild.accent_color || defaultGuildPalette.accentColor,
+      backgroundMode: dbGuild.background_mode || defaultGuildPalette.backgroundMode,
+      gradientColor: dbGuild.gradient_color || defaultGuildPalette.gradientColor,
+      gradientOrientation: dbGuild.gradient_orientation || defaultGuildPalette.gradientOrientation,
+      gradientTransitionRate: dbGuild.gradient_transition_rate ?? defaultGuildPalette.gradientTransitionRate,
       layoutStyle: dbGuild.layout_style || 'chronicle',
       rosterDisplay: dbGuild.roster_display || 'ledger',
       sectionVisibility: { ...defaultGuildSectionVisibility, ...(dbGuild.section_visibility || {}) },
@@ -1177,6 +1189,10 @@ export class GuildService {
       profileFontColor: '#f4efe6',
       profileBaseColor: '#18201f',
       profileAccentColor: '#c9954a',
+      profileBackgroundMode: 'solid',
+      profileGradientColor: '#27302d',
+      profileGradientOrientation: 'diagonal',
+      profileGradientTransitionRate: 100,
       profileDynamicPortraitEnabled: Boolean(dbCharacter.profile_dynamic_portrait_enabled),
       profilePortraitBackgroundImageUrl: isSafeExternalImageUrl(dbCharacter.profile_portrait_background_url || '')
         ? dbCharacter.profile_portrait_background_url || undefined

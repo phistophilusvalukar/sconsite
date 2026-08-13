@@ -19,6 +19,10 @@ const validProfile = {
   fontColor: '#f4efe6',
   baseColor: '#18201f',
   accentColor: '#c9954a',
+  backgroundMode: 'solid' as const,
+  gradientColor: '#27302d',
+  gradientOrientation: 'diagonal' as const,
+  gradientTransitionRate: 100,
   bannerImageUrl: '',
   dynamicPortraitEnabled: false,
   portraitBackgroundImageUrl: '',
@@ -40,6 +44,17 @@ describe('character profile customization', () => {
       ...validProfile,
       sectionVisibility: { portrait: true }
     }).success).toBe(false);
+  });
+
+  it('validates dual-color gradient direction and transition rate', () => {
+    expect(characterProfileCustomizationSchema.safeParse({
+      ...validProfile,
+      backgroundMode: 'gradient',
+      gradientOrientation: 'vertical',
+      gradientTransitionRate: 0
+    }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, gradientTransitionRate: 101 }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, gradientOrientation: 'radial' }).success).toBe(false);
   });
 
   it('validates independent title, subtitle, and text sizes', () => {

@@ -12,11 +12,12 @@
   --character-section-title-size: 41px;
   --character-saga-subtitle-size: 34px;
   --character-text-size: 16px;
+  --character-page-background: var(--character-base);
   position: relative;
   min-height: 100vh;
   overflow: hidden;
   color: var(--character-ink);
-  background: color-mix(in srgb, var(--character-base) 88%, #060706);
+  background: var(--character-page-background);
   font-family: var(--character-text-font);
 }
 
@@ -572,6 +573,21 @@
 .character-color-grid label > div { display: flex; align-items: center; gap: 7px; padding: 8px; border: 1px solid #38413c; border-radius: 8px; background: #0e1311; }
 .character-color-grid input { width: 34px; height: 34px; padding: 0; border: 0; background: transparent; }
 .character-color-grid code { overflow: hidden; color: #a8b0ab; font-size: 10px; }
+.character-background-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 10px; }
+.character-background-mode button,
+.character-gradient-controls fieldset button { border: 1px solid #38413c; border-radius: 8px; padding: 10px; color: #aeb5b0; background: #0e1311; font-size: 11px; font-weight: 750; text-transform: capitalize; cursor: pointer; }
+.character-background-mode button.is-selected,
+.character-gradient-controls fieldset button.is-selected { border-color: #b99a60; color: #f3e8cf; background: #252217; box-shadow: inset 0 0 0 1px rgb(185 154 96 / .2); }
+.character-gradient-controls { display: grid; gap: 12px; margin-top: 14px; }
+.character-gradient-preview { height: 86px; border: 1px solid #45504a; border-radius: 8px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .2); }
+.character-gradient-controls fieldset { margin: 0; border: 0; padding: 0; }
+.character-gradient-controls legend { margin-bottom: 7px; color: #c7cdc9; font-size: 12px; font-weight: 700; }
+.character-gradient-controls fieldset > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.character-gradient-rate { display: grid; gap: 8px; color: #c7cdc9; font-size: 12px; font-weight: 700; }
+.character-gradient-rate > span { display: flex; justify-content: space-between; gap: 12px; }
+.character-gradient-rate output { color: #d8bd89; font-size: 11px; }
+.character-gradient-rate input { width: 100%; accent-color: #b99a60; }
+.character-gradient-rate small { color: #78827c; font-size: 10px; font-weight: 400; line-height: 1.45; }
 .character-layout-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
 .character-layout-options button { display: flex; min-width: 0; flex-direction: column; align-items: stretch; gap: 7px; padding: 10px; border: 1px solid #38413c; border-radius: 8px; color: #cbd0cc; background: #0e1311; text-align: left; }
 .character-layout-options small { color: #7f8983; font-size: 10px; line-height: 1.35; }

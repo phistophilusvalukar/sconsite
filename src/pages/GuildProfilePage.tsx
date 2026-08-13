@@ -46,6 +46,7 @@ import RichTextEditor from '../features/guilds/RichTextEditor';
 import SafeRichText from '../features/guilds/SafeRichText';
 import { plainTextToRichHtml, richTextToPlainText, sanitizeRichHtml } from '../features/guilds/richText';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
+import { buildProfileBackground } from '../features/profiles/profileBackground';
 import { CharacterService } from '../services/characterService';
 import GuildService from '../services/guildService';
 import type { Character, Guild, GuildCheckin, GuildGuestbookEntry, GuildMembership } from '../types/database';
@@ -320,6 +321,13 @@ const GuildProfilePage: React.FC = () => {
     '--guild-base': displayGuild.baseColor,
     '--guild-accent': displayGuild.accentColor,
     '--guild-ink': displayGuild.fontColor,
+    '--guild-page-background': buildProfileBackground(
+      displayGuild.baseColor,
+      displayGuild.backgroundMode,
+      displayGuild.gradientColor,
+      displayGuild.gradientOrientation,
+      displayGuild.gradientTransitionRate
+    ),
     '--guild-title-font': getGuildFontStack(displayGuild.titleFontFamily),
     '--guild-subtitle-font': getGuildFontStack(displayGuild.subtitleFontFamily),
     '--guild-text-font': getGuildFontStack(displayGuild.fontFamily),
@@ -621,9 +629,23 @@ const GuildProfilePage: React.FC = () => {
 
             <div className="guild-editor-section">
               <div className="guild-editor-section-heading"><h3>Colors</h3><button type="button" onClick={() => setDraft(current => current ? { ...current, ...defaultGuildPalette } : current)}><RotateCcw size={14} /> Website default</button></div>
-              <div className="guild-color-grid">
-                {([['baseColor', 'Page'], ['fontColor', 'Text'], ['accentColor', 'Buttons']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
+              <div className="guild-background-mode" role="group" aria-label="Page background style">
+                <button type="button" className={draft.backgroundMode === 'solid' ? 'is-selected' : ''} aria-pressed={draft.backgroundMode === 'solid'} onClick={() => updateDraft('backgroundMode', 'solid')}>Solid color</button>
+                <button type="button" className={draft.backgroundMode === 'gradient' ? 'is-selected' : ''} aria-pressed={draft.backgroundMode === 'gradient'} onClick={() => updateDraft('backgroundMode', 'gradient')}>Dual-color gradient</button>
               </div>
+              <div className="guild-color-grid">
+                {([['baseColor', draft.backgroundMode === 'gradient' ? 'Background one' : 'Page'], ...(draft.backgroundMode === 'gradient' ? [['gradientColor', 'Background two']] as const : []), ['fontColor', 'Text'], ['accentColor', 'Buttons']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
+              </div>
+              {draft.backgroundMode === 'gradient' && (
+                <div className="guild-gradient-controls">
+                  <div className="guild-gradient-preview" style={{ background: buildProfileBackground(draft.baseColor, draft.backgroundMode, draft.gradientColor, draft.gradientOrientation, draft.gradientTransitionRate) }} aria-hidden="true" />
+                  <fieldset>
+                    <legend>Gradient direction</legend>
+                    <div>{(['horizontal', 'diagonal', 'vertical'] as const).map(orientation => <button type="button" className={draft.gradientOrientation === orientation ? 'is-selected' : ''} aria-pressed={draft.gradientOrientation === orientation} onClick={() => updateDraft('gradientOrientation', orientation)} key={orientation}>{orientation}</button>)}</div>
+                  </fieldset>
+                  <label className="guild-gradient-rate"><span>Transition rate <output>{draft.gradientTransitionRate}%</output></span><input type="range" min="0" max="100" step="1" value={draft.gradientTransitionRate} onChange={event => updateDraft('gradientTransitionRate', Number(event.target.value))} /><small>0% creates a hard split in the center. 100% blends across the whole page.</small></label>
+                </div>
+              )}
             </div>
 
             <div className="guild-editor-section">
@@ -659,13 +681,16 @@ const GuildProfilePage: React.FC = () => {
               <div className="guild-editor-section-heading"><h3>Section wording</h3><button type="button" onClick={() => updateDraft('sectionHeadings', { ...defaultGuildSectionHeadings })}><RotateCcw size={14} /> Restore defaults</button></div>
               <p>Rename each small label and main title. Leave a field empty to hide that line.</p>
               <div className="guild-heading-customization">
-                {SECTION_HEADING_OPTIONS.map(option => (
-                  <fieldset key={option.section}>
-                    <legend>{option.section}</legend>
-                    <label className="guild-field"><span>Small label</span><input maxLength={80} value={draft.sectionHeadings[option.labelKey]} onChange={event => updateDraft('sectionHeadings', { ...draft.sectionHeadings, [option.labelKey]: event.target.value })} /></label>
-                    {option.titleKey && <label className="guild-field"><span>Main title</span><input maxLength={80} value={draft.sectionHeadings[option.titleKey]} onChange={event => updateDraft('sectionHeadings', { ...draft.sectionHeadings, [option.titleKey]: event.target.value })} /></label>}
-                  </fieldset>
-                ))}
+                {SECTION_HEADING_OPTIONS.map(option => {
+                  const titleKey = option.titleKey;
+                  return (
+                    <fieldset key={option.section}>
+                      <legend>{option.section}</legend>
+                      <label className="guild-field"><span>Small label</span><input maxLength={80} value={draft.sectionHeadings[option.labelKey]} onChange={event => updateDraft('sectionHeadings', { ...draft.sectionHeadings, [option.labelKey]: event.target.value })} /></label>
+                      {titleKey && <label className="guild-field"><span>Main title</span><input maxLength={80} value={draft.sectionHeadings[titleKey]} onChange={event => updateDraft('sectionHeadings', { ...draft.sectionHeadings, [titleKey]: event.target.value })} /></label>}
+                    </fieldset>
+                  );
+                })}
               </div>
             </div>
 

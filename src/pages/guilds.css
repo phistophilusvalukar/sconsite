@@ -317,10 +317,11 @@
   --guild-section-title-size: 34px;
   --guild-saga-section-title-size: 77px;
   --guild-text-size: 16px;
+  --guild-page-background: var(--guild-base);
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: var(--guild-base);
+  background: var(--guild-page-background);
   color: var(--guild-ink);
   font-family: var(--guild-text-font);
 }
@@ -339,7 +340,7 @@
 .guild-leader-copy h2 a:hover {
   color: var(--guild-accent);
 }
-.guild-profile-atmosphere { position: absolute; z-index: -1; inset: 0; background: radial-gradient(circle at 15% 3%, color-mix(in srgb, var(--guild-accent) 20%, transparent), transparent 33rem), radial-gradient(circle at 90% 35%, color-mix(in srgb, var(--guild-accent) 10%, transparent), transparent 28rem), linear-gradient(180deg, color-mix(in srgb, var(--guild-base) 82%, black 18%), var(--guild-base)); }
+.guild-profile-atmosphere { position: absolute; z-index: -1; inset: 0; background: radial-gradient(circle at 15% 3%, color-mix(in srgb, var(--guild-accent) 20%, transparent), transparent 33rem), radial-gradient(circle at 90% 35%, color-mix(in srgb, var(--guild-accent) 10%, transparent), transparent 28rem), var(--guild-page-background); }
 .guild-profile-atmosphere::after { position: absolute; inset: 0; background-image: linear-gradient(color-mix(in srgb, var(--guild-ink) 2%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--guild-ink) 2%, transparent) 1px, transparent 1px); background-size: 52px 52px; content: ''; mask-image: linear-gradient(black, transparent 75%); }
 .guild-profile-shell { width: min(1260px, calc(100% - 2.5rem)); margin: 0 auto; padding: 1.35rem 0 6rem; }
 .guild-profile-nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
@@ -762,6 +763,21 @@
 .guild-color-grid > label > div { display: flex; align-items: center; gap: .35rem; border: 1px solid rgba(255,255,255,.1); border-radius: 4px; padding: .35rem; }
 .guild-color-grid input { width: 30px; height: 30px; border: 0; padding: 0; background: transparent; cursor: pointer; }
 .guild-color-grid code { color: #c5c0c9; font-size: .62rem; }
+.guild-background-mode { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; margin-bottom: .65rem; }
+.guild-background-mode button,
+.guild-gradient-controls fieldset button { border: 1px solid rgba(255,255,255,.11); border-radius: 4px; padding: .6rem .7rem; background: rgba(255,255,255,.025); color: #aaa5ae; font-size: .65rem; font-weight: 750; text-transform: capitalize; cursor: pointer; }
+.guild-background-mode button.is-selected,
+.guild-gradient-controls fieldset button.is-selected { border-color: #b49b67; background: rgba(180,155,103,.13); color: #f2e6cd; box-shadow: inset 0 0 0 1px rgba(180,155,103,.16); }
+.guild-gradient-controls { display: grid; gap: .75rem; margin-top: .85rem; }
+.guild-gradient-preview { height: 78px; border: 1px solid rgba(255,255,255,.14); border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
+.guild-gradient-controls fieldset { margin: 0; border: 0; padding: 0; }
+.guild-gradient-controls legend { margin-bottom: .4rem; color: #a7a1ab; font-size: .67rem; }
+.guild-gradient-controls fieldset > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+.guild-gradient-rate { display: grid; gap: .4rem; color: #a7a1ab; font-size: .67rem; }
+.guild-gradient-rate > span { display: flex; justify-content: space-between; gap: 1rem; }
+.guild-gradient-rate output { color: #d4bd8d; font-weight: 800; }
+.guild-gradient-rate input { width: 100%; accent-color: #b49b67; }
+.guild-gradient-rate small { color: #736f77; font-size: .6rem; line-height: 1.45; }
 .guild-layout-options { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .45rem; }
 .guild-layout-options button { display: grid; gap: .35rem; border: 1px solid rgba(255,255,255,.09); border-radius: 4px; padding: .55rem; background: rgba(255,255,255,.02); color: #d5d0d8; cursor: pointer; text-align: left; }
 .guild-layout-options small { color: #817b86; font-size: .56rem; line-height: 1.3; }

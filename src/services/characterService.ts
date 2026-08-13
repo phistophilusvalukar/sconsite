@@ -104,6 +104,10 @@ type CharacterCreateInput = Omit<
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
+  | 'profileBackgroundMode'
+  | 'profileGradientColor'
+  | 'profileGradientOrientation'
+  | 'profileGradientTransitionRate'
   | 'profileBannerImageUrl'
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
@@ -128,6 +132,10 @@ type CharacterCreateInput = Omit<
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
+  | 'profileBackgroundMode'
+  | 'profileGradientColor'
+  | 'profileGradientOrientation'
+  | 'profileGradientTransitionRate'
   | 'profileBannerImageUrl'
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
@@ -174,6 +182,10 @@ interface CharacterRow {
   profile_font_color?: string | null;
   profile_base_color?: string | null;
   profile_accent_color?: string | null;
+  profile_background_mode?: Character['profileBackgroundMode'] | null;
+  profile_gradient_color?: string | null;
+  profile_gradient_orientation?: Character['profileGradientOrientation'] | null;
+  profile_gradient_transition_rate?: number | null;
   profile_banner_image_url?: string | null;
   profile_dynamic_portrait_enabled?: boolean | null;
   profile_portrait_background_url?: string | null;
@@ -310,6 +322,10 @@ export class CharacterService {
         profile_font_color: characterData.profileFontColor || defaultCharacterProfilePalette.fontColor,
         profile_base_color: characterData.profileBaseColor || defaultCharacterProfilePalette.baseColor,
         profile_accent_color: characterData.profileAccentColor || defaultCharacterProfilePalette.accentColor,
+        profile_background_mode: characterData.profileBackgroundMode || defaultCharacterProfilePalette.backgroundMode,
+        profile_gradient_color: characterData.profileGradientColor || defaultCharacterProfilePalette.gradientColor,
+        profile_gradient_orientation: characterData.profileGradientOrientation || defaultCharacterProfilePalette.gradientOrientation,
+        profile_gradient_transition_rate: characterData.profileGradientTransitionRate ?? defaultCharacterProfilePalette.gradientTransitionRate,
         profile_banner_image_url: characterData.profileBannerImageUrl || null,
         profile_dynamic_portrait_enabled: characterData.profileDynamicPortraitEnabled ?? false,
         profile_portrait_background_url: characterData.profilePortraitBackgroundImageUrl || null,
@@ -545,7 +561,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v2_command', {
         p_character_id: characterId,
         p_profile: parsed.data
       });
@@ -1130,6 +1146,10 @@ export class CharacterService {
       profileFontColor: dbCharacter.profile_font_color || defaultCharacterProfilePalette.fontColor,
       profileBaseColor: dbCharacter.profile_base_color || defaultCharacterProfilePalette.baseColor,
       profileAccentColor: dbCharacter.profile_accent_color || defaultCharacterProfilePalette.accentColor,
+      profileBackgroundMode: dbCharacter.profile_background_mode || defaultCharacterProfilePalette.backgroundMode,
+      profileGradientColor: dbCharacter.profile_gradient_color || defaultCharacterProfilePalette.gradientColor,
+      profileGradientOrientation: dbCharacter.profile_gradient_orientation || defaultCharacterProfilePalette.gradientOrientation,
+      profileGradientTransitionRate: dbCharacter.profile_gradient_transition_rate ?? defaultCharacterProfilePalette.gradientTransitionRate,
       profileBannerImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_banner_image_url || '')
         ? dbCharacter.profile_banner_image_url || undefined
         : undefined,

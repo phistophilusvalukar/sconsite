@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Guild } from '../../types/database';
 import { defaultProfileDecorations, profileDecorationThemeValues } from '../profiles/profileDecorations';
+import { defaultProfileBackground, profileBackgroundModeValues, profileGradientOrientationValues } from '../profiles/profileBackground';
 import { plainTextToRichHtml } from './richText';
 
 export const guildFontOptions = [
@@ -90,7 +91,8 @@ export const defaultGuildSectionHeadings = {
 export const defaultGuildPalette = {
   baseColor: '#111615',
   fontColor: '#f0ede7',
-  accentColor: '#a09482'
+  accentColor: '#a09482',
+  ...defaultProfileBackground
 } as const;
 
 export const defaultGuildTypography = {
@@ -134,6 +136,10 @@ export const guildCustomizationSchema = z.object({
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
+  backgroundMode: z.enum(profileBackgroundModeValues),
+  gradientColor: hexColor,
+  gradientOrientation: z.enum(profileGradientOrientationValues),
+  gradientTransitionRate: z.number().int().min(0).max(100),
   layoutStyle: z.enum(['chronicle', 'stronghold', 'banner', 'saga']),
   rosterDisplay: z.enum(['ledger', 'dossiers', 'cards']),
   sectionVisibility: z.object({
@@ -215,6 +221,10 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   fontColor: guild.fontColor,
   baseColor: guild.baseColor,
   accentColor: guild.accentColor,
+  backgroundMode: guild.backgroundMode,
+  gradientColor: guild.gradientColor,
+  gradientOrientation: guild.gradientOrientation,
+  gradientTransitionRate: guild.gradientTransitionRate,
   layoutStyle: guild.layoutStyle,
   rosterDisplay: guild.rosterDisplay,
   sectionVisibility: { ...guild.sectionVisibility },

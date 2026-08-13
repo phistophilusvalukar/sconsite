@@ -22,6 +22,10 @@ const validCustomization = {
   fontColor: '#f8fafc',
   baseColor: '#171425',
   accentColor: '#d6a84b',
+  backgroundMode: 'solid' as const,
+  gradientColor: '#27302d',
+  gradientOrientation: 'diagonal' as const,
+  gradientTransitionRate: 100,
   layoutStyle: 'chronicle' as const,
   rosterDisplay: 'dossiers' as const,
   sectionVisibility: {
@@ -62,6 +66,17 @@ describe('guild customization', () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it('validates dual-color gradient direction and transition rate', () => {
+    expect(guildCustomizationSchema.safeParse({
+      ...validCustomization,
+      backgroundMode: 'gradient',
+      gradientOrientation: 'horizontal',
+      gradientTransitionRate: 0
+    }).success).toBe(true);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, gradientColor: 'navy' }).success).toBe(false);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, gradientTransitionRate: -1 }).success).toBe(false);
   });
 
   it('validates independent typography size controls', () => {

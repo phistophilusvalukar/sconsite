@@ -30,6 +30,7 @@ import {
 } from '../features/characters/characterProfileCustomization';
 import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
+import { buildProfileBackground } from '../features/profiles/profileBackground';
 import { CharacterService } from '../services/characterService';
 import type { Character } from '../types/database';
 import './characterProfile.css';
@@ -125,6 +126,10 @@ const CharacterProfilePage: React.FC = () => {
       profileFontColor: draft.fontColor,
       profileBaseColor: draft.baseColor,
       profileAccentColor: draft.accentColor,
+      profileBackgroundMode: draft.backgroundMode,
+      profileGradientColor: draft.gradientColor,
+      profileGradientOrientation: draft.gradientOrientation,
+      profileGradientTransitionRate: draft.gradientTransitionRate,
       profileBannerImageUrl: draft.bannerImageUrl || undefined,
       profileDynamicPortraitEnabled: draft.dynamicPortraitEnabled,
       profilePortraitBackgroundImageUrl: draft.portraitBackgroundImageUrl || undefined,
@@ -211,6 +216,15 @@ const CharacterProfilePage: React.FC = () => {
     '--character-base': displayCharacter.profileBaseColor,
     '--character-accent': displayCharacter.profileAccentColor,
     '--character-ink': displayCharacter.profileFontColor,
+    '--character-page-background': displayCharacter.profileBackgroundMode === 'gradient'
+      ? buildProfileBackground(
+        displayCharacter.profileBaseColor,
+        displayCharacter.profileBackgroundMode,
+        displayCharacter.profileGradientColor,
+        displayCharacter.profileGradientOrientation,
+        displayCharacter.profileGradientTransitionRate
+      )
+      : `color-mix(in srgb, ${displayCharacter.profileBaseColor} 88%, #060706)`,
     '--character-title-font': getCharacterFontStack(displayCharacter.profileTitleFontFamily),
     '--character-subtitle-font': getCharacterFontStack(displayCharacter.profileSubtitleFontFamily),
     '--character-text-font': getCharacterFontStack(displayCharacter.profileFontFamily),
@@ -276,9 +290,23 @@ const CharacterProfilePage: React.FC = () => {
 
             <div className="character-editor-section">
               <div className="character-editor-section-heading"><h3>Colors</h3><button type="button" onClick={() => setDraft(current => current ? { ...current, ...defaultCharacterProfilePalette } : current)}><RotateCcw size={14} /> Website default</button></div>
-              <div className="character-color-grid">
-                {([['baseColor', 'Page'], ['fontColor', 'Text'], ['accentColor', 'Buttons']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
+              <div className="character-background-mode" role="group" aria-label="Page background style">
+                <button type="button" className={draft.backgroundMode === 'solid' ? 'is-selected' : ''} aria-pressed={draft.backgroundMode === 'solid'} onClick={() => updateDraft('backgroundMode', 'solid')}>Solid color</button>
+                <button type="button" className={draft.backgroundMode === 'gradient' ? 'is-selected' : ''} aria-pressed={draft.backgroundMode === 'gradient'} onClick={() => updateDraft('backgroundMode', 'gradient')}>Dual-color gradient</button>
               </div>
+              <div className="character-color-grid">
+                {([['baseColor', draft.backgroundMode === 'gradient' ? 'Background one' : 'Page'], ...(draft.backgroundMode === 'gradient' ? [['gradientColor', 'Background two']] as const : []), ['fontColor', 'Text'], ['accentColor', 'Buttons']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
+              </div>
+              {draft.backgroundMode === 'gradient' && (
+                <div className="character-gradient-controls">
+                  <div className="character-gradient-preview" style={{ background: buildProfileBackground(draft.baseColor, draft.backgroundMode, draft.gradientColor, draft.gradientOrientation, draft.gradientTransitionRate) }} aria-hidden="true" />
+                  <fieldset>
+                    <legend>Gradient direction</legend>
+                    <div>{(['horizontal', 'diagonal', 'vertical'] as const).map(orientation => <button type="button" className={draft.gradientOrientation === orientation ? 'is-selected' : ''} aria-pressed={draft.gradientOrientation === orientation} onClick={() => updateDraft('gradientOrientation', orientation)} key={orientation}>{orientation}</button>)}</div>
+                  </fieldset>
+                  <label className="character-gradient-rate"><span>Transition rate <output>{draft.gradientTransitionRate}%</output></span><input type="range" min="0" max="100" step="1" value={draft.gradientTransitionRate} onChange={event => updateDraft('gradientTransitionRate', Number(event.target.value))} /><small>0% creates a hard split in the center. 100% blends across the whole page.</small></label>
+                </div>
+              )}
             </div>
 
             <div className="character-editor-section">

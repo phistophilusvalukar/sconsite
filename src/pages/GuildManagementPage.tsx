@@ -71,7 +71,7 @@ const GuildManagementPage: React.FC = () => {
   const isLeader = Boolean(guild && user?.id === guild.leaderId);
   const actorPermissions = useMemo<GuildManagementPermissions>(() => {
     if (isLeader) return { kickMembers: true, setMessageBoard: true, acceptApplications: true, customizeGuild: true };
-    return roster.filter(member => member.userId === user?.id).reduce((combined, member) => ({
+    return roster.filter(member => member.userId === user?.id).reduce<GuildManagementPermissions>((combined, member) => ({
       kickMembers: combined.kickMembers || member.permissions.kickMembers,
       setMessageBoard: combined.setMessageBoard || member.permissions.setMessageBoard,
       acceptApplications: combined.acceptApplications || member.permissions.acceptApplications,

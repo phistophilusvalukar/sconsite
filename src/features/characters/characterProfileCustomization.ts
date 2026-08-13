@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Character } from '../../types/database';
 import { defaultProfileDecorations, profileDecorationThemeValues } from '../profiles/profileDecorations';
+import { defaultProfileBackground, profileBackgroundModeValues, profileGradientOrientationValues } from '../profiles/profileBackground';
 
 export const characterFontOptions = [
   { value: 'cinzel', label: 'Cinzel', stack: 'Cinzel, Georgia, serif', category: 'Classic' },
@@ -48,7 +49,8 @@ export const defaultCharacterProfileSectionVisibility = {
 export const defaultCharacterProfilePalette = {
   baseColor: '#111615',
   fontColor: '#f0ede7',
-  accentColor: '#a09482'
+  accentColor: '#a09482',
+  ...defaultProfileBackground
 } as const;
 
 export const defaultCharacterProfileTypography = {
@@ -86,6 +88,10 @@ export const characterProfileCustomizationSchema = z.object({
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
+  backgroundMode: z.enum(profileBackgroundModeValues),
+  gradientColor: hexColor,
+  gradientOrientation: z.enum(profileGradientOrientationValues),
+  gradientTransitionRate: z.number().int().min(0).max(100),
   bannerImageUrl: externalImageUrl,
   dynamicPortraitEnabled: z.boolean(),
   portraitBackgroundImageUrl: externalImageUrl,
@@ -132,6 +138,10 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   fontColor: character.profileFontColor,
   baseColor: character.profileBaseColor,
   accentColor: character.profileAccentColor,
+  backgroundMode: character.profileBackgroundMode,
+  gradientColor: character.profileGradientColor,
+  gradientOrientation: character.profileGradientOrientation,
+  gradientTransitionRate: character.profileGradientTransitionRate,
   bannerImageUrl: character.profileBannerImageUrl || '',
   dynamicPortraitEnabled: character.profileDynamicPortraitEnabled ?? false,
   portraitBackgroundImageUrl: character.profilePortraitBackgroundImageUrl || '',

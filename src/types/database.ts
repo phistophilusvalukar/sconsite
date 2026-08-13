@@ -105,6 +105,10 @@ export interface Character {
   profileFontColor: string;
   profileBaseColor: string;
   profileAccentColor: string;
+  profileBackgroundMode: 'solid' | 'gradient';
+  profileGradientColor: string;
+  profileGradientOrientation: 'horizontal' | 'diagonal' | 'vertical';
+  profileGradientTransitionRate: number;
   profileBannerImageUrl?: string;
   profileDynamicPortraitEnabled?: boolean;
   profilePortraitBackgroundImageUrl?: string;
@@ -157,6 +161,10 @@ export interface Guild {
   fontColor: string;
   baseColor: string;
   accentColor: string;
+  backgroundMode: 'solid' | 'gradient';
+  gradientColor: string;
+  gradientOrientation: 'horizontal' | 'diagonal' | 'vertical';
+  gradientTransitionRate: number;
   layoutStyle: 'chronicle' | 'stronghold' | 'banner' | 'saga';
   rosterDisplay: 'ledger' | 'dossiers' | 'cards';
   sectionVisibility: GuildSectionVisibility;
