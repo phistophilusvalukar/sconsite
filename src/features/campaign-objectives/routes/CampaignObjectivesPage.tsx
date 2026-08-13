@@ -69,8 +69,8 @@ export default function CampaignObjectivesPage() {
     setIsLoading(false);
   }, [service]);
 
-  const loadDetails = useCallback(async (slug: string) => {
-    setIsLoading(true);
+  const loadDetails = useCallback(async (slug: string, showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     setError(null);
     const response = await service.getCampaignBySlug(slug);
     if (response.success && response.data) {
@@ -113,7 +113,7 @@ export default function CampaignObjectivesPage() {
   }, [publicCharacters, userCharacters]);
 
   async function refreshDetails() {
-    if (campaignSlug) await loadDetails(campaignSlug);
+    if (campaignSlug) await loadDetails(campaignSlug, false);
   }
 
   async function createCampaign(input: { name: string; summary: string; status: CampaignStatus }) {

@@ -100,8 +100,8 @@ const SchedulePage: React.FC = () => {
   const isCreator = Boolean(selectedPoll && user?.id === selectedPoll.creatorId);
   const maxAvailability = Math.max(1, ...Array.from(availabilityBySlot.values()).map(value => value.size));
 
-  const loadPolls = useCallback(async () => {
-    setIsLoading(true);
+  const loadPolls = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
       const response = await scheduleService.getPolls();
       if (response.success && response.data) {
@@ -117,7 +117,7 @@ const SchedulePage: React.FC = () => {
   }, [pollId, scheduleService]);
 
   useEffect(() => {
-    loadPolls();
+    void loadPolls(true);
   }, [loadPolls]);
 
   useSupabaseRealtime({

@@ -63,8 +63,8 @@ const NewsPage: React.FC = () => {
     return categoryMatches && tagMatches;
   });
 
-  const loadPosts = useCallback(async () => {
-    setIsLoading(true);
+  const loadPosts = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     setError(null);
     const result = await newsService.getPosts(user?.id, isAdmin);
     if (result.success && result.data) {
@@ -76,7 +76,7 @@ const NewsPage: React.FC = () => {
   }, [isAdmin, newsService, user?.id]);
 
   useEffect(() => {
-    loadPosts();
+    void loadPosts(true);
   }, [loadPosts]);
 
   useSupabaseRealtime({
@@ -169,7 +169,13 @@ const NewsPage: React.FC = () => {
 
     const result = await newsService.toggleLike(post._id, user.id, post.likedByCurrentUser);
     if (result.success) {
-      await loadPosts();
+      setPosts(current => current.map(item => item._id === post._id
+        ? {
+            ...item,
+            likedByCurrentUser: !item.likedByCurrentUser,
+            likeCount: item.likedByCurrentUser ? Math.max(0, item.likeCount - 1) : item.likeCount + 1
+          }
+        : item));
     } else {
       setError(result.error || 'Failed to update like.');
     }
@@ -187,9 +193,11 @@ const NewsPage: React.FC = () => {
     if (!body) return;
 
     const result = await newsService.addComment(selectedPost._id, user.id, user.username, body);
-    if (result.success) {
+    if (result.success && result.data) {
       setCommentBody('');
-      await loadPosts();
+      setPosts(current => current.map(post => post._id === selectedPost._id
+        ? { ...post, comments: [...post.comments, result.data!] }
+        : post));
     } else {
       setError(result.error || 'Failed to add comment.');
     }
@@ -199,7 +207,10 @@ const NewsPage: React.FC = () => {
     if (!commentId) return;
     const result = await newsService.deleteComment(commentId);
     if (result.success) {
-      await loadPosts();
+      setPosts(current => current.map(post => ({
+        ...post,
+        comments: post.comments.filter(comment => comment._id !== commentId)
+      })));
     } else {
       setError(result.error || 'Failed to delete comment.');
     }

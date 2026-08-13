@@ -17,7 +17,6 @@ export function useSupabaseRealtime({
   debounceMs = 250
 }: UseSupabaseRealtimeOptions) {
   const onChangeRef = useRef(onChange);
-  const debounceTimerRef = useRef<number | undefined>(undefined);
   const tablesKey = tables.join('|');
 
   useEffect(() => {
@@ -27,15 +26,43 @@ export function useSupabaseRealtime({
   useEffect(() => {
     if (!enabled || !tablesKey) return;
 
+    let disposed = false;
+    let debounceTimer: number | undefined;
+    let refreshInFlight = false;
+    let refreshQueued = false;
     const uniqueTables = Array.from(new Set(tablesKey.split('|').filter(Boolean)));
     const channel = supabase.channel(channelName);
-    const scheduleRefresh = () => {
-      if (debounceTimerRef.current) {
-        window.clearTimeout(debounceTimerRef.current);
+    const runRefresh = async () => {
+      if (refreshInFlight) {
+        refreshQueued = true;
+        return;
       }
 
-      debounceTimerRef.current = window.setTimeout(() => {
-        void onChangeRef.current();
+      refreshInFlight = true;
+      try {
+        await onChangeRef.current();
+      } finally {
+        refreshInFlight = false;
+        if (!disposed && refreshQueued) {
+          refreshQueued = false;
+          debounceTimer = window.setTimeout(() => {
+            void runRefresh();
+          }, debounceMs);
+        }
+      }
+    };
+    const scheduleRefresh = () => {
+      if (refreshInFlight) {
+        refreshQueued = true;
+        return;
+      }
+
+      if (debounceTimer) {
+        window.clearTimeout(debounceTimer);
+      }
+
+      debounceTimer = window.setTimeout(() => {
+        void runRefresh();
       }, debounceMs);
     };
 
@@ -54,8 +81,10 @@ export function useSupabaseRealtime({
     void channel.subscribe();
 
     return () => {
-      if (debounceTimerRef.current) {
-        window.clearTimeout(debounceTimerRef.current);
+      disposed = true;
+      refreshQueued = false;
+      if (debounceTimer) {
+        window.clearTimeout(debounceTimer);
       }
       void supabase.removeChannel(channel);
     };

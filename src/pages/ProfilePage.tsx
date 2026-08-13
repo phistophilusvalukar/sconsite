@@ -40,13 +40,13 @@ const ProfilePage: React.FC = () => {
     }
   }, [user?.profile]);
 
-  const loadGames = useCallback(async () => {
+  const loadGames = useCallback(async (showLoading = false) => {
     if (!user?.id) {
       setIsLoadingGames(false);
       return;
     }
 
-    setIsLoadingGames(true);
+    if (showLoading) setIsLoadingGames(true);
     try {
       const response = await gameService.getGames(user.id);
       if (response.success && response.data) {
@@ -65,7 +65,7 @@ const ProfilePage: React.FC = () => {
       return;
     }
 
-    loadGames();
+    void loadGames(true);
   }, [isAuthenticated, loadGames]);
 
   useSupabaseRealtime({

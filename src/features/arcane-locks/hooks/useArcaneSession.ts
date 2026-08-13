@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../../../config/database';
+import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
 import type { ArcanaCheckKind, ArcanaCheckResult, ArcaneKnowledgeState, LockAction } from '../engine/types';
 import {
   getArcaneKnowledge,
@@ -24,8 +24,8 @@ export function useArcaneSession(sessionId: string, selectedLockId?: string) {
   const [knowledge, setKnowledge] = useState<ArcaneKnowledgeState | null>(null);
   const [lastArcanaResult, setLastArcanaResult] = useState<ArcanaCheckResult | null>(null);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
+  const refresh = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
       const next = await getLockViewForCurrentUser(sessionId, selectedLockId);
       setView(next);
@@ -39,21 +39,15 @@ export function useArcaneSession(sessionId: string, selectedLockId?: string) {
   }, [selectedLockId, sessionId]);
 
   useEffect(() => {
-    void refresh();
+    void refresh(true);
   }, [refresh]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel(`arcane-session:${sessionId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'arcane_lock_instances' }, () => void refresh())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'arcane_lock_player_access' }, () => void refresh())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'arcane_puzzle_sessions' }, () => void refresh())
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [refresh, sessionId]);
+  useSupabaseRealtime({
+    channelName: `arcane-session:${sessionId}`,
+    tables: ['arcane_lock_instances', 'arcane_lock_player_access', 'arcane_puzzle_sessions'],
+    onChange: refresh,
+    enabled: Boolean(sessionId)
+  });
 
   const submitAction = useCallback(async (action: LockAction) => {
     if (!view) return;

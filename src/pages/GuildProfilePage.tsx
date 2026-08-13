@@ -102,9 +102,9 @@ const GuildProfilePage: React.FC = () => {
   const guildService = useMemo(() => GuildService.getInstance(), []);
   const characterService = useMemo(() => CharacterService.getInstance(), []);
 
-  const loadGuild = useCallback(async () => {
+  const loadGuild = useCallback(async (showLoading = false) => {
     if (!guildId) return;
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     const response = await guildService.getGuild(guildId);
     if (response.success && response.data) {
       setGuild(response.data);
@@ -132,7 +132,7 @@ const GuildProfilePage: React.FC = () => {
   }, [guildId, guildService]);
 
   useEffect(() => {
-    void loadGuild();
+    void loadGuild(true);
   }, [loadGuild]);
 
   useEffect(() => {
@@ -163,7 +163,9 @@ const GuildProfilePage: React.FC = () => {
       DATABASE_TABLES.GUILD_CHECKINS,
       DATABASE_TABLES.GUILD_GUESTBOOK_ENTRIES
     ],
-    onChange: () => void Promise.all([loadGuild(), loadCommunity()]),
+    onChange: async () => {
+      await Promise.all([loadGuild(), loadCommunity()]);
+    },
     enabled: isAuthenticated && Boolean(guildId)
   });
 

@@ -125,10 +125,10 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     setRelationshipMessage('');
   }, [character._id, canEdit, initialTab, sectionVisibility.journal, sectionVisibility.relationships]);
 
-  const loadModalData = useCallback(async () => {
+  const loadModalData = useCallback(async (showLoading = false) => {
     if (!character._id) return;
 
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     try {
       const [journalResponse, relationshipResponse, foundryResponse] = await Promise.all([
         characterService.getJournalEntries(character._id, currentUserId),
@@ -145,12 +145,16 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   }, [canEdit, character._id, characterService, currentUserId]);
 
   useEffect(() => {
-    loadModalData();
+    void loadModalData(true);
   }, [loadModalData]);
 
   useSupabaseRealtime({
     channelName: `character-details-${character._id || 'unknown'}`,
     tables: [
+      DATABASE_TABLES.CHARACTER_FOUNDRY_FILES,
+      DATABASE_TABLES.CHARACTER_JOURNAL_ENTRIES,
+      DATABASE_TABLES.CHARACTER_JOURNAL_COMMENTS,
+      DATABASE_TABLES.CHARACTER_JOURNAL_LIKES,
       DATABASE_TABLES.CHARACTER_RELATIONSHIPS
     ],
     onChange: loadModalData,

@@ -39,8 +39,8 @@ const GuildsPage: React.FC = () => {
   const characterService = useMemo(() => CharacterService.getInstance(), []);
   const eligibleLeaderCharacters = characters.filter(character => character.level >= 4);
 
-  const loadGuilds = useCallback(async () => {
-    setIsLoading(true);
+  const loadGuilds = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
       const response = await guildService.getGuilds();
       if (response.success && response.data) setGuilds(response.data);
@@ -56,7 +56,7 @@ const GuildsPage: React.FC = () => {
   }, [characterService, user?.id]);
 
   useEffect(() => {
-    void loadGuilds();
+    void loadGuilds(true);
   }, [loadGuilds]);
 
   useEffect(() => {
@@ -66,7 +66,7 @@ const GuildsPage: React.FC = () => {
   useSupabaseRealtime({
     channelName: `guild-directory-${user?.id || 'anonymous'}`,
     tables: [DATABASE_TABLES.GUILDS, DATABASE_TABLES.GUILD_MEMBERSHIPS],
-    onChange: () => void loadGuilds(),
+    onChange: loadGuilds,
     enabled: isAuthenticated
   });
 

@@ -74,9 +74,9 @@ const CharacterProfilePage: React.FC = () => {
   const [linkMessage, setLinkMessage] = useState('');
   const [showDynamicPortraitTutorial, setShowDynamicPortraitTutorial] = useState(false);
 
-  const loadProfile = useCallback(async () => {
+  const loadProfile = useCallback(async (showLoading = false) => {
     if (!characterId || !user?.id) return;
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     const [characterResponse, publicResponse] = await Promise.all([
       characterService.getCharacterById(characterId),
       characterService.getPublicCharacters()
@@ -98,18 +98,13 @@ const CharacterProfilePage: React.FC = () => {
   }, [characterId, characterService, user?.id]);
 
   useEffect(() => {
-    void loadProfile();
+    void loadProfile(true);
   }, [loadProfile]);
 
   useSupabaseRealtime({
     channelName: `character-profile-page-${characterId || 'unknown'}-${user?.id || 'anonymous'}`,
     tables: [
       DATABASE_TABLES.CHARACTERS,
-      DATABASE_TABLES.CHARACTER_FOUNDRY_FILES,
-      DATABASE_TABLES.CHARACTER_JOURNAL_ENTRIES,
-      DATABASE_TABLES.CHARACTER_JOURNAL_COMMENTS,
-      DATABASE_TABLES.CHARACTER_JOURNAL_LIKES,
-      DATABASE_TABLES.CHARACTER_RELATIONSHIPS,
       DATABASE_TABLES.GUILD_MEMBERSHIPS
     ],
     onChange: loadProfile,

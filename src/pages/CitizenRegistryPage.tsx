@@ -126,8 +126,8 @@ const CitizenRegistryPage: React.FC = () => {
 
   const registryService = useMemo(() => CitizenRegistryService.getInstance(), []);
 
-  const loadRegistry = useCallback(async () => {
-    setIsLoading(true);
+  const loadRegistry = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     setError(null);
 
     const response = await registryService.getRegistry();
@@ -142,7 +142,7 @@ const CitizenRegistryPage: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      loadRegistry();
+      void loadRegistry(true);
     } else {
       setIsLoading(false);
     }

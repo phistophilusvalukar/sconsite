@@ -39,10 +39,10 @@ const CharacterPage: React.FC = () => {
 
   const characterService = useMemo(() => CharacterService.getInstance(), []);
 
-  const loadCharacters = useCallback(async () => {
+  const loadCharacters = useCallback(async (showLoading = false) => {
     if (!user?.id) return;
 
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     try {
       const response = await characterService.getUserCharacters(user.id);
       if (response.success && response.data) {
@@ -73,7 +73,7 @@ const CharacterPage: React.FC = () => {
 
   useEffect(() => {
     if (user?.id) {
-      loadCharacters();
+      void loadCharacters(true);
     }
   }, [loadCharacters, user?.id]);
 

@@ -116,8 +116,8 @@ const GamesPage: React.FC = () => {
   const [archiveCommentDrafts, setArchiveCommentDrafts] = useState<Record<string, string>>({});
   const [editingArchiveComments, setEditingArchiveComments] = useState<Record<string, string>>({});
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
       const [gameResponse, pollResponse, characterResponse] = await Promise.all([
         gameService.getGames(user?.id),
@@ -163,7 +163,7 @@ const GamesPage: React.FC = () => {
       return;
     }
 
-    loadData();
+    void loadData(true);
   }, [isAuthenticated, loadData]);
 
   useSupabaseRealtime({

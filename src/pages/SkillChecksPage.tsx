@@ -203,13 +203,13 @@ const ChallengeManagerPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const loadChallenges = useCallback(async () => {
+  const loadChallenges = useCallback(async (showLoading = false) => {
     if (!user?.id) {
       setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     const response = await service.getGmChallenges(user.id);
     if (response.success && response.data) {
       setChallenges(response.data);
@@ -220,7 +220,7 @@ const ChallengeManagerPage: React.FC = () => {
   }, [service, user?.id]);
 
   useEffect(() => {
-    void loadChallenges();
+    void loadChallenges(true);
   }, [loadChallenges]);
 
   useSupabaseRealtime({
