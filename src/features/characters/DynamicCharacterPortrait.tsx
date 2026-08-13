@@ -25,6 +25,7 @@ interface DynamicCharacterPortraitProps {
   motion?: 'parallax' | 'hover' | 'none';
   overlayClassName?: string;
   title?: string;
+  allowDynamic?: boolean;
 }
 
 const hasDynamicCharacterPortrait = (character?: PortraitCharacter): boolean => Boolean(
@@ -40,11 +41,12 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
   className = '',
   motion = 'hover',
   overlayClassName,
-  title
+  title,
+  allowDynamic = false
 }) => {
   const portraitRef = useRef<HTMLDivElement>(null);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
-  const isDynamic = hasDynamicCharacterPortrait(character) && !imageLoadFailed;
+  const isDynamic = allowDynamic && hasDynamicCharacterPortrait(character) && !imageLoadFailed;
 
   useEffect(() => {
     setImageLoadFailed(false);

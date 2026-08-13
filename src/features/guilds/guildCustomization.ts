@@ -115,6 +115,13 @@ export const isSafeExternalImageUrl = (value: string) => {
 };
 const externalImageUrl = z.string().trim().max(2000).refine(isSafeExternalImageUrl, 'Use a direct HTTPS image URL.');
 const sectionHeadingText = z.string().trim().max(80, 'Section headings can be at most 80 characters.');
+export const guildRosterLineupPlacementSchema = z.object({
+  characterId: z.string().uuid(),
+  x: z.number().int().min(0).max(100),
+  y: z.number().int().min(-30).max(40),
+  scale: z.number().int().min(50).max(180),
+  rotation: z.number().int().min(-12).max(12)
+}).strict();
 
 export const guildCustomizationSchema = z.object({
   name: z.string().trim().min(2, 'Guild name must be at least 2 characters.').max(80),
@@ -141,7 +148,11 @@ export const guildCustomizationSchema = z.object({
   gradientOrientation: z.enum(profileGradientOrientationValues),
   gradientTransitionRate: z.number().int().min(0).max(100),
   layoutStyle: z.enum(['chronicle', 'stronghold', 'banner', 'saga']),
-  rosterDisplay: z.enum(['ledger', 'dossiers', 'cards']),
+  rosterDisplay: z.enum(['ledger', 'dossiers', 'cards', 'lineup']),
+  rosterLineup: z.array(guildRosterLineupPlacementSchema).max(30).refine(
+    placements => new Set(placements.map(placement => placement.characterId)).size === placements.length,
+    'Each character can appear only once in the Class Photo.'
+  ),
   sectionVisibility: z.object({
     charter: z.boolean(),
     requirements: z.boolean(),
@@ -227,6 +238,7 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   gradientTransitionRate: guild.gradientTransitionRate,
   layoutStyle: guild.layoutStyle,
   rosterDisplay: guild.rosterDisplay,
+  rosterLineup: guild.rosterLineup || [],
   sectionVisibility: { ...guild.sectionVisibility },
   sectionHeadings: { ...defaultGuildSectionHeadings, ...guild.sectionHeadings },
   emblemUrl: guild.emblemUrl || '',

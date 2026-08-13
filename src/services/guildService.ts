@@ -21,6 +21,7 @@ import {
   defaultGuildSectionVisibility,
   defaultGuildRoleLabels,
   guildCustomizationSchema,
+  guildRosterLineupPlacementSchema,
   isSafeExternalImageUrl
 } from '../features/guilds/guildCustomization';
 import { plainTextToRichHtml, richTextToPlainText, sanitizeRichHtml } from '../features/guilds/richText';
@@ -183,6 +184,7 @@ interface GuildRow {
   gradient_transition_rate?: number;
   layout_style?: Guild['layoutStyle'];
   roster_display?: Guild['rosterDisplay'];
+  roster_lineup?: unknown;
   section_visibility?: Partial<Guild['sectionVisibility']>;
   section_headings?: Partial<Guild['sectionHeadings']>;
   auto_leader_enabled?: boolean;
@@ -448,7 +450,7 @@ export class GuildService {
       safeProfile.headquartersTitle = richTextToPlainText(safeProfile.headquartersTitleHtml).slice(0, 140);
       safeProfile.headquartersDescription = richTextToPlainText(safeProfile.headquartersDescriptionHtml).slice(0, 3000);
 
-      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v4_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v5_command', {
         p_guild_id: guildId,
         p_profile: safeProfile
       });
@@ -1083,6 +1085,7 @@ export class GuildService {
   private transformGuildFromDb(dbGuild: GuildRow): Guild {
     const memberships = (dbGuild.memberships || []).map((membership) => this.transformMembershipFromDb(membership));
     const applications = (dbGuild.applications || []).map((application) => this.transformApplicationFromDb(application));
+    const parsedRosterLineup = z.array(guildRosterLineupPlacementSchema).max(30).safeParse(dbGuild.roster_lineup);
 
     return {
       _id: dbGuild.id,
@@ -1120,6 +1123,7 @@ export class GuildService {
       gradientTransitionRate: dbGuild.gradient_transition_rate ?? defaultGuildPalette.gradientTransitionRate,
       layoutStyle: dbGuild.layout_style || 'chronicle',
       rosterDisplay: dbGuild.roster_display || 'ledger',
+      rosterLineup: parsedRosterLineup.success ? parsedRosterLineup.data : [],
       sectionVisibility: { ...defaultGuildSectionVisibility, ...(dbGuild.section_visibility || {}) },
       sectionHeadings: { ...defaultGuildSectionHeadings, ...(dbGuild.section_headings || {}) },
       autoLeaderEnabled: dbGuild.auto_leader_enabled ?? false,

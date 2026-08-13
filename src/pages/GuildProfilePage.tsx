@@ -31,6 +31,8 @@ import ProfileTypographyControls from '../components/ProfileTypographyControls';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import GuildRoster from '../features/guilds/GuildRoster';
+import GuildRosterLineup from '../features/guilds/GuildRosterLineup';
+import { createDefaultGuildLineup, isEligibleForGuildLineup } from '../features/guilds/guildRosterLineupUtils';
 import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
 import {
   GuildCustomizationInput,
@@ -213,6 +215,19 @@ const GuildProfilePage: React.FC = () => {
     setDraft(current => current ? { ...current, [key]: value } : current);
   };
 
+  const selectRosterDisplay = (rosterDisplay: GuildCustomizationInput['rosterDisplay']) => {
+    setDraft(current => {
+      if (!current) return current;
+      return {
+        ...current,
+        rosterDisplay,
+        rosterLineup: rosterDisplay === 'lineup' && current.rosterLineup.length === 0
+          ? createDefaultGuildLineup(activeRoster)
+          : current.rosterLineup
+      };
+    });
+  };
+
   const handleSaveCustomization = async () => {
     if (!guild?._id || !user?.id || !draft) return;
     setIsSaving(true);
@@ -222,6 +237,10 @@ const GuildProfilePage: React.FC = () => {
     const headquartersTitleHtml = sanitizeRichHtml(draft.headquartersTitleHtml, 'inline');
     const headquartersDescriptionHtml = sanitizeRichHtml(draft.headquartersDescriptionHtml);
     const messageBoardHtml = sanitizeRichHtml(draft.messageBoardHtml);
+    const eligibleLineupIds = new Set(activeRoster
+      .filter(isEligibleForGuildLineup)
+      .map(member => member.characterId || member.character?._id)
+      .filter((characterId): characterId is string => Boolean(characterId)));
     const normalizedDraft: GuildCustomizationInput = {
       ...draft,
       titleHtml,
@@ -231,7 +250,8 @@ const GuildProfilePage: React.FC = () => {
       headquartersTitleHtml,
       headquartersDescription: richTextToPlainText(headquartersDescriptionHtml).slice(0, 3000),
       headquartersDescriptionHtml,
-      messageBoardHtml
+      messageBoardHtml,
+      rosterLineup: draft.rosterLineup.filter(placement => eligibleLineupIds.has(placement.characterId))
     };
     const response = await guildService.updateGuildCustomization(guild._id, user.id, normalizedDraft);
     setIsSaving(false);
@@ -659,10 +679,12 @@ const GuildProfilePage: React.FC = () => {
               <h3>Roster presentation</h3>
               <p>Choose the visual language used for every character on the public roster.</p>
               <div className="guild-roster-options">
-                <button type="button" className={draft.rosterDisplay === 'ledger' ? 'is-selected' : ''} onClick={() => updateDraft('rosterDisplay', 'ledger')}><BookOpen /><strong>Book ledger</strong><small>A formal registry list</small></button>
-                <button type="button" className={draft.rosterDisplay === 'dossiers' ? 'is-selected' : ''} onClick={() => updateDraft('rosterDisplay', 'dossiers')}><FileText /><strong>Dossier files</strong><small>Portraits and case notes</small></button>
-                <button type="button" className={draft.rosterDisplay === 'cards' ? 'is-selected' : ''} onClick={() => updateDraft('rosterDisplay', 'cards')}><Grid3X3 /><strong>Portrait cards</strong><small>A cinematic character grid</small></button>
+                <button type="button" className={draft.rosterDisplay === 'ledger' ? 'is-selected' : ''} onClick={() => selectRosterDisplay('ledger')}><BookOpen /><strong>Book ledger</strong><small>A formal registry list</small></button>
+                <button type="button" className={draft.rosterDisplay === 'dossiers' ? 'is-selected' : ''} onClick={() => selectRosterDisplay('dossiers')}><FileText /><strong>Dossier files</strong><small>Portraits and case notes</small></button>
+                <button type="button" className={draft.rosterDisplay === 'cards' ? 'is-selected' : ''} onClick={() => selectRosterDisplay('cards')}><Grid3X3 /><strong>Portrait cards</strong><small>A cinematic character grid</small></button>
+                <button type="button" className={draft.rosterDisplay === 'lineup' ? 'is-selected' : ''} onClick={() => selectRosterDisplay('lineup')}><Sparkles /><strong>Class Photo</strong><small>Arrange overlapping character cutouts</small></button>
               </div>
+              {draft.rosterDisplay === 'lineup' && <GuildRosterLineup members={activeRoster} placements={draft.rosterLineup} editable onChange={placements => updateDraft('rosterLineup', placements)} />}
             </div>
 
             <div className="guild-editor-section">

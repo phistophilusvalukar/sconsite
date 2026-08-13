@@ -28,6 +28,7 @@ const validCustomization = {
   gradientTransitionRate: 100,
   layoutStyle: 'chronicle' as const,
   rosterDisplay: 'dossiers' as const,
+  rosterLineup: [],
   sectionVisibility: {
     charter: true,
     requirements: true,
@@ -130,6 +131,31 @@ describe('guild customization', () => {
   it('rejects unsupported roster presentations and oversized visitor content', () => {
     expect(guildCustomizationSchema.safeParse({ ...validCustomization, rosterDisplay: 'carousel' }).success).toBe(false);
     expect(guildCustomizationSchema.safeParse({ ...validCustomization, messageBoardHtml: 'x'.repeat(12001) }).success).toBe(false);
+  });
+
+  it('validates a uniquely arranged Class Photo roster', () => {
+    const placement = {
+      characterId: '11111111-1111-4111-8111-111111111111',
+      x: 50,
+      y: 0,
+      scale: 100,
+      rotation: -2
+    };
+    expect(guildCustomizationSchema.safeParse({
+      ...validCustomization,
+      rosterDisplay: 'lineup',
+      rosterLineup: [placement]
+    }).success).toBe(true);
+    expect(guildCustomizationSchema.safeParse({
+      ...validCustomization,
+      rosterDisplay: 'lineup',
+      rosterLineup: [placement, placement]
+    }).success).toBe(false);
+    expect(guildCustomizationSchema.safeParse({
+      ...validCustomization,
+      rosterDisplay: 'lineup',
+      rosterLineup: [{ ...placement, scale: 181 }]
+    }).success).toBe(false);
   });
 
   it('only accepts HTTPS image links', () => {

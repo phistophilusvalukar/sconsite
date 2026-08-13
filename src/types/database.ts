@@ -137,6 +137,14 @@ export interface CharacterProfileSectionVisibility {
   relationships: boolean;
 }
 
+export interface GuildRosterLineupPlacement {
+  characterId: string;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+}
+
 export interface Guild {
   _id?: string;
   name: string;
@@ -172,7 +180,8 @@ export interface Guild {
   gradientOrientation: 'horizontal' | 'diagonal' | 'vertical';
   gradientTransitionRate: number;
   layoutStyle: 'chronicle' | 'stronghold' | 'banner' | 'saga';
-  rosterDisplay: 'ledger' | 'dossiers' | 'cards';
+  rosterDisplay: 'ledger' | 'dossiers' | 'cards' | 'lineup';
+  rosterLineup?: GuildRosterLineupPlacement[];
   sectionVisibility: GuildSectionVisibility;
   sectionHeadings: GuildSectionHeadings;
   autoLeaderEnabled: boolean;

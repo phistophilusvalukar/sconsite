@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Guild, GuildMembership } from '../../types/database';
 import { DEFAULT_NPC_PLACEHOLDER, normalizeFoundryAvatar } from '../../utils/foundryCharacter';
 import DynamicCharacterPortrait from '../characters/DynamicCharacterPortrait';
+import GuildRosterLineup from './GuildRosterLineup';
 
 interface GuildRosterProps {
   guild: Guild;
@@ -14,6 +15,10 @@ const memberPortrait = (member: GuildMembership) =>
   normalizeFoundryAvatar(member.character?.stats?.avatar) || DEFAULT_NPC_PLACEHOLDER;
 
 const GuildRoster: React.FC<GuildRosterProps> = ({ guild, members }) => {
+  if (guild.rosterDisplay === 'lineup') {
+    return <GuildRosterLineup members={members} placements={guild.rosterLineup || []} />;
+  }
+
   if (guild.rosterDisplay === 'ledger') {
     return (
       <div className="guild-ledger">
