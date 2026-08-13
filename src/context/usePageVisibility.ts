@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { PageVisibilityContext } from './PageVisibilityContext';
+import { PageVisibilityContext } from './pageVisibilityContextValue';
 
 export function usePageVisibility() {
   const context = useContext(PageVisibilityContext);

@@ -1,13 +1,5 @@
 {
   "schemaVersion": 1,
-  "assets": [
-    {
-      "path": "public/assets/profile-decorations/*-v1.webp",
-      "creator": "OpenAI image generation for this project",
-      "source": "Project-directed original generation on 2026-08-13",
-      "license": "Project-owned generated asset",
-      "notes": "Twenty-two original fantasy profile decoration treatments. No third-party reference media was used."
-    }
-  ],
-  "note": "Generated and third-party media is recorded here; procedural tones require no external attribution."
+  "assets": [],
+  "note": "The vertical slice uses CSS geometry and Web Audio procedural tones only. No third-party media is bundled."
 }

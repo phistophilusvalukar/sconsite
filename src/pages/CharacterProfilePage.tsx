@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import ProfileTypographyControls from '../components/ProfileTypographyControls';
-import ProfileDecorationControls from '../components/ProfileDecorationControls';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import {
@@ -30,7 +29,6 @@ import {
   getCharacterFontStack
 } from '../features/characters/characterProfileCustomization';
 import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
-import { getProfileDecorationStyle } from '../features/profiles/profileDecorations';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { CharacterService } from '../services/characterService';
 import type { Character } from '../types/database';
@@ -124,10 +122,6 @@ const CharacterProfilePage: React.FC = () => {
       profileTitleFontSize: draft.titleFontSize,
       profileSubtitleFontSize: draft.subtitleFontSize,
       profileTextFontSize: draft.textFontSize,
-      profileBorderTheme: draft.borderTheme,
-      profileBackgroundTheme: draft.backgroundTheme,
-      profileBorderColorSource: draft.borderColorSource,
-      profileBackgroundColorSource: draft.backgroundColorSource,
       profileFontColor: draft.fontColor,
       profileBaseColor: draft.baseColor,
       profileAccentColor: draft.accentColor,
@@ -213,13 +207,6 @@ const CharacterProfilePage: React.FC = () => {
     return <main className="character-profile-state"><Shield /><h1>{loadError || 'Character not found.'}</h1><Link to="/characters">Return to characters</Link></main>;
   }
 
-  const decorationStyle = getProfileDecorationStyle(
-    displayCharacter.profileBorderTheme,
-    displayCharacter.profileBackgroundTheme,
-    displayCharacter.profileBorderColorSource === 'base' ? displayCharacter.profileBaseColor : displayCharacter.profileAccentColor,
-    displayCharacter.profileBackgroundColorSource === 'base' ? displayCharacter.profileBaseColor : displayCharacter.profileAccentColor,
-    displayCharacter.profileFontColor
-  );
   const profileStyle = {
     '--character-base': displayCharacter.profileBaseColor,
     '--character-accent': displayCharacter.profileAccentColor,
@@ -234,17 +221,11 @@ const CharacterProfilePage: React.FC = () => {
     '--character-section-title-size': `${Math.round(displayCharacter.profileSubtitleFontSize * 1.85)}px`,
     '--character-saga-subtitle-size': `${Math.round(displayCharacter.profileSubtitleFontSize * 1.55)}px`,
     '--character-text-size': `${displayCharacter.profileTextFontSize}px`,
-    ...decorationStyle,
     fontFamily: getCharacterFontStack(displayCharacter.profileFontFamily)
   } as CSSProperties;
 
   return (
-    <main
-      className={`character-profile-page${displayCharacter.profileBorderTheme === 'none' ? '' : ' has-profile-border-theme'}${displayCharacter.profileBackgroundTheme === 'none' ? '' : ' has-profile-background-theme'}`}
-      data-border-theme={displayCharacter.profileBorderTheme}
-      data-background-theme={displayCharacter.profileBackgroundTheme}
-      style={profileStyle}
-    >
+    <main className="character-profile-page" style={profileStyle}>
       <div className="character-profile-atmosphere" aria-hidden="true" />
       <div className="character-profile-shell">
         <nav className="character-profile-nav" aria-label="Character profile controls">
@@ -298,18 +279,6 @@ const CharacterProfilePage: React.FC = () => {
               <div className="character-color-grid">
                 {([['baseColor', 'Page'], ['fontColor', 'Text'], ['accentColor', 'Buttons']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
               </div>
-            </div>
-
-            <div className="character-editor-section">
-              <h3>Borders and background</h3>
-              <p>Mix a decorative frame with an atmospheric page motif. Each can follow either your page color or button color.</p>
-              <ProfileDecorationControls
-                value={draft}
-                baseColor={draft.baseColor}
-                accentColor={draft.accentColor}
-                fontColor={draft.fontColor}
-                onChange={update => setDraft(current => current ? { ...current, ...update } : current)}
-              />
             </div>
 
             <div className="character-editor-section">

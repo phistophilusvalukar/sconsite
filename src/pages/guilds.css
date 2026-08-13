@@ -340,9 +340,6 @@
   color: var(--guild-accent);
 }
 .guild-profile-atmosphere { position: absolute; z-index: -1; inset: 0; background: radial-gradient(circle at 15% 3%, color-mix(in srgb, var(--guild-accent) 20%, transparent), transparent 33rem), radial-gradient(circle at 90% 35%, color-mix(in srgb, var(--guild-accent) 10%, transparent), transparent 28rem), linear-gradient(180deg, color-mix(in srgb, var(--guild-base) 82%, black 18%), var(--guild-base)); }
-.guild-profile-atmosphere::before { position: absolute; inset: 0; background-color: color-mix(in srgb, var(--profile-background-decoration-color) 82%, #24292c); background-image: var(--profile-background-pattern, none); background-position: center top; background-size: max(760px, 100vw) auto; background-repeat: repeat-y; background-blend-mode: luminosity; content: ''; opacity: 0; transition: opacity .25s ease; }
-.guild-profile.has-profile-background-theme .guild-profile-atmosphere::before { opacity: .66; }
-.guild-profile.has-profile-background-theme .guild-profile-atmosphere::after { opacity: 0; }
 .guild-profile-atmosphere::after { position: absolute; inset: 0; background-image: linear-gradient(color-mix(in srgb, var(--guild-ink) 2%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--guild-ink) 2%, transparent) 1px, transparent 1px); background-size: 52px 52px; content: ''; mask-image: linear-gradient(black, transparent 75%); }
 .guild-profile-shell { width: min(1260px, calc(100% - 2.5rem)); margin: 0 auto; padding: 1.35rem 0 6rem; }
 .guild-profile-nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
@@ -368,25 +365,6 @@
 .guild-profile-rule::before,
 .guild-profile-rule::after { height: 1px; flex: 1; background: color-mix(in srgb, var(--guild-accent) 26%, transparent); content: ''; }
 .guild-profile-rule span { width: 8px; height: 8px; border: 1px solid currentColor; transform: rotate(45deg); }
-.guild-profile.has-profile-border-theme .guild-profile-hero,
-.guild-profile.has-profile-border-theme .guild-story-panel,
-.guild-profile.has-profile-border-theme .guild-headquarters-panel,
-.guild-profile.has-profile-border-theme .guild-roster-panel,
-.guild-profile.has-profile-border-theme .guild-action-card,
-.guild-profile.has-profile-border-theme .guild-leader-card,
-.guild-profile.has-profile-border-theme .guild-requirements-panel,
-.guild-profile.has-profile-border-theme .guild-message-board,
-.guild-profile.has-profile-border-theme .guild-checkin-panel,
-.guild-profile.has-profile-border-theme .guild-guestbook-panel {
-  position: relative;
-  isolation: isolate;
-  border: 12px solid transparent;
-  border-image-source: var(--profile-border-image);
-  border-image-slice: 170;
-  border-image-width: 12px;
-  border-image-repeat: stretch;
-  box-shadow: 0 18px 50px rgb(0 0 0 / .2), inset 0 0 0 1px color-mix(in srgb, var(--profile-border-decoration-color) 66%, transparent), 0 0 30px color-mix(in srgb, var(--profile-border-decoration-color) 18%, transparent);
-}
 .guild-profile-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(285px, .55fr); gap: 1.25rem; padding-top: 2rem; }
 .guild-story-panel,
 .guild-headquarters-panel,

@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import ProfileTypographyControls from '../components/ProfileTypographyControls';
-import ProfileDecorationControls from '../components/ProfileDecorationControls';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import GuildRoster, { GuildRoleEdit } from '../features/guilds/GuildRoster';
@@ -46,7 +45,6 @@ import RichTextEditor from '../features/guilds/RichTextEditor';
 import SafeRichText from '../features/guilds/SafeRichText';
 import { plainTextToRichHtml, richTextToPlainText, sanitizeRichHtml } from '../features/guilds/richText';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
-import { getProfileDecorationStyle } from '../features/profiles/profileDecorations';
 import { CharacterService } from '../services/characterService';
 import GuildService from '../services/guildService';
 import type { Character, Guild, GuildCheckin, GuildGuestbookEntry, GuildMembership } from '../types/database';
@@ -352,13 +350,6 @@ const GuildProfilePage: React.FC = () => {
     return <main className="guild-profile-state"><Shield /><h1>{loadError || 'Guild not found.'}</h1><Link to="/guilds">Return to the registry</Link></main>;
   }
 
-  const decorationStyle = getProfileDecorationStyle(
-    displayGuild.borderTheme,
-    displayGuild.backgroundTheme,
-    displayGuild.borderColorSource === 'base' ? displayGuild.baseColor : displayGuild.accentColor,
-    displayGuild.backgroundColorSource === 'base' ? displayGuild.baseColor : displayGuild.accentColor,
-    displayGuild.fontColor
-  );
   const guildStyle = {
     '--guild-base': displayGuild.baseColor,
     '--guild-accent': displayGuild.accentColor,
@@ -372,7 +363,6 @@ const GuildProfilePage: React.FC = () => {
     '--guild-section-title-size': `${Math.round(displayGuild.subtitleFontSize * 1.62)}px`,
     '--guild-saga-section-title-size': `${Math.round(displayGuild.subtitleFontSize * 3.65)}px`,
     '--guild-text-size': `${displayGuild.textFontSize}px`,
-    ...decorationStyle,
     fontFamily: getGuildFontStack(displayGuild.fontFamily)
   } as CSSProperties;
 
@@ -382,13 +372,7 @@ const GuildProfilePage: React.FC = () => {
     : formatTimestamp(displayGuild.messageBoardUpdatedAt);
 
   return (
-    <main
-      className={`guild-profile${displayGuild.borderTheme === 'none' ? '' : ' has-profile-border-theme'}${displayGuild.backgroundTheme === 'none' ? '' : ' has-profile-background-theme'}`}
-      data-layout={displayGuild.layoutStyle}
-      data-border-theme={displayGuild.borderTheme}
-      data-background-theme={displayGuild.backgroundTheme}
-      style={guildStyle}
-    >
+    <main className="guild-profile" data-layout={displayGuild.layoutStyle} style={guildStyle}>
       <div className="guild-profile-atmosphere" aria-hidden="true" />
       <div className="guild-profile-shell">
         <nav className="guild-profile-nav">
@@ -670,18 +654,6 @@ const GuildProfilePage: React.FC = () => {
               <div className="guild-color-grid">
                 {([['baseColor', 'Page'], ['fontColor', 'Text'], ['accentColor', 'Buttons']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
               </div>
-            </div>
-
-            <div className="guild-editor-section">
-              <h3>Borders and background</h3>
-              <p>Mix a decorative frame with an atmospheric page motif. Each can follow either your page color or button color.</p>
-              <ProfileDecorationControls
-                value={draft}
-                baseColor={draft.baseColor}
-                accentColor={draft.accentColor}
-                fontColor={draft.fontColor}
-                onChange={update => setDraft(current => current ? { ...current, ...update } : current)}
-              />
             </div>
 
             <div className="guild-editor-section">

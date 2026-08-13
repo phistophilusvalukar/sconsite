@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Ban,
   CalendarDays,
@@ -19,7 +18,6 @@ import {
 } from 'lucide-react';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
-import { usePageVisibility } from '../context/usePageVisibility';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { Character, GameApplication, GameApplicationStatus, GameArchiveComment, GameListing, GameRewardsBonus, GameStatus, SchedulePoll } from '../types/database';
 import GameService, { getTierForLevel } from '../services/gameService';
@@ -84,7 +82,6 @@ interface ApplicationModalState {
 
 const GamesPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
-  const { isPageEnabled } = usePageVisibility();
   const gameService = useMemo(() => GameService.getInstance(), []);
   const scheduleService = useMemo(() => ScheduleService.getInstance(), []);
   const characterService = useMemo(() => CharacterService.getInstance(), []);
@@ -275,7 +272,6 @@ const GamesPage: React.FC = () => {
   const selectedPoll = polls.find(poll => poll._id === form.schedulePollId);
   const selectedPollParticipants = selectedPoll?.participants || [];
   const selectedTier = getTierForLevel(form.characterLevel);
-  const canSeeUnderHaulContracts = Boolean(user?.isAdmin || user?.profile?.isAdmin || isPageEnabled('underhaul-contracts'));
 
   const handlePollSelect = (pollId: string) => {
     const poll = polls.find(item => item._id === pollId);

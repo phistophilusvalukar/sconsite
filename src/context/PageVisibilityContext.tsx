@@ -1,20 +1,9 @@
-import React, { ReactNode, createContext, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { DATABASE_TABLES } from '../config/database';
 import { SitePageKey, sitePages } from '../config/sitePages';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import PageVisibilityService, { PageVisibilitySetting } from '../services/pageVisibilityService';
-
-interface PageVisibilityContextValue {
-  settings: PageVisibilitySetting[];
-  settingsByKey: Record<SitePageKey, PageVisibilitySetting>;
-  isLoading: boolean;
-  error: string | null;
-  isPageEnabled: (pageKey: SitePageKey) => boolean;
-  refreshSettings: () => Promise<void>;
-  setPageEnabled: (pageKey: SitePageKey, isEnabled: boolean, updatedBy: string) => Promise<PageVisibilitySetting>;
-}
-
-export const PageVisibilityContext = createContext<PageVisibilityContextValue | undefined>(undefined);
+import { PageVisibilityContext } from './pageVisibilityContextValue';
 
 export const PageVisibilityProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const visibilityService = useMemo(() => PageVisibilityService.getInstance(), []);
