@@ -83,6 +83,7 @@ export const isSafeCharacterBannerImageUrl = (value: string) => {
 const externalImageUrl = z.string().trim().max(2000).refine(isSafeCharacterBannerImageUrl, 'Use a direct HTTPS image URL.');
 
 export const characterProfileCustomizationSchema = z.object({
+  isPublic: z.boolean(),
   subtitle: z.string().trim().max(140),
   titleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
   subtitleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
@@ -139,6 +140,7 @@ export const getCharacterFontStack = (fontFamily: Character['profileFontFamily']
   characterFontOptions.find(option => option.value === fontFamily)?.stack || characterFontOptions[0].stack;
 
 export const customizationFromCharacter = (character: Character): CharacterProfileCustomizationInput => ({
+  isPublic: character.profileIsPublic ?? false,
   subtitle: character.profileSubtitle,
   titleFontFamily: character.profileTitleFontFamily || character.profileFontFamily,
   subtitleFontFamily: character.profileSubtitleFontFamily || character.profileFontFamily,

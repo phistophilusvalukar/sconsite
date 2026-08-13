@@ -5,6 +5,7 @@ import {
 } from './characterProfileCustomization';
 
 const validProfile = {
+  isPublic: false,
   subtitle: 'Cartographer of impossible roads',
   titleFontFamily: 'metal-mania' as const,
   subtitleFontFamily: 'cinzel' as const,
@@ -42,6 +43,12 @@ const validProfile = {
 describe('character profile customization', () => {
   it('accepts a complete profile presentation', () => {
     expect(characterProfileCustomizationSchema.safeParse(validProfile).success).toBe(true);
+  });
+
+  it('requires an explicit public visibility setting', () => {
+    const { isPublic: _isPublic, ...missingVisibility } = validProfile;
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, isPublic: true }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse(missingVisibility).success).toBe(false);
   });
 
   it('rejects unsafe colors and incomplete visibility settings', () => {

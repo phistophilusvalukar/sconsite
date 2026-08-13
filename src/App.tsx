@@ -68,6 +68,7 @@ function AppRoutes() {
         <Route path="/lore/:slug" element={<PageGate pageKey="lore"><LorePage /></PageGate>} />
         <Route path="/characters" element={<PageGate pageKey="characters"><CharacterPage /></PageGate>} />
         <Route path="/characters/:characterId" element={<PageGate pageKey="characters"><CharacterProfilePage /></PageGate>} />
+        <Route path="/public/characters/:characterId" element={<CharacterProfilePage publicView />} />
         <Route path="/citizens" element={<PageGate pageKey="citizens"><CitizenRegistryPage /></PageGate>} />
         <Route path="/guilds" element={<PageGate pageKey="guilds"><GuildsPage /></PageGate>} />
         <Route path="/guilds/:guildId/manage" element={<PageGate pageKey="guilds"><GuildManagementPage /></PageGate>} />
@@ -120,7 +121,9 @@ function App() {
 
 function AppLayout() {
   const location = useLocation();
-  const isPublicResource = location.pathname.startsWith('/ticket-log') || location.pathname === '/rules';
+  const isPublicResource = location.pathname.startsWith('/ticket-log')
+    || location.pathname === '/rules'
+    || location.pathname.startsWith('/public/characters/');
   const hideFooter = location.pathname === '/';
 
   if (isPublicResource) {

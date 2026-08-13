@@ -6,6 +6,7 @@ import {
   Crosshair,
   Eye,
   EyeOff,
+  Globe2,
   HelpCircle,
   Loader2,
   Palette,
@@ -33,6 +34,7 @@ import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPor
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { buildProfileBackground } from '../features/profiles/profileBackground';
 import { CharacterService } from '../services/characterService';
+import type { PublicCharacterProfileBundle } from '../services/characterService';
 import type { Character } from '../types/database';
 import './characterProfile.css';
 
@@ -58,12 +60,17 @@ const SECTION_OPTIONS: Array<{
   { key: 'relationships', label: 'Relationships', description: 'The character relationship ledger and graph.' }
 ];
 
-const CharacterProfilePage: React.FC = () => {
+interface CharacterProfilePageProps {
+  publicView?: boolean;
+}
+
+const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView = false }) => {
   const { characterId } = useParams<{ characterId: string }>();
   const { isAuthenticated, user } = useAuth();
   const characterService = useMemo(() => CharacterService.getInstance(), []);
   const [character, setCharacter] = useState<Character | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [publicData, setPublicData] = useState<PublicCharacterProfileBundle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -75,8 +82,30 @@ const CharacterProfilePage: React.FC = () => {
   const [showDynamicPortraitTutorial, setShowDynamicPortraitTutorial] = useState(false);
 
   const loadProfile = useCallback(async (showLoading = false) => {
-    if (!characterId || !user?.id) return;
+    if (!characterId) {
+      setLoadError('Character not found.');
+      setIsLoading(false);
+      return;
+    }
     if (showLoading) setIsLoading(true);
+
+    if (publicView) {
+      const response = await characterService.getPublicCharacterProfile(characterId);
+      if (response.success && response.data) {
+        setCharacter(response.data.character);
+        setPublicData(response.data);
+        setCharacters([]);
+        setLoadError('');
+      } else {
+        setCharacter(null);
+        setPublicData(null);
+        setLoadError(response.error || 'This character page is private or unavailable.');
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    if (!user?.id) return;
     const [characterResponse, publicResponse] = await Promise.all([
       characterService.getCharacterById(characterId),
       characterService.getPublicCharacters()
@@ -92,10 +121,11 @@ const CharacterProfilePage: React.FC = () => {
       setCharacters(Array.from(byId.values()));
     } else {
       setCharacter(null);
+      setPublicData(null);
       setLoadError(characterResponse.error || 'Character not found.');
     }
     setIsLoading(false);
-  }, [characterId, characterService, user?.id]);
+  }, [characterId, characterService, publicView, user?.id]);
 
   useEffect(() => {
     void loadProfile(true);
@@ -108,15 +138,16 @@ const CharacterProfilePage: React.FC = () => {
       DATABASE_TABLES.GUILD_MEMBERSHIPS
     ],
     onChange: loadProfile,
-    enabled: isAuthenticated && Boolean(characterId && user?.id),
+    enabled: !publicView && isAuthenticated && Boolean(characterId && user?.id),
     debounceMs: 1500
   });
 
-  const isOwner = Boolean(character && user?.id === character.userId);
+  const isOwner = !publicView && Boolean(character && user?.id === character.userId);
   const displayCharacter = useMemo(() => {
     if (!character || !draft || !isEditingProfile) return character;
     return {
       ...character,
+      profileIsPublic: draft.isPublic,
       profileSubtitle: draft.subtitle,
       profileTitleFontFamily: draft.titleFontFamily,
       profileSubtitleFontFamily: draft.subtitleFontFamily,
@@ -197,9 +228,9 @@ const CharacterProfilePage: React.FC = () => {
     await loadProfile();
   };
 
-  const copyPageLink = async () => {
+  const copyPageLink = async (url = window.location.href) => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(url);
       setLinkMessage('Link copied');
       window.setTimeout(() => setLinkMessage(''), 1800);
     } catch {
@@ -207,7 +238,7 @@ const CharacterProfilePage: React.FC = () => {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !publicView) {
     return <main className="character-profile-state"><Shield /><h1>Character pages are available after sign in.</h1></main>;
   }
 
@@ -216,8 +247,10 @@ const CharacterProfilePage: React.FC = () => {
   }
 
   if (!displayCharacter || loadError) {
-    return <main className="character-profile-state"><Shield /><h1>{loadError || 'Character not found.'}</h1><Link to="/characters">Return to characters</Link></main>;
+    return <main className="character-profile-state"><Shield /><h1>{publicView ? 'This character page is private or unavailable.' : (loadError || 'Character not found.')}</h1>{!publicView && <Link to="/characters">Return to characters</Link>}</main>;
   }
+
+  const publicPageUrl = `${window.location.origin}/public/characters/${displayCharacter._id}`;
 
   const profileStyle = {
     '--character-base': displayCharacter.profileBaseColor,
@@ -250,9 +283,11 @@ const CharacterProfilePage: React.FC = () => {
       <div className="character-profile-atmosphere" aria-hidden="true" />
       <div className="character-profile-shell">
         <nav className="character-profile-nav" aria-label="Character profile controls">
-          <Link to="/characters"><ArrowLeft size={17} /> Character registry</Link>
+          {publicView
+            ? <span className="character-profile-public-label"><Globe2 size={17} /> Public character folio</span>
+            : <Link to="/characters"><ArrowLeft size={17} /> Character registry</Link>}
           <div>
-            <button type="button" onClick={() => void copyPageLink()}><Copy size={16} /> {linkMessage || 'Copy page link'}</button>
+            <button type="button" onClick={() => void copyPageLink(publicView || displayCharacter.profileIsPublic ? publicPageUrl : window.location.href)}><Copy size={16} /> {linkMessage || (displayCharacter.profileIsPublic ? 'Copy public link' : 'Copy page link')}</button>
             {isOwner && <button type="button" onClick={openEditor}><Palette size={17} /> Customize page</button>}
           </div>
         </nav>
@@ -266,6 +301,7 @@ const CharacterProfilePage: React.FC = () => {
             pageMode
             onEdit={() => setIsEditingCharacter(true)}
             onRelationshipsChanged={loadProfile}
+            readOnlyData={publicView && publicData ? publicData : undefined}
           />
         </Suspense>
       </div>
@@ -282,6 +318,13 @@ const CharacterProfilePage: React.FC = () => {
             <div className="character-editor-section">
               <h3>Identity</h3>
               <label className="character-field"><span>Subtitle</span><input maxLength={140} value={draft.subtitle} onChange={event => updateDraft('subtitle', event.target.value)} placeholder="Cartographer of impossible roads" /><small>A short line beneath the character name.</small></label>
+            </div>
+
+            <div className="character-editor-section character-public-access">
+              <h3>Public access</h3>
+              <p>Publish a read-only version of this character page that anyone with its URL can open without signing in.</p>
+              <label className="character-dynamic-toggle"><input type="checkbox" checked={draft.isPublic} onChange={event => updateDraft('isPublic', event.target.checked)} /><Globe2 size={19} /><span><strong>Allow public viewing</strong><small>Hidden sections stay hidden, and private Foundry files and equipment are never included.</small></span></label>
+              {draft.isPublic && displayCharacter._id && <div className="character-public-link"><code>{publicPageUrl}</code><button type="button" onClick={() => void copyPageLink(publicPageUrl)}><Copy size={14} /> {linkMessage || 'Copy'}</button></div>}
             </div>
 
             <div className="character-editor-section">

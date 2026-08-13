@@ -2,6 +2,7 @@ const PUBLIC_PREFIXES = [
   '/ticket-log',
   '/ticket-log-archive-data',
   '/rules',
+  '/public/characters',
   '/assets',
   '/api',
   '/auth/callback',

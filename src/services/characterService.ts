@@ -91,6 +91,7 @@ type CharacterCreateInput = Omit<
   | 'createdAt'
   | 'updatedAt'
   | 'profileSubtitle'
+  | 'profileIsPublic'
   | 'profileTitleFontFamily'
   | 'profileSubtitleFontFamily'
   | 'profileFontFamily'
@@ -125,6 +126,7 @@ type CharacterCreateInput = Omit<
 > & Partial<Pick<
   Character,
   | 'profileSubtitle'
+  | 'profileIsPublic'
   | 'profileTitleFontFamily'
   | 'profileSubtitleFontFamily'
   | 'profileFontFamily'
@@ -179,6 +181,7 @@ interface CharacterRow {
   backstory?: string;
   notes?: string;
   is_active: boolean;
+  profile_is_public?: boolean | null;
   guild_id?: string;
   profile_subtitle?: string | null;
   profile_title_font_family?: Character['profileTitleFontFamily'] | null;
@@ -281,6 +284,70 @@ const characterRelationshipRowSchema = z.object({
 });
 
 const characterRelationshipRowsSchema = z.array(characterRelationshipRowSchema);
+
+const publicJournalCommentSchema = z.object({
+  id: z.string().uuid(),
+  entryId: z.string().uuid(),
+  authorId: z.literal(''),
+  body: z.string(),
+  isEdited: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string()
+});
+
+const publicJournalEntrySchema = z.object({
+  id: z.string().uuid(),
+  characterId: z.string().uuid(),
+  authorId: z.literal(''),
+  title: z.string(),
+  body: z.string(),
+  likeCount: z.number().int().nonnegative(),
+  likedByCurrentUser: z.literal(false),
+  comments: z.array(publicJournalCommentSchema),
+  createdAt: z.string(),
+  updatedAt: z.string()
+});
+
+const publicRelationshipSchema = z.object({
+  id: z.string().uuid(),
+  sourceCharacterId: z.string().uuid(),
+  targetCharacterId: z.string().uuid(),
+  name: z.string().trim().min(1).max(80),
+  tag: z.string().trim().min(1).max(40).nullable().optional(),
+  sentiment: z.number().int().min(-100).max(100),
+  sourceApproved: z.literal(true),
+  targetApproved: z.literal(true),
+  confirmedAt: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string()
+});
+
+const publicCharacterRowSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.literal(''),
+  name: z.string(),
+  class: z.string(),
+  level: z.number().int(),
+  race: z.string(),
+  is_active: z.boolean(),
+  profile_is_public: z.literal(true),
+  created_at: z.string(),
+  updated_at: z.string()
+}).passthrough();
+
+const publicCharacterProfileBundleSchema = z.object({
+  character: publicCharacterRowSchema,
+  journalEntries: z.array(publicJournalEntrySchema),
+  relationships: z.array(publicRelationshipSchema),
+  relatedCharacterNames: z.record(z.string(), z.string())
+});
+
+export interface PublicCharacterProfileBundle {
+  character: Character;
+  journalEntries: CharacterJournalEntry[];
+  relationships: CharacterRelationship[];
+  relatedCharacterNames: Record<string, string>;
+}
 
 export class CharacterService {
   private static instance: CharacterService;
@@ -585,7 +652,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v3_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v4_command', {
         p_character_id: characterId,
         p_profile: parsed.data
       });
@@ -596,6 +663,52 @@ export class CharacterService {
     } catch (error) {
       console.error('Error updating character profile:', error);
       return { success: false, error: 'Failed to update character page' };
+    }
+  }
+
+  async getPublicCharacterProfile(characterId: string): Promise<ApiResponse<PublicCharacterProfileBundle>> {
+    try {
+      const { data, error } = await this.dbService.getClient().rpc('get_public_character_profile', {
+        p_character_id: characterId
+      });
+      if (error) return { success: false, error: error.message };
+      if (!data) return { success: false, error: 'This character page is not public.' };
+
+      const parsed = publicCharacterProfileBundleSchema.safeParse(data);
+      if (!parsed.success) {
+        console.error('Invalid public character profile returned by Supabase:', parsed.error);
+        return { success: false, error: 'The public character page could not be read.' };
+      }
+
+      const character = this.transformCharacterFromDb(parsed.data.character as unknown as CharacterRow);
+      return {
+        success: true,
+        data: {
+          character,
+          journalEntries: parsed.data.journalEntries.map(entry => ({
+            ...entry,
+            createdAt: new Date(entry.createdAt),
+            updatedAt: new Date(entry.updatedAt),
+            comments: entry.comments.map(comment => ({
+              ...comment,
+              createdAt: new Date(comment.createdAt),
+              updatedAt: new Date(comment.updatedAt)
+            }))
+          })),
+          relationships: parsed.data.relationships.map(relationship => ({
+            ...relationship,
+            tag: relationship.tag || undefined,
+            status: 'confirmed' as const,
+            confirmedAt: new Date(relationship.confirmedAt),
+            createdAt: new Date(relationship.createdAt),
+            updatedAt: new Date(relationship.updatedAt)
+          })),
+          relatedCharacterNames: parsed.data.relatedCharacterNames
+        }
+      };
+    } catch (error) {
+      console.error('Error loading public character profile:', error);
+      return { success: false, error: 'Failed to load the public character page.' };
     }
   }
 
@@ -1155,6 +1268,7 @@ export class CharacterService {
       backstory: dbCharacter.backstory,
       notes: dbCharacter.notes,
       isActive: dbCharacter.is_active,
+      profileIsPublic: Boolean(dbCharacter.profile_is_public),
       guildId: dbCharacter.guild_id,
       profileSubtitle: dbCharacter.profile_subtitle || '',
       profileTitleFontFamily: dbCharacter.profile_title_font_family || dbCharacter.profile_font_family || 'cinzel',

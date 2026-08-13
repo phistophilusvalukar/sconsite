@@ -25,6 +25,7 @@ import {
   FoundryJsonEntry
 } from '../types/database';
 import { CharacterService } from '../services/characterService';
+import type { PublicCharacterProfileBundle } from '../services/characterService';
 import { defaultCharacterProfileSectionVisibility } from '../features/characters/characterProfileCustomization';
 import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
 import CharacterLevelPlanner from '../features/characters/CharacterLevelPlanner';
@@ -46,6 +47,7 @@ interface CharacterDetailsModalProps {
   onEdit?: (character: Character) => void;
   onRelationshipsChanged?: () => void | Promise<void>;
   pageMode?: boolean;
+  readOnlyData?: Pick<PublicCharacterProfileBundle, 'journalEntries' | 'relationships' | 'relatedCharacterNames'>;
 }
 
 const defaultPortrait = DEFAULT_NPC_PLACEHOLDER;
@@ -58,9 +60,11 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   onClose,
   onEdit,
   onRelationshipsChanged,
-  pageMode = false
+  pageMode = false,
+  readOnlyData
 }) => {
   const characterService = useMemo(() => CharacterService.getInstance(), []);
+  const isReadOnly = Boolean(readOnlyData);
   const [activeTab, setActiveTab] = useState<DetailsTab>(canEdit ? 'foundry' : 'journal');
   const [foundryFiles, setFoundryFiles] = useState<FoundryJsonEntry[]>([]);
   const [journalEntries, setJournalEntries] = useState<CharacterJournalEntry[]>([]);
@@ -129,6 +133,13 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     if (!character._id) return;
 
     if (showLoading) setIsLoading(true);
+    if (readOnlyData) {
+      setJournalEntries(readOnlyData.journalEntries);
+      setRelationships(readOnlyData.relationships);
+      setFoundryFiles([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       const [journalResponse, relationshipResponse, foundryResponse] = await Promise.all([
         characterService.getJournalEntries(character._id, currentUserId),
@@ -142,7 +153,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [canEdit, character._id, characterService, currentUserId]);
+  }, [canEdit, character._id, characterService, currentUserId, readOnlyData]);
 
   useEffect(() => {
     void loadModalData(true);
@@ -158,7 +169,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
       DATABASE_TABLES.CHARACTER_RELATIONSHIPS
     ],
     onChange: loadModalData,
-    enabled: Boolean(character._id),
+    enabled: Boolean(character._id) && !isReadOnly,
     debounceMs: 1500
   });
 
@@ -451,8 +462,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
             <div className={`grid border-b border-fantasy-700/30 ${visibleTabs.length === 4 ? 'grid-cols-4' : visibleTabs.length === 3 ? 'grid-cols-3' : visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {canEdit && <TabButton active={activeTab === 'foundry'} label="Foundry" icon={<FileJson className="h-4 w-4" />} onClick={() => setActiveTab('foundry')} />}
               {canEdit && <TabButton active={activeTab === 'planner'} label="Planner" icon={<Download className="h-4 w-4" />} onClick={() => setActiveTab('planner')} />}
-              <TabButton active={activeTab === 'journal'} label="Journal" icon={<BookOpen className="h-4 w-4" />} onClick={() => setActiveTab('journal')} />
-              <TabButton active={activeTab === 'relationships'} label="Relations" icon={<Network className="h-4 w-4" />} onClick={() => setActiveTab('relationships')} />
+              {sectionVisibility.journal && <TabButton active={activeTab === 'journal'} label="Journal" icon={<BookOpen className="h-4 w-4" />} onClick={() => setActiveTab('journal')} />}
+              {(canEdit || sectionVisibility.relationships) && <TabButton active={activeTab === 'relationships'} label="Relations" icon={<Network className="h-4 w-4" />} onClick={() => setActiveTab('relationships')} />}
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-6">
@@ -533,7 +544,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                           </div>
                           <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{entry.body}</p>
                           <div className="mt-4 flex items-center gap-3 border-t border-fantasy-700/30 pt-3">
-                            <button onClick={() => handleToggleLike(entry)} className={`flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${entry.likedByCurrentUser ? 'bg-red-500/20 text-red-200' : 'bg-fantasy-800/50 text-gray-300 hover:text-white'}`}>
+                            <button disabled={isReadOnly} onClick={() => { if (!isReadOnly) void handleToggleLike(entry); }} className={`flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors disabled:cursor-default ${entry.likedByCurrentUser ? 'bg-red-500/20 text-red-200' : 'bg-fantasy-800/50 text-gray-300 hover:text-white'}`}>
                               <Heart className="h-4 w-4" />
                               <span>{entry.likeCount}</span>
                             </button>
@@ -545,7 +556,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                           <div className="mt-4 space-y-3">
                             {entry.comments.map(comment => (
                               <div key={comment.id} className="rounded-lg bg-midnight-900/60 p-3">
-                                <p className="text-xs text-gray-500">{comment.authorId === currentUserId ? 'You' : 'Player'} - {new Date(comment.createdAt).toLocaleString()}</p>
+                                <p className="text-xs text-gray-500">{Boolean(currentUserId) && comment.authorId === currentUserId ? 'You' : 'Player'} - {new Date(comment.createdAt).toLocaleString()}</p>
                                 {comment.isEdited && <p className="mt-1 text-xs text-gray-500">Edited</p>}
                                 {editingComments[comment.id] !== undefined ? (
                                   <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto_auto]">
@@ -560,9 +571,9 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                                 ) : (
                                   <p className="mt-1 text-sm text-gray-200">{comment.body}</p>
                                 )}
-                                {(comment.authorId === currentUserId || canEdit) && (
+                                {((Boolean(currentUserId) && comment.authorId === currentUserId) || canEdit) && (
                                   <div className="mt-2 flex items-center gap-3">
-                                    {comment.authorId === currentUserId && (
+                                    {Boolean(currentUserId) && comment.authorId === currentUserId && (
                                       <button onClick={() => setEditingComments(prev => ({ ...prev, [comment.id]: comment.body }))} className="text-xs text-yellow-200 hover:text-yellow-100">Edit</button>
                                     )}
                                     <button onClick={() => handleDeleteComment(entry.id, comment.id)} className="text-xs text-red-200 hover:text-red-100">Delete</button>
@@ -570,10 +581,10 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                                 )}
                               </div>
                             ))}
-                            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                            {!isReadOnly && <div className="grid gap-2 md:grid-cols-[1fr_auto]">
                               <input value={commentDrafts[entry.id] || ''} onChange={event => setCommentDrafts(prev => ({ ...prev, [entry.id]: event.target.value }))} className="rounded-lg border border-fantasy-700/30 bg-fantasy-800/50 p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Add a comment" />
                               <button onClick={() => handleAddComment(entry.id)} className="rounded-lg bg-fantasy-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-fantasy-600">Comment</button>
-                            </div>
+                            </div>}
                           </div>
                         </article>
                       ))}
@@ -754,7 +765,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                             return (
                               <div key={link.id} className="flex items-center justify-between gap-3 rounded-lg border border-fantasy-700/30 bg-fantasy-900/30 p-3">
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate font-semibold text-white">{relatedCharacter?.name || 'Unknown character'}</p>
+                                  <p className="truncate font-semibold text-white">{relatedCharacter?.name || readOnlyData?.relatedCharacterNames[relatedCharacterId] || 'Unknown character'}</p>
                                   <p className="truncate text-sm" style={{ color: getRelationshipColor(link.sentiment) }}>
                                     {link.name}{link.tag ? ` · ${link.tag}` : ''}
                                   </p>

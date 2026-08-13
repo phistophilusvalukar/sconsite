@@ -91,6 +91,7 @@ export interface Character {
   backstory?: string;
   notes?: string;
   isActive: boolean;
+  profileIsPublic?: boolean;
   guildId?: string;
   profileSubtitle: string;
   profileTitleFontFamily: ProfileFontFamily;
