@@ -76,7 +76,7 @@ const Header: React.FC = () => {
         <div className="site-nav-row">
           <Link to="/" className="site-brand" onMouseEnter={() => preloadRoute('/')}>
             <span className="site-brand-mark"><BrandIcon /></span>
-            <span className="site-brand-copy"><strong>Westmarch</strong><small>Campaign registry</small></span>
+            <span className="site-brand-copy"><strong>SCON</strong><small>Campaign registry</small></span>
           </Link>
 
           <div className="site-nav-desktop">

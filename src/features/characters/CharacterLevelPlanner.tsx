@@ -46,7 +46,7 @@ const CharacterLevelPlanner: React.FC<CharacterPlannerProps> = ({ characterName,
   const service = useMemo(() => CharacterService.getInstance(), []);
   const actorResult = useMemo(() => {
     try { return { actor: parsePlannerActor(sourceJson), error: '' }; }
-    catch { return { actor: undefined, error: 'The active file is not a supported PF2e Foundry actor JSON.' }; }
+    catch (error) { return { actor: undefined, error: error instanceof Error ? error.message : 'The active file is not a supported PF2e Foundry actor JSON.' }; }
   }, [sourceJson]);
   const [planner, setPlanner] = useState<CharacterPlannerData>();
   const [targetLevel, setTargetLevel] = useState(1);

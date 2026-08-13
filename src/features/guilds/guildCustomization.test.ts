@@ -9,7 +9,12 @@ const validCustomization = {
   subtitle: 'Seekers of roads unwritten',
   description: 'An order devoted to exploration.',
   descriptionHtml: '<p>An order devoted to <em>exploration</em>.</p>',
+  titleFontFamily: 'cinzel-decorative' as const,
+  subtitleFontFamily: 'marcellus' as const,
   fontFamily: 'cinzel' as const,
+  titleFontSize: 96,
+  subtitleFontSize: 21,
+  textFontSize: 16,
   fontColor: '#f8fafc',
   baseColor: '#171425',
   accentColor: '#d6a84b',
@@ -52,6 +57,12 @@ describe('guild customization', () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it('validates independent typography size controls', () => {
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, textFontSize: 20 }).success).toBe(true);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, textFontSize: 27 }).success).toBe(false);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, titleFontSize: 39 }).success).toBe(false);
   });
 
   it('maps every stored font choice to a usable font stack', () => {

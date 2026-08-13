@@ -27,6 +27,7 @@ import {
   X
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
+import ProfileTypographyControls from '../components/ProfileTypographyControls';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import GuildRoster, { GuildRoleEdit } from '../features/guilds/GuildRoster';
@@ -351,6 +352,15 @@ const GuildProfilePage: React.FC = () => {
     '--guild-base': displayGuild.baseColor,
     '--guild-accent': displayGuild.accentColor,
     '--guild-ink': displayGuild.fontColor,
+    '--guild-title-font': getGuildFontStack(displayGuild.titleFontFamily),
+    '--guild-subtitle-font': getGuildFontStack(displayGuild.subtitleFontFamily),
+    '--guild-text-font': getGuildFontStack(displayGuild.fontFamily),
+    '--guild-title-size': `${displayGuild.titleFontSize}px`,
+    '--guild-saga-title-size': `${Math.round(displayGuild.titleFontSize * 1.75)}px`,
+    '--guild-subtitle-size': `${displayGuild.subtitleFontSize}px`,
+    '--guild-section-title-size': `${Math.round(displayGuild.subtitleFontSize * 1.62)}px`,
+    '--guild-saga-section-title-size': `${Math.round(displayGuild.subtitleFontSize * 3.65)}px`,
+    '--guild-text-size': `${displayGuild.textFontSize}px`,
     fontFamily: getGuildFontStack(displayGuild.fontFamily)
   } as CSSProperties;
 
@@ -628,11 +638,13 @@ const GuildProfilePage: React.FC = () => {
 
             <div className="guild-editor-section">
               <h3>Typography</h3>
-              <div className="guild-font-groups">
-                {guildFontCategories.map(category => <section key={category}><h4>{category}</h4><div className="guild-option-grid">
-                  {guildFontOptions.filter(option => option.category === category).map(option => <button type="button" className={draft.fontFamily === option.value ? 'is-selected' : ''} style={{ fontFamily: option.stack }} onClick={() => updateDraft('fontFamily', option.value)} key={option.value}><strong>{option.label}</strong><span>Ag</span></button>)}
-                </div></section>)}
-              </div>
+              <p>Use dramatic lettering for the banner without sacrificing readability in the guild's longer records.</p>
+              <ProfileTypographyControls
+                value={draft}
+                fontOptions={guildFontOptions}
+                categories={guildFontCategories}
+                onChange={update => setDraft(current => current ? { ...current, ...update } : current)}
+              />
             </div>
 
             <div className="guild-editor-section">

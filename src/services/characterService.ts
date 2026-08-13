@@ -91,7 +91,12 @@ type CharacterCreateInput = Omit<
   | 'createdAt'
   | 'updatedAt'
   | 'profileSubtitle'
+  | 'profileTitleFontFamily'
+  | 'profileSubtitleFontFamily'
   | 'profileFontFamily'
+  | 'profileTitleFontSize'
+  | 'profileSubtitleFontSize'
+  | 'profileTextFontSize'
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
@@ -106,7 +111,12 @@ type CharacterCreateInput = Omit<
 > & Partial<Pick<
   Character,
   | 'profileSubtitle'
+  | 'profileTitleFontFamily'
+  | 'profileSubtitleFontFamily'
   | 'profileFontFamily'
+  | 'profileTitleFontSize'
+  | 'profileSubtitleFontSize'
+  | 'profileTextFontSize'
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
@@ -143,7 +153,12 @@ interface CharacterRow {
   is_active: boolean;
   guild_id?: string;
   profile_subtitle?: string | null;
+  profile_title_font_family?: Character['profileTitleFontFamily'] | null;
+  profile_subtitle_font_family?: Character['profileSubtitleFontFamily'] | null;
   profile_font_family?: Character['profileFontFamily'] | null;
+  profile_title_font_size?: number | null;
+  profile_subtitle_font_size?: number | null;
+  profile_text_font_size?: number | null;
   profile_font_color?: string | null;
   profile_base_color?: string | null;
   profile_accent_color?: string | null;
@@ -270,7 +285,12 @@ export class CharacterService {
         is_active: characterData.isActive !== false,
         guild_id: characterData.guildId || null,
         profile_subtitle: characterData.profileSubtitle || '',
-        profile_font_family: characterData.profileFontFamily || 'cinzel',
+        profile_title_font_family: characterData.profileTitleFontFamily || 'cinzel',
+        profile_subtitle_font_family: characterData.profileSubtitleFontFamily || 'cinzel',
+        profile_font_family: characterData.profileFontFamily || 'inter',
+        profile_title_font_size: characterData.profileTitleFontSize || 124,
+        profile_subtitle_font_size: characterData.profileSubtitleFontSize || 22,
+        profile_text_font_size: characterData.profileTextFontSize || 16,
         profile_font_color: characterData.profileFontColor || defaultCharacterProfilePalette.fontColor,
         profile_base_color: characterData.profileBaseColor || defaultCharacterProfilePalette.baseColor,
         profile_accent_color: characterData.profileAccentColor || defaultCharacterProfilePalette.accentColor,
@@ -1081,7 +1101,12 @@ export class CharacterService {
       isActive: dbCharacter.is_active,
       guildId: dbCharacter.guild_id,
       profileSubtitle: dbCharacter.profile_subtitle || '',
-      profileFontFamily: dbCharacter.profile_font_family || 'cinzel',
+      profileTitleFontFamily: dbCharacter.profile_title_font_family || dbCharacter.profile_font_family || 'cinzel',
+      profileSubtitleFontFamily: dbCharacter.profile_subtitle_font_family || dbCharacter.profile_font_family || 'cinzel',
+      profileFontFamily: dbCharacter.profile_font_family || 'inter',
+      profileTitleFontSize: dbCharacter.profile_title_font_size || 124,
+      profileSubtitleFontSize: dbCharacter.profile_subtitle_font_size || 22,
+      profileTextFontSize: dbCharacter.profile_text_font_size || 16,
       profileFontColor: dbCharacter.profile_font_color || defaultCharacterProfilePalette.fontColor,
       profileBaseColor: dbCharacter.profile_base_color || defaultCharacterProfilePalette.baseColor,
       profileAccentColor: dbCharacter.profile_accent_color || defaultCharacterProfilePalette.accentColor,

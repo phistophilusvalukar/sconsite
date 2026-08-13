@@ -2,11 +2,22 @@
   --character-base: #111615;
   --character-accent: #a09482;
   --character-ink: #f0ede7;
+  --character-title-font: Cinzel, Georgia, serif;
+  --character-subtitle-font: Cinzel, Georgia, serif;
+  --character-text-font: Inter, ui-sans-serif, system-ui, sans-serif;
+  --character-title-size: 124px;
+  --character-dossier-title-size: 97px;
+  --character-saga-title-size: 161px;
+  --character-subtitle-size: 22px;
+  --character-section-title-size: 41px;
+  --character-saga-subtitle-size: 34px;
+  --character-text-size: 16px;
   position: relative;
   min-height: 100vh;
   overflow: hidden;
   color: var(--character-ink);
   background: color-mix(in srgb, var(--character-base) 88%, #060706);
+  font-family: var(--character-text-font);
 }
 
 .character-profile-atmosphere {
@@ -114,7 +125,8 @@
 .character-profile-heading h2 {
   margin: 0;
   color: var(--character-ink);
-  font-size: clamp(3.2rem, 8vw, 7.8rem);
+  font-family: var(--character-title-font);
+  font-size: clamp(2rem, 8vw, var(--character-title-size));
   font-weight: 600;
   line-height: .88;
   letter-spacing: -.055em;
@@ -125,7 +137,8 @@
   max-width: 720px;
   margin: 18px 0 0;
   color: color-mix(in srgb, var(--character-ink) 72%, transparent);
-  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-family: var(--character-subtitle-font);
+  font-size: var(--character-subtitle-size);
   font-style: italic;
 }
 
@@ -170,7 +183,8 @@
 .character-profile-nameplate {
   margin: 0;
   color: var(--character-ink);
-  font-size: clamp(2.2rem, 4vw, 4.4rem);
+  font-family: var(--character-title-font);
+  font-size: clamp(2.2rem, 4vw, var(--character-title-size));
   font-weight: 600;
   line-height: .96;
   letter-spacing: -.04em;
@@ -195,7 +209,8 @@
 }
 .character-profile-rankline strong {
   color: var(--character-ink);
-  font-size: clamp(1.45rem, 3vw, 2.55rem);
+  font-family: var(--character-subtitle-font);
+  font-size: clamp(var(--character-subtitle-size), 3vw, var(--character-section-title-size));
   font-weight: 650;
   line-height: 1;
 }
@@ -221,6 +236,16 @@
 .character-profile-ability > div span { color: var(--character-accent); }
 
 .character-profile-records { min-width: 0; background: color-mix(in srgb, var(--character-base) 83%, #070807); }
+.character-profile-identity p,
+.character-profile-identity li,
+.character-profile-records p,
+.character-profile-records li { font-family: var(--character-text-font); font-size: var(--character-text-size); }
+.character-profile-identity h3,
+.character-profile-identity h4,
+.character-profile-records h1,
+.character-profile-records h2,
+.character-profile-records h3,
+.character-profile-records h4 { font-family: var(--character-subtitle-font); }
 .character-profile-records > div:first-child { border-color: color-mix(in srgb, var(--character-accent) 20%, transparent); }
 .character-profile-records > div:first-child button { color: color-mix(in srgb, var(--character-ink) 58%, transparent); background: transparent; }
 .character-profile-records > div:first-child button.bg-fantasy-800\/60 { color: var(--character-accent); background: color-mix(in srgb, var(--character-accent) 12%, transparent); }
@@ -250,7 +275,7 @@
     color-mix(in srgb, var(--character-base) 92%, #070807);
 }
 .character-profile-document[data-layout='dossier'] .character-profile-heading { min-height: 180px; padding-block: 42px; }
-.character-profile-document[data-layout='dossier'] .character-profile-heading h2 { font-size: clamp(2.8rem, 6vw, 6rem); letter-spacing: -.025em; }
+.character-profile-document[data-layout='dossier'] .character-profile-heading h2 { font-size: clamp(2rem, 6vw, var(--character-dossier-title-size)); letter-spacing: -.025em; }
 .character-profile-document[data-layout='dossier'] .character-profile-identity { grid-template-columns: minmax(180px, .6fr) minmax(0, 1.4fr); }
 .character-profile-document[data-layout='dossier'] .character-profile-portrait { aspect-ratio: 1 / 1.18; border-radius: 2px; box-shadow: 10px 10px 0 color-mix(in srgb, var(--character-accent) 10%, transparent); }
 
@@ -266,7 +291,7 @@
   background: color-mix(in srgb, var(--character-base) 94%, #050605);
 }
 .character-profile-document[data-layout='saga'] .character-profile-heading {
-  min-height: clamp(480px, 66vh, 760px);
+  min-height: clamp(400px,45vh,760px);
   align-items: flex-end;
   justify-content: center;
   overflow: hidden;
@@ -289,7 +314,7 @@
 }
 .character-profile-document[data-layout='saga'] .character-profile-heading > div:first-child { max-width: 1050px; }
 .character-profile-document[data-layout='saga'] .character-profile-heading > div:last-child { position: absolute; top: 38px; right: 38px; }
-.character-profile-document[data-layout='saga'] .character-profile-heading h2 { font-size: clamp(4rem, 11vw, 10rem); line-height: .8; text-shadow: 0 8px 34px rgb(0 0 0 / .8); }
+.character-profile-document[data-layout='saga'] .character-profile-heading h2 { font-size: clamp(2.5rem, 11vw, var(--character-saga-title-size)); line-height: .8; text-shadow: 0 8px 34px rgb(0 0 0 / .8); }
 .character-profile-document[data-layout='saga'] .character-profile-subtitle { margin-inline: auto; color: color-mix(in srgb, var(--character-ink) 88%, transparent); }
 .character-profile-document[data-layout='saga'] .character-profile-content { grid-template-columns: 1fr; }
 .character-profile-document[data-layout='saga'] .character-profile-core { border-right: 0; border-bottom: 1px solid color-mix(in srgb, var(--character-accent) 20%, transparent); }
@@ -308,7 +333,7 @@
   box-shadow: 0 0 0 10px color-mix(in srgb, var(--character-base) 86%, transparent), 22px 28px 0 color-mix(in srgb, var(--character-accent) 11%, transparent), 0 40px 80px rgb(0 0 0 / .4);
 }
 .character-profile-document[data-layout='saga'] .character-profile-identity > div:last-child { padding-top: clamp(52px, 8vw, 110px); }
-.character-profile-document[data-layout='saga'] .character-profile-rankline strong { font-size: clamp(2rem, 4vw, 3.8rem); }
+.character-profile-document[data-layout='saga'] .character-profile-rankline strong { font-size: clamp(var(--character-subtitle-size), 4vw, var(--character-saga-subtitle-size)); }
 .character-profile-document[data-layout='saga'] .character-profile-records { min-height: 680px; }
 
 .character-profile-state,
@@ -490,7 +515,7 @@
   .character-profile-nav { align-items: flex-start; }
   .character-profile-nav > div { flex-direction: column; align-items: flex-end; }
   .character-profile-heading { min-height: 190px; align-items: flex-start; flex-direction: column; padding: 32px 24px; }
-  .character-profile-heading h2 { font-size: clamp(2.7rem, 15vw, 5rem); }
+  .character-profile-heading h2 { font-size: clamp(2rem, 15vw, var(--character-title-size)); }
   .character-profile-heading::after { right: 24px; }
   .character-profile-identity,
   .character-profile-document[data-layout='dossier'] .character-profile-identity,

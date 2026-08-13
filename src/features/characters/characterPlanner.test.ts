@@ -52,6 +52,35 @@ describe('character planner', () => {
     expect(variant.system.abilities?.con.value).toBeUndefined();
   });
 
+  it('normalizes serialized, wrapped, and legacy Foundry actor exports', () => {
+    const serialized = parsePlannerActor(JSON.stringify({
+      actor: {
+        name: 'Wrapped Hero',
+        system: { details: { level: '7' }, skills: { arcana: '2' } },
+        items: [{ id: 'legacy-feat', name: 'Legacy Feat', type: 'feat', data: { level: 3 }, flags: null }]
+      }
+    }));
+    expect(serialized.system.details.level.value).toBe(7);
+    expect(serialized.system.skills?.arcana.rank).toBe(2);
+    expect(serialized.items?.[0]._id).toBe('legacy-feat');
+    expect(serialized.items?.[0].system?.level?.value).toBe(3);
+
+    const legacy = parsePlannerActor({
+      name: 'Old Foundry Hero',
+      data: {
+        data: { details: { level: { value: '4' } }, skills: { athletics: { rank: '1' } } },
+        items: []
+      }
+    });
+    expect(legacy.system.details.level.value).toBe(4);
+    expect(legacy.system.skills?.athletics.rank).toBe(1);
+  });
+
+  it('reports the unsupported Foundry field instead of a generic warning', () => {
+    expect(() => parsePlannerActor({ system: { details: {} } }))
+      .toThrow(/system\.details\.level/);
+  });
+
   it('uses modern Foundry build boosts and preserves the imported level-one boost map', () => {
     const modern = parsePlannerActor({
       name: 'Modern Hero',
@@ -90,7 +119,7 @@ describe('character planner', () => {
   });
 
   it('derives skill rank from selected graph cells and renumbers after removal', () => {
-    let planner = { ...createDefaultPlanner(actor), skillUpgrades: [] };
+    let planner: ReturnType<typeof createDefaultPlanner> = { ...createDefaultPlanner(actor), skillUpgrades: [] };
     planner = setSkillBoost(planner, 'athletics', 3, true);
     planner = setSkillBoost(planner, 'athletics', 7, true);
     expect(rankAtLevel(planner, 'athletics', 6)).toBe(1);

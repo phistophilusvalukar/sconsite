@@ -60,6 +60,15 @@ export const defaultGuildPalette = {
   accentColor: '#a09482'
 } as const;
 
+export const defaultGuildTypography = {
+  titleFontFamily: 'cinzel',
+  subtitleFontFamily: 'cinzel',
+  fontFamily: 'inter',
+  titleFontSize: 96,
+  subtitleFontSize: 21,
+  textFontSize: 16
+} as const;
+
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Choose a valid six-digit color.');
 export const isSafeExternalImageUrl = (value: string) => {
   if (!value) return true;
@@ -78,7 +87,12 @@ export const guildCustomizationSchema = z.object({
   subtitle: z.string().trim().max(140),
   description: z.string().trim().max(4000),
   descriptionHtml: z.string().trim().max(12000),
+  titleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
+  subtitleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
   fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
+  titleFontSize: z.number().int().min(40).max(180),
+  subtitleFontSize: z.number().int().min(14).max(56),
+  textFontSize: z.number().int().min(12).max(26),
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
@@ -126,7 +140,12 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   subtitle: guild.subtitle,
   description: guild.description,
   descriptionHtml: guild.descriptionHtml || plainTextToRichHtml(guild.description),
+  titleFontFamily: guild.titleFontFamily || guild.fontFamily,
+  subtitleFontFamily: guild.subtitleFontFamily || guild.fontFamily,
   fontFamily: guild.fontFamily,
+  titleFontSize: guild.titleFontSize || defaultGuildTypography.titleFontSize,
+  subtitleFontSize: guild.subtitleFontSize || defaultGuildTypography.subtitleFontSize,
+  textFontSize: guild.textFontSize || defaultGuildTypography.textFontSize,
   fontColor: guild.fontColor,
   baseColor: guild.baseColor,
   accentColor: guild.accentColor,

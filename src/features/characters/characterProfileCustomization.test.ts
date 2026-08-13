@@ -6,7 +6,12 @@ import {
 
 const validProfile = {
   subtitle: 'Cartographer of impossible roads',
+  titleFontFamily: 'metal-mania' as const,
+  subtitleFontFamily: 'cinzel' as const,
   fontFamily: 'cormorant' as const,
+  titleFontSize: 124,
+  subtitleFontSize: 22,
+  textFontSize: 16,
   fontColor: '#f4efe6',
   baseColor: '#18201f',
   accentColor: '#c9954a',
@@ -31,6 +36,12 @@ describe('character profile customization', () => {
       ...validProfile,
       sectionVisibility: { portrait: true }
     }).success).toBe(false);
+  });
+
+  it('validates independent title, subtitle, and text sizes', () => {
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, textFontSize: 26 }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, titleFontSize: 181 }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, subtitleFontSize: 13 }).success).toBe(false);
   });
 
   it('accepts dramatic fonts and requires HTTPS banner artwork', () => {

@@ -50,6 +50,15 @@ export const defaultCharacterProfilePalette = {
   accentColor: '#a09482'
 } as const;
 
+export const defaultCharacterProfileTypography = {
+  titleFontFamily: 'cinzel',
+  subtitleFontFamily: 'cinzel',
+  fontFamily: 'inter',
+  titleFontSize: 124,
+  subtitleFontSize: 22,
+  textFontSize: 16
+} as const;
+
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Choose a valid six-digit color.');
 export const isSafeCharacterBannerImageUrl = (value: string) => {
   if (!value) return true;
@@ -63,7 +72,12 @@ const externalImageUrl = z.string().trim().max(2000).refine(isSafeCharacterBanne
 
 export const characterProfileCustomizationSchema = z.object({
   subtitle: z.string().trim().max(140),
+  titleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
+  subtitleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
   fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
+  titleFontSize: z.number().int().min(40).max(180),
+  subtitleFontSize: z.number().int().min(14).max(56),
+  textFontSize: z.number().int().min(12).max(26),
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
@@ -100,7 +114,12 @@ export const getCharacterFontStack = (fontFamily: Character['profileFontFamily']
 
 export const customizationFromCharacter = (character: Character): CharacterProfileCustomizationInput => ({
   subtitle: character.profileSubtitle,
+  titleFontFamily: character.profileTitleFontFamily || character.profileFontFamily,
+  subtitleFontFamily: character.profileSubtitleFontFamily || character.profileFontFamily,
   fontFamily: character.profileFontFamily,
+  titleFontSize: character.profileTitleFontSize || defaultCharacterProfileTypography.titleFontSize,
+  subtitleFontSize: character.profileSubtitleFontSize || defaultCharacterProfileTypography.subtitleFontSize,
+  textFontSize: character.profileTextFontSize || defaultCharacterProfileTypography.textFontSize,
   fontColor: character.profileFontColor,
   baseColor: character.profileBaseColor,
   accentColor: character.profileAccentColor,

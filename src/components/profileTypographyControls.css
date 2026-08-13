@@ -1,0 +1,13 @@
+.profile-typography-controls { display: grid; gap: .75rem; }
+.profile-typography-role { display: grid; gap: .7rem; border: 1px solid rgb(255 255 255 / .1); border-radius: 7px; padding: .85rem; background: rgb(255 255 255 / .025); }
+.profile-typography-role-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.profile-typography-role-heading span { color: #d6d1d9; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.profile-typography-role-heading output { border-radius: 999px; padding: .25rem .48rem; background: rgb(255 255 255 / .07); color: #d8b96d; font: 800 .62rem/1 Inter, sans-serif; }
+.profile-typography-role > p { overflow: hidden; margin: 0; color: #f2edf4; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.profile-typography-role > label { display: grid; grid-template-columns: 3rem minmax(0, 1fr); align-items: center; gap: .65rem; }
+.profile-typography-role > label > span { color: #8f8995; font: 750 .62rem/1 Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.profile-typography-role select { min-width: 0; width: 100%; border: 1px solid rgb(255 255 255 / .12); border-radius: 4px; padding: .55rem .65rem; outline: 0; background: #211c25; color: #f5f1f6; font-size: .82rem; }
+.profile-typography-role select:focus { border-color: #c7a45d; }
+.profile-typography-role select option,
+.profile-typography-role select optgroup { background: #211c25; color: #f5f1f6; font-family: Inter, sans-serif; }
+.profile-typography-role input[type='range'] { width: 100%; accent-color: #c7a45d; }

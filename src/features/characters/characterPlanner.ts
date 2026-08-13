@@ -48,6 +48,27 @@ const optionalFoundryNumber = z.preprocess(value => {
   return value;
 }, z.number().finite().optional());
 
+const requiredFoundryNumber = z.preprocess(value => {
+  if (typeof value === 'string' && value.trim() !== '') return Number(value);
+  return value;
+}, z.number().finite());
+
+const actorLevelSchema = z.preprocess(value => {
+  if (typeof value === 'number' || typeof value === 'string') return { value };
+  return value;
+}, z.object({ value: requiredFoundryNumber }).passthrough());
+
+const actorSkillSchema = z.preprocess(value => {
+  if (value === null || value === undefined) return { rank: 0 };
+  if (typeof value === 'number' || typeof value === 'string') return { rank: value };
+  return value;
+}, z.object({
+  rank: z.preprocess(value => {
+    const rank = typeof value === 'string' ? Number(value) : value;
+    return typeof rank === 'number' && Number.isFinite(rank) ? Math.max(0, Math.min(4, Math.round(rank))) : 0;
+  }, z.number().int().min(0).max(4))
+}).passthrough());
+
 const actorAbilitySchema = z.preprocess(value => {
   if (value === null || value === undefined) return {};
   if (typeof value === 'number') return { value };
@@ -58,11 +79,98 @@ const actorAbilitySchema = z.preprocess(value => {
   mod: optionalFoundryNumber
 }).passthrough());
 
-const actorSchema = z.object({
-  name: z.string().optional(),
+const actorItemSystemSchema = z.preprocess(value => value && typeof value === 'object' ? value : {}, z.object({
+  level: actorLevelSchema.optional().nullable().transform(level => level || undefined),
+  category: z.preprocess(value => typeof value === 'string' ? value : value == null ? value : String(value), z.string().nullable().optional()),
+  location: z.preprocess(value => typeof value === 'string' ? value : value == null ? value : String(value), z.string().nullable().optional())
+}).passthrough());
+
+const actorItemFlagsSchema = z.preprocess(value => value && typeof value === 'object' ? value : {}, z.object({
+  pf2e: z.preprocess(value => value && typeof value === 'object' ? value : {}, z.object({
+    grantedBy: z.preprocess(value => value && typeof value === 'object' ? value : undefined, z.object({
+      id: z.preprocess(value => value == null ? '' : String(value), z.string())
+    }).passthrough().optional())
+  }).passthrough().optional())
+}).passthrough());
+
+const actorItemsSchema = z.preprocess(value => {
+  if (!Array.isArray(value)) return [];
+  return value.map((item, index) => {
+    const record = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+    return {
+      ...record,
+      _id: String(record._id ?? record.id ?? `planner-item-${index}`),
+      name: String(record.name ?? 'Unnamed item'),
+      type: String(record.type ?? ''),
+      system: record.system ?? record.data ?? {},
+      flags: record.flags ?? {}
+    };
+  });
+}, z.array(z.object({
+  _id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  system: actorItemSystemSchema.optional(),
+  flags: actorItemFlagsSchema.optional()
+}).passthrough()));
+
+const actorSchema = z.preprocess(rawValue => {
+  let value = rawValue;
+  if (typeof value === 'string') {
+    try { value = JSON.parse(value) as unknown; }
+    catch { return value; }
+  }
+  if (Array.isArray(value)) {
+    value = value.find(entry => entry && typeof entry === 'object' && ('system' in entry || 'data' in entry)) ?? value[0];
+  }
+  if (!value || typeof value !== 'object') return value;
+  let record = value as Record<string, unknown>;
+  for (const key of ['actor', 'document', '_source', 'data']) {
+    const nested = record[key];
+    if (nested && typeof nested === 'object' && 'system' in nested) {
+      record = nested as Record<string, unknown>;
+      break;
+    }
+  }
+  const legacySystem = record.data && typeof record.data === 'object'
+    ? record.data as Record<string, unknown>
+    : undefined;
+  const system = record.system && typeof record.system === 'object'
+    ? record.system as Record<string, unknown>
+    : legacySystem?.data && typeof legacySystem.data === 'object'
+      ? legacySystem.data as Record<string, unknown>
+      : legacySystem?.details
+        ? legacySystem
+        : undefined;
+  if (!system) return record;
+
+  const details = system.details && typeof system.details === 'object'
+    ? system.details as Record<string, unknown>
+    : {};
+  const items = record.items ?? legacySystem?.items ?? [];
+  const classItem = Array.isArray(items)
+    ? items.find(item => item && typeof item === 'object' && (item as Record<string, unknown>).type === 'class') as Record<string, unknown> | undefined
+    : undefined;
+  const classSystem = classItem?.system && typeof classItem.system === 'object'
+    ? classItem.system as Record<string, unknown>
+    : classItem?.data && typeof classItem.data === 'object'
+      ? classItem.data as Record<string, unknown>
+      : undefined;
+  const level = details.level ?? system.level ?? record.level ?? classSystem?.level;
+
+  return {
+    ...record,
+    system: {
+      ...system,
+      details: { ...details, ...(level === undefined ? {} : { level }) }
+    },
+    items
+  };
+}, z.object({
+  name: z.preprocess(value => value == null ? undefined : String(value), z.string().optional()),
   system: z.object({
-    details: z.object({ level: z.object({ value: z.number() }).passthrough() }).passthrough(),
-    skills: z.record(z.string(), z.object({ rank: z.number().int().min(0).max(4) }).passthrough()).optional(),
+    details: z.object({ level: actorLevelSchema }).passthrough(),
+    skills: z.record(z.string(), actorSkillSchema).optional(),
     abilities: z.record(z.string(), actorAbilitySchema).optional(),
     build: z.object({
       attributes: z.object({
@@ -70,26 +178,18 @@ const actorSchema = z.object({
       }).passthrough().optional()
     }).passthrough().optional()
   }).passthrough(),
-  items: z.array(z.object({
-    _id: z.string(),
-    name: z.string(),
-    type: z.string(),
-    system: z.object({
-      level: z.object({ value: z.number() }).passthrough().optional(),
-      category: z.string().nullable().optional(),
-      location: z.string().nullable().optional()
-    }).passthrough().optional(),
-    flags: z.object({
-      pf2e: z.object({ grantedBy: z.object({ id: z.string() }).passthrough().optional() }).passthrough().optional()
-    }).passthrough().optional()
-  }).passthrough()).optional()
-}).passthrough();
+  items: actorItemsSchema.optional()
+}).passthrough());
 
 export type PlannerActor = z.infer<typeof actorSchema>;
-export type PlannerFeat = PlannerActor['items'][number] & { type: 'feat' };
+export type PlannerFeat = NonNullable<PlannerActor['items']>[number] & { type: 'feat' };
 
 export function parsePlannerActor(value: unknown): PlannerActor {
-  return actorSchema.parse(value);
+  const result = actorSchema.safeParse(value);
+  if (result.success) return result.data;
+  const issue = result.error.issues[0];
+  const path = issue?.path.length ? issue.path.join('.') : 'document root';
+  throw new Error(`The planner could not read ${path}: ${issue?.message || 'invalid Foundry data'}.`);
 }
 
 export function parsePlannerData(value: unknown): CharacterPlannerData | undefined {

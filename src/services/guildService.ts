@@ -144,7 +144,12 @@ interface GuildRow {
   emblem_url?: string;
   banner_image_url?: string;
   region?: string;
+  title_font_family?: Guild['titleFontFamily'];
+  subtitle_font_family?: Guild['subtitleFontFamily'];
   font_family?: Guild['fontFamily'];
+  title_font_size?: number;
+  subtitle_font_size?: number;
+  text_font_size?: number;
   font_color?: string;
   base_color?: string;
   accent_color?: string;
@@ -950,7 +955,12 @@ export class GuildService {
       emblemUrl: isSafeExternalImageUrl(dbGuild.emblem_url || dbGuild.logo || '') ? dbGuild.emblem_url || dbGuild.logo : undefined,
       bannerImageUrl: isSafeExternalImageUrl(dbGuild.banner_image_url || '') ? dbGuild.banner_image_url : undefined,
       region: dbGuild.region || '',
-      fontFamily: dbGuild.font_family || 'cinzel',
+      titleFontFamily: dbGuild.title_font_family || dbGuild.font_family || 'cinzel',
+      subtitleFontFamily: dbGuild.subtitle_font_family || dbGuild.font_family || 'cinzel',
+      fontFamily: dbGuild.font_family || 'inter',
+      titleFontSize: dbGuild.title_font_size || 96,
+      subtitleFontSize: dbGuild.subtitle_font_size || 21,
+      textFontSize: dbGuild.text_font_size || 16,
       fontColor: dbGuild.font_color || defaultGuildPalette.fontColor,
       baseColor: dbGuild.base_color || defaultGuildPalette.baseColor,
       accentColor: dbGuild.accent_color || defaultGuildPalette.accentColor,
@@ -1069,7 +1079,12 @@ export class GuildService {
       isActive: dbCharacter.is_active,
       guildId: dbCharacter.guild_id,
       profileSubtitle: '',
+      profileTitleFontFamily: 'cinzel',
+      profileSubtitleFontFamily: 'cinzel',
       profileFontFamily: 'cinzel',
+      profileTitleFontSize: 124,
+      profileSubtitleFontSize: 22,
+      profileTextFontSize: 16,
       profileFontColor: '#f4efe6',
       profileBaseColor: '#18201f',
       profileAccentColor: '#c9954a',

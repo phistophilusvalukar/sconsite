@@ -16,6 +16,7 @@ import {
   X
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
+import ProfileTypographyControls from '../components/ProfileTypographyControls';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import {
@@ -120,7 +121,12 @@ const CharacterProfilePage: React.FC = () => {
     return {
       ...character,
       profileSubtitle: draft.subtitle,
+      profileTitleFontFamily: draft.titleFontFamily,
+      profileSubtitleFontFamily: draft.subtitleFontFamily,
       profileFontFamily: draft.fontFamily,
+      profileTitleFontSize: draft.titleFontSize,
+      profileSubtitleFontSize: draft.subtitleFontSize,
+      profileTextFontSize: draft.textFontSize,
       profileFontColor: draft.fontColor,
       profileBaseColor: draft.baseColor,
       profileAccentColor: draft.accentColor,
@@ -210,6 +216,16 @@ const CharacterProfilePage: React.FC = () => {
     '--character-base': displayCharacter.profileBaseColor,
     '--character-accent': displayCharacter.profileAccentColor,
     '--character-ink': displayCharacter.profileFontColor,
+    '--character-title-font': getCharacterFontStack(displayCharacter.profileTitleFontFamily),
+    '--character-subtitle-font': getCharacterFontStack(displayCharacter.profileSubtitleFontFamily),
+    '--character-text-font': getCharacterFontStack(displayCharacter.profileFontFamily),
+    '--character-title-size': `${displayCharacter.profileTitleFontSize}px`,
+    '--character-dossier-title-size': `${Math.round(displayCharacter.profileTitleFontSize * .78)}px`,
+    '--character-saga-title-size': `${Math.round(displayCharacter.profileTitleFontSize * 1.3)}px`,
+    '--character-subtitle-size': `${displayCharacter.profileSubtitleFontSize}px`,
+    '--character-section-title-size': `${Math.round(displayCharacter.profileSubtitleFontSize * 1.85)}px`,
+    '--character-saga-subtitle-size': `${Math.round(displayCharacter.profileSubtitleFontSize * 1.55)}px`,
+    '--character-text-size': `${displayCharacter.profileTextFontSize}px`,
     fontFamily: getCharacterFontStack(displayCharacter.profileFontFamily)
   } as CSSProperties;
 
@@ -254,11 +270,13 @@ const CharacterProfilePage: React.FC = () => {
 
             <div className="character-editor-section">
               <h3>Typography</h3>
-              <div className="character-font-groups">
-                {characterFontCategories.map(category => <section key={category}><h4>{category}</h4><div className="character-option-grid">
-                  {characterFontOptions.filter(option => option.category === category).map(option => <button type="button" className={draft.fontFamily === option.value ? 'is-selected' : ''} style={{ fontFamily: option.stack }} onClick={() => updateDraft('fontFamily', option.value)} key={option.value}><strong>{option.label}</strong><span>Ag</span></button>)}
-                </div></section>)}
-              </div>
+              <p>Choose a readable text face while keeping dramatic display fonts for names and headings.</p>
+              <ProfileTypographyControls
+                value={draft}
+                fontOptions={characterFontOptions}
+                categories={characterFontCategories}
+                onChange={update => setDraft(current => current ? { ...current, ...update } : current)}
+              />
             </div>
 
             <div className="character-editor-section">
