@@ -586,22 +586,6 @@ const GamesPage: React.FC = () => {
           </button>
         </div>
 
-        {canSeeUnderHaulContracts && (
-          <section className="mb-8 rounded-lg border border-yellow-400/40 bg-gradient-to-br from-yellow-500/15 via-fantasy-900/35 to-midnight-900/70 p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">Playable office job</p>
-                <h2 className="font-fantasy text-2xl font-bold text-white">UnderHaul Contracts Office</h2>
-                <p className="mt-2 max-w-3xl text-gray-300">
-                Inspect fantasy dungeon-service case folders, compare documents, flag evidence, question visitors, and submit contract rulings.
-                </p>
-              </div>
-              <Link to="/underhaul/contracts" className="inline-flex items-center justify-center rounded-lg bg-yellow-500 px-4 py-3 font-bold text-midnight-900 hover:bg-yellow-400">
-                Open Contracts Office
-              </Link>
-            </div>
-          </section>
-        )}
 
         {isLoading ? (
           <div className="text-center py-16">

@@ -73,11 +73,38 @@ const actorAbilitySchema = z.preprocess(value => {
   if (value === null || value === undefined) return {};
   if (typeof value === 'number') return { value };
   if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return { value: Number(value) };
+  if (typeof value !== 'object' || Array.isArray(value)) return {};
   return value;
 }, z.object({
   value: optionalFoundryNumber,
   mod: optionalFoundryNumber
 }).passthrough());
+
+const actorAbilitiesSchema = z.preprocess(value => {
+  if (!value || typeof value !== 'object') return {};
+
+  const normalized: Record<string, unknown> = {};
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => {
+      if (typeof entry === 'number' || (typeof entry === 'string' && Number.isFinite(Number(entry)))) {
+        const ability = abilityKeys[index];
+        if (ability) normalized[ability] = entry;
+        return;
+      }
+      if (!entry || typeof entry !== 'object') return;
+      const record = entry as Record<string, unknown>;
+      const key = String(record.slug ?? record.key ?? record.ability ?? record.abbreviation ?? '').toLowerCase();
+      if ((abilityKeys as readonly string[]).includes(key)) normalized[key] = record;
+    });
+    return normalized;
+  }
+
+  Object.entries(value as Record<string, unknown>).forEach(([rawKey, ability]) => {
+    const key = rawKey.toLowerCase();
+    if ((abilityKeys as readonly string[]).includes(key)) normalized[key] = ability;
+  });
+  return normalized;
+}, z.record(z.string(), actorAbilitySchema));
 
 const actorItemSystemSchema = z.preprocess(value => value && typeof value === 'object' ? value : {}, z.object({
   level: actorLevelSchema.optional().nullable().transform(level => level || undefined),
@@ -171,7 +198,7 @@ const actorSchema = z.preprocess(rawValue => {
   system: z.object({
     details: z.object({ level: actorLevelSchema }).passthrough(),
     skills: z.record(z.string(), actorSkillSchema).optional(),
-    abilities: z.record(z.string(), actorAbilitySchema).optional(),
+    abilities: actorAbilitiesSchema.optional(),
     build: z.object({
       attributes: z.object({
         boosts: z.record(z.string(), z.unknown()).optional()

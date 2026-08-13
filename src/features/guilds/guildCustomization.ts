@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Guild } from '../../types/database';
+import { defaultProfileDecorations, profileDecorationThemeValues } from '../profiles/profileDecorations';
 import { plainTextToRichHtml } from './richText';
 
 export const guildFontOptions = [
@@ -93,6 +94,10 @@ export const guildCustomizationSchema = z.object({
   titleFontSize: z.number().int().min(40).max(180),
   subtitleFontSize: z.number().int().min(14).max(56),
   textFontSize: z.number().int().min(12).max(26),
+  borderTheme: z.enum(profileDecorationThemeValues),
+  backgroundTheme: z.enum(profileDecorationThemeValues),
+  borderColorSource: z.enum(['base', 'accent']),
+  backgroundColorSource: z.enum(['base', 'accent']),
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
@@ -146,6 +151,10 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   titleFontSize: guild.titleFontSize || defaultGuildTypography.titleFontSize,
   subtitleFontSize: guild.subtitleFontSize || defaultGuildTypography.subtitleFontSize,
   textFontSize: guild.textFontSize || defaultGuildTypography.textFontSize,
+  borderTheme: guild.borderTheme || defaultProfileDecorations.borderTheme,
+  backgroundTheme: guild.backgroundTheme || defaultProfileDecorations.backgroundTheme,
+  borderColorSource: guild.borderColorSource || defaultProfileDecorations.borderColorSource,
+  backgroundColorSource: guild.backgroundColorSource || defaultProfileDecorations.backgroundColorSource,
   fontColor: guild.fontColor,
   baseColor: guild.baseColor,
   accentColor: guild.accentColor,

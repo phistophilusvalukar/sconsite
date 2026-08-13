@@ -1,0 +1,19 @@
+.profile-decoration-controls { display: grid; gap: .8rem; }
+.profile-decoration-preview { position: relative; display: grid; min-height: 112px; place-items: end start; overflow: hidden; border: 1px solid rgb(255 255 255 / .12); border-radius: 7px; padding: .9rem; background: #171a18; isolation: isolate; }
+.profile-decoration-preview::before { position: absolute; z-index: -1; inset: 0; background-image: var(--profile-background-pattern); background-size: 260px 260px; content: ''; opacity: .85; }
+.profile-decoration-preview.has-border { border: 6px solid transparent; border-image: var(--profile-border-image) 8 round; }
+.profile-decoration-preview i { position: absolute; z-index: -1; inset: 0; background: linear-gradient(15deg, rgb(0 0 0 / .84), transparent 68%); }
+.profile-decoration-preview div { display: grid; gap: .22rem; }
+.profile-decoration-preview span { color: #a8afa9; font: 800 .56rem/1 Inter, sans-serif; letter-spacing: .15em; text-transform: uppercase; }
+.profile-decoration-preview strong { color: #f1eee8; font: 650 1rem/1.2 Cinzel, serif; }
+.profile-decoration-choice { display: grid; gap: .65rem; border: 1px solid rgb(255 255 255 / .09); border-radius: 6px; padding: .8rem; background: rgb(255 255 255 / .025); }
+.profile-decoration-choice > div:first-child { display: grid; gap: .2rem; }
+.profile-decoration-choice > div:first-child strong { color: #ded9e1; font-size: .72rem; }
+.profile-decoration-choice > div:first-child span { color: #807a84; font-size: .6rem; line-height: 1.4; }
+.profile-decoration-choice select { width: 100%; border: 1px solid rgb(255 255 255 / .12); border-radius: 4px; padding: .58rem .65rem; outline: 0; background: #211c25; color: #f5f1f6; font-size: .78rem; }
+.profile-decoration-choice select:focus { border-color: #c7a45d; }
+.profile-decoration-choice select option,
+.profile-decoration-choice select optgroup { background: #211c25; color: #f5f1f6; }
+.profile-decoration-source { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; }
+.profile-decoration-source button { border: 1px solid rgb(255 255 255 / .1); border-radius: 4px; padding: .48rem; background: rgb(255 255 255 / .025); color: #99939d; font-size: .61rem; font-weight: 800; cursor: pointer; }
+.profile-decoration-source button.is-selected { border-color: #c7a45d; background: rgb(199 164 93 / .12); color: #ead29d; }

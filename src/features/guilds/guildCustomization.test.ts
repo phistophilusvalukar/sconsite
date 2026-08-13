@@ -15,6 +15,10 @@ const validCustomization = {
   titleFontSize: 96,
   subtitleFontSize: 21,
   textFontSize: 16,
+  borderTheme: 'knights' as const,
+  backgroundTheme: 'metal' as const,
+  borderColorSource: 'accent' as const,
+  backgroundColorSource: 'base' as const,
   fontColor: '#f8fafc',
   baseColor: '#171425',
   accentColor: '#d6a84b',
@@ -63,6 +67,11 @@ describe('guild customization', () => {
     expect(guildCustomizationSchema.safeParse({ ...validCustomization, textFontSize: 20 }).success).toBe(true);
     expect(guildCustomizationSchema.safeParse({ ...validCustomization, textFontSize: 27 }).success).toBe(false);
     expect(guildCustomizationSchema.safeParse({ ...validCustomization, titleFontSize: 39 }).success).toBe(false);
+  });
+
+  it('validates independent guild border and background motifs', () => {
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, borderTheme: 'flintlocks', backgroundTheme: 'pirates' }).success).toBe(true);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, backgroundTheme: 'spaceships' }).success).toBe(false);
   });
 
   it('maps every stored font choice to a usable font stack', () => {

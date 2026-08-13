@@ -52,6 +52,35 @@ describe('character planner', () => {
     expect(variant.system.abilities?.con.value).toBeUndefined();
   });
 
+  it('normalizes nullable, array-shaped, and metadata-heavy ability collections', () => {
+    const arrayAbilities = parsePlannerActor({
+      system: {
+        details: { level: 3 },
+        abilities: [
+          { slug: 'str', value: '18', mod: '4' },
+          { key: 'dex', value: 16, mod: 3 },
+          { slug: 'fortune', value: 'not-an-ability' }
+        ]
+      }
+    });
+    expect(arrayAbilities.system.abilities?.str.value).toBe(18);
+    expect(arrayAbilities.system.abilities?.dex.mod).toBe(3);
+    expect(arrayAbilities.system.abilities?.fortune).toBeUndefined();
+
+    const nullableAbilities = parsePlannerActor({
+      system: { details: { level: 1 }, abilities: null }
+    });
+    expect(nullableAbilities.system.abilities).toEqual({});
+
+    const metadataAbilities = parsePlannerActor({
+      system: {
+        details: { level: 1 },
+        abilities: { str: { mod: 2 }, cha: 'not-calculated', metadata: ['legacy', 'payload'] }
+      }
+    });
+    expect(metadataAbilities.system.abilities).toEqual({ str: { mod: 2 }, cha: {} });
+  });
+
   it('normalizes serialized, wrapped, and legacy Foundry actor exports', () => {
     const serialized = parsePlannerActor(JSON.stringify({
       actor: {

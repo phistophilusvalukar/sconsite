@@ -97,6 +97,10 @@ type CharacterCreateInput = Omit<
   | 'profileTitleFontSize'
   | 'profileSubtitleFontSize'
   | 'profileTextFontSize'
+  | 'profileBorderTheme'
+  | 'profileBackgroundTheme'
+  | 'profileBorderColorSource'
+  | 'profileBackgroundColorSource'
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
@@ -117,6 +121,10 @@ type CharacterCreateInput = Omit<
   | 'profileTitleFontSize'
   | 'profileSubtitleFontSize'
   | 'profileTextFontSize'
+  | 'profileBorderTheme'
+  | 'profileBackgroundTheme'
+  | 'profileBorderColorSource'
+  | 'profileBackgroundColorSource'
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
@@ -159,6 +167,10 @@ interface CharacterRow {
   profile_title_font_size?: number | null;
   profile_subtitle_font_size?: number | null;
   profile_text_font_size?: number | null;
+  profile_border_theme?: Character['profileBorderTheme'] | null;
+  profile_background_theme?: Character['profileBackgroundTheme'] | null;
+  profile_border_color_source?: Character['profileBorderColorSource'] | null;
+  profile_background_color_source?: Character['profileBackgroundColorSource'] | null;
   profile_font_color?: string | null;
   profile_base_color?: string | null;
   profile_accent_color?: string | null;
@@ -291,6 +303,10 @@ export class CharacterService {
         profile_title_font_size: characterData.profileTitleFontSize || 124,
         profile_subtitle_font_size: characterData.profileSubtitleFontSize || 22,
         profile_text_font_size: characterData.profileTextFontSize || 16,
+        profile_border_theme: characterData.profileBorderTheme || 'none',
+        profile_background_theme: characterData.profileBackgroundTheme || 'none',
+        profile_border_color_source: characterData.profileBorderColorSource || 'accent',
+        profile_background_color_source: characterData.profileBackgroundColorSource || 'base',
         profile_font_color: characterData.profileFontColor || defaultCharacterProfilePalette.fontColor,
         profile_base_color: characterData.profileBaseColor || defaultCharacterProfilePalette.baseColor,
         profile_accent_color: characterData.profileAccentColor || defaultCharacterProfilePalette.accentColor,
@@ -1107,6 +1123,10 @@ export class CharacterService {
       profileTitleFontSize: dbCharacter.profile_title_font_size || 124,
       profileSubtitleFontSize: dbCharacter.profile_subtitle_font_size || 22,
       profileTextFontSize: dbCharacter.profile_text_font_size || 16,
+      profileBorderTheme: dbCharacter.profile_border_theme || 'none',
+      profileBackgroundTheme: dbCharacter.profile_background_theme || 'none',
+      profileBorderColorSource: dbCharacter.profile_border_color_source || 'accent',
+      profileBackgroundColorSource: dbCharacter.profile_background_color_source || 'base',
       profileFontColor: dbCharacter.profile_font_color || defaultCharacterProfilePalette.fontColor,
       profileBaseColor: dbCharacter.profile_base_color || defaultCharacterProfilePalette.baseColor,
       profileAccentColor: dbCharacter.profile_accent_color || defaultCharacterProfilePalette.accentColor,

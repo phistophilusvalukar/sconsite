@@ -1,3 +1,5 @@
+import type { ProfileDecorationColorSource, ProfileDecorationTheme } from '../features/profiles/profileDecorations';
+
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
 
@@ -96,6 +98,10 @@ export interface Character {
   profileTitleFontSize: number;
   profileSubtitleFontSize: number;
   profileTextFontSize: number;
+  profileBorderTheme: ProfileDecorationTheme;
+  profileBackgroundTheme: ProfileDecorationTheme;
+  profileBorderColorSource: ProfileDecorationColorSource;
+  profileBackgroundColorSource: ProfileDecorationColorSource;
   profileFontColor: string;
   profileBaseColor: string;
   profileAccentColor: string;
@@ -144,6 +150,10 @@ export interface Guild {
   titleFontSize: number;
   subtitleFontSize: number;
   textFontSize: number;
+  borderTheme: ProfileDecorationTheme;
+  backgroundTheme: ProfileDecorationTheme;
+  borderColorSource: ProfileDecorationColorSource;
+  backgroundColorSource: ProfileDecorationColorSource;
   fontColor: string;
   baseColor: string;
   accentColor: string;

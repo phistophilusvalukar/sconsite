@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Character } from '../../types/database';
+import { defaultProfileDecorations, profileDecorationThemeValues } from '../profiles/profileDecorations';
 
 export const characterFontOptions = [
   { value: 'cinzel', label: 'Cinzel', stack: 'Cinzel, Georgia, serif', category: 'Classic' },
@@ -29,7 +30,7 @@ export const characterFontCategories = ['Classic', 'Savage', 'Fancy', 'Whimsical
 
 export const characterLayoutOptions = [
   { value: 'chronicle', label: 'Chronicle', description: 'A balanced, story-forward character page.' },
-  { value: 'dossier', label: 'Dossier', description: 'An archival file with compact facts and records.' },
+  { value: 'dossier', label: 'Dossier', description: 'A detective-noir case file with evidence photography and confidential records.' },
   { value: 'spotlight', label: 'Spotlight', description: 'A cinematic portrait-led presentation.' },
   { value: 'saga', label: 'Saga', description: 'An epic full-width hero with an arched portrait and sweeping records.' }
 ] as const;
@@ -78,6 +79,10 @@ export const characterProfileCustomizationSchema = z.object({
   titleFontSize: z.number().int().min(40).max(180),
   subtitleFontSize: z.number().int().min(14).max(56),
   textFontSize: z.number().int().min(12).max(26),
+  borderTheme: z.enum(profileDecorationThemeValues),
+  backgroundTheme: z.enum(profileDecorationThemeValues),
+  borderColorSource: z.enum(['base', 'accent']),
+  backgroundColorSource: z.enum(['base', 'accent']),
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
@@ -120,6 +125,10 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   titleFontSize: character.profileTitleFontSize || defaultCharacterProfileTypography.titleFontSize,
   subtitleFontSize: character.profileSubtitleFontSize || defaultCharacterProfileTypography.subtitleFontSize,
   textFontSize: character.profileTextFontSize || defaultCharacterProfileTypography.textFontSize,
+  borderTheme: character.profileBorderTheme || defaultProfileDecorations.borderTheme,
+  backgroundTheme: character.profileBackgroundTheme || defaultProfileDecorations.backgroundTheme,
+  borderColorSource: character.profileBorderColorSource || defaultProfileDecorations.borderColorSource,
+  backgroundColorSource: character.profileBackgroundColorSource || defaultProfileDecorations.backgroundColorSource,
   fontColor: character.profileFontColor,
   baseColor: character.profileBaseColor,
   accentColor: character.profileAccentColor,

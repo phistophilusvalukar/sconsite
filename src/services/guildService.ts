@@ -150,6 +150,10 @@ interface GuildRow {
   title_font_size?: number;
   subtitle_font_size?: number;
   text_font_size?: number;
+  border_theme?: Guild['borderTheme'];
+  background_theme?: Guild['backgroundTheme'];
+  border_color_source?: Guild['borderColorSource'];
+  background_color_source?: Guild['backgroundColorSource'];
   font_color?: string;
   base_color?: string;
   accent_color?: string;
@@ -961,6 +965,10 @@ export class GuildService {
       titleFontSize: dbGuild.title_font_size || 96,
       subtitleFontSize: dbGuild.subtitle_font_size || 21,
       textFontSize: dbGuild.text_font_size || 16,
+      borderTheme: dbGuild.border_theme || 'none',
+      backgroundTheme: dbGuild.background_theme || 'none',
+      borderColorSource: dbGuild.border_color_source || 'accent',
+      backgroundColorSource: dbGuild.background_color_source || 'base',
       fontColor: dbGuild.font_color || defaultGuildPalette.fontColor,
       baseColor: dbGuild.base_color || defaultGuildPalette.baseColor,
       accentColor: dbGuild.accent_color || defaultGuildPalette.accentColor,
@@ -1085,6 +1093,10 @@ export class GuildService {
       profileTitleFontSize: 124,
       profileSubtitleFontSize: 22,
       profileTextFontSize: 16,
+      profileBorderTheme: 'none',
+      profileBackgroundTheme: 'none',
+      profileBorderColorSource: 'accent',
+      profileBackgroundColorSource: 'base',
       profileFontColor: '#f4efe6',
       profileBaseColor: '#18201f',
       profileAccentColor: '#c9954a',

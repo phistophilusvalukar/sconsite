@@ -391,7 +391,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
           } : undefined}
         >
           <div>
-            <p className={pageMode ? 'character-profile-kicker' : 'text-sm uppercase tracking-[0.14em] text-yellow-300'}>{canEdit ? 'Character Dossier' : 'Public Character'}</p>
+            <p className={pageMode ? 'character-profile-kicker' : 'text-sm uppercase tracking-[0.14em] text-yellow-300'}>{'Character Profile'}</p>
             <h2 className={pageMode ? '' : 'font-fantasy text-2xl font-bold text-white'}>{character.name}</h2>
             {pageMode && <p className="character-profile-subtitle">{character.profileSubtitle || 'An adventurer of the Shattered Convergence'}</p>}
           </div>

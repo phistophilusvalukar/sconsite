@@ -12,6 +12,10 @@ const validProfile = {
   titleFontSize: 124,
   subtitleFontSize: 22,
   textFontSize: 16,
+  borderTheme: 'runes' as const,
+  backgroundTheme: 'arcane' as const,
+  borderColorSource: 'accent' as const,
+  backgroundColorSource: 'base' as const,
   fontColor: '#f4efe6',
   baseColor: '#18201f',
   accentColor: '#c9954a',
@@ -42,6 +46,12 @@ describe('character profile customization', () => {
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, textFontSize: 26 }).success).toBe(true);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, titleFontSize: 181 }).success).toBe(false);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, subtitleFontSize: 13 }).success).toBe(false);
+  });
+
+  it('validates fantasy decoration themes and their palette sources', () => {
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, borderTheme: 'dragons', backgroundTheme: 'fire' }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, borderTheme: 'laser-beams' }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, backgroundColorSource: 'custom' }).success).toBe(false);
   });
 
   it('accepts dramatic fonts and requires HTTPS banner artwork', () => {
