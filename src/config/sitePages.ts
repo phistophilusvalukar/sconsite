@@ -6,6 +6,7 @@ import {
   Dices,
   GitBranch,
   Home,
+  Library,
   Newspaper,
   Scroll,
   Shield,
@@ -21,6 +22,7 @@ import {
 export type SitePageKey =
   | 'home'
   | 'about'
+  | 'lore'
   | 'characters'
   | 'citizens'
   | 'guilds'
@@ -62,6 +64,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Campaign premise and Westmarch server information.',
     icon: Scroll,
     routePrefixes: ['/about']
+  },
+  {
+    key: 'lore',
+    name: 'Lore',
+    href: '/lore',
+    description: 'A continually expanding atlas of Ao, Axiom, and the Convergence.',
+    icon: Library,
+    routePrefixes: ['/lore']
   },
   {
     key: 'characters',

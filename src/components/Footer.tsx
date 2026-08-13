@@ -9,7 +9,7 @@ const Footer: React.FC = () => {
       <div className="site-footer-inner">
         <div className="site-footer-brand">
           <span className="site-footer-mark"><Shield /></span>
-          <div><p className="site-kicker">The Shattered Convergence</p><h2>Pathfinder Westmarch</h2></div>
+          <div><p className="site-kicker">The Shattered Convergence</p><h2>Pathfinder 2e Living World</h2></div>
           <p>A living campaign registry for characters, guilds, expeditions, and the stories that return from them.</p>
         </div>
 
@@ -28,6 +28,7 @@ const Footer: React.FC = () => {
           </div>
           <div>
             <h3>Elsewhere</h3>
+            <Link to="/lore">Lore atlas</Link>
             <Link to="/about">About the campaign</Link>
             <a href="https://github.com/pathfinder-westmarch">GitHub <Github /></a>
             <Link to="/profile">Your profile <ArrowUpRight /></Link>
@@ -35,7 +36,7 @@ const Footer: React.FC = () => {
         </div>
       </div>
       <div className="site-footer-bottom">
-        <p>© {new Date().getFullYear()} Pathfinder Westmarch. Kept for the community.</p>
+        <p>© {new Date().getFullYear()} Shattered Convergence. Kept for the community.</p>
         <span>Persistent world · Player-led stories · Pathfinder 2e</span>
       </div>
     </footer>

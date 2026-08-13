@@ -6,11 +6,12 @@ import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
 import GoogleLogin from './GoogleLogin';
 
-type PreloadableRoute = '/' | '/about' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/citadel-tactics' | '/tactical-puzzles' | '/campaign-objectives' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
+type PreloadableRoute = '/' | '/about' | '/lore' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/citadel-tactics' | '/tactical-puzzles' | '/campaign-objectives' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
   '/about': () => import('../pages/AboutPage'),
+  '/lore': () => import('../pages/LorePage'),
   '/characters': () => import('../pages/CharacterPage'),
   '/citizens': () => import('../pages/CitizenRegistryPage'),
   '/guilds': () => import('../pages/GuildsPage'),
@@ -42,7 +43,7 @@ type NavigationGroup = { name: string; pageKeys: SitePageKey[] };
 type NavigationItem = Pick<SitePageDefinition, 'name' | 'href' | 'icon'>;
 
 const navigationGroups: NavigationGroup[] = [
-  { name: 'Discover', pageKeys: ['home', 'about', 'news'] },
+  { name: 'Discover', pageKeys: ['home', 'about', 'lore', 'news'] },
   { name: 'People', pageKeys: ['characters', 'guilds', 'citizens'] },
   { name: 'Play', pageKeys: ['schedule', 'games'] },
   { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals', 'citadel-tactics'] },
@@ -76,7 +77,7 @@ const Header: React.FC = () => {
         <div className="site-nav-row">
           <Link to="/" className="site-brand" onMouseEnter={() => preloadRoute('/')}>
             <span className="site-brand-mark"><BrandIcon /></span>
-            <span className="site-brand-copy"><strong>SCON</strong><small>Campaign registry</small></span>
+            <span className="site-brand-copy"><strong>SCON</strong><small>Living world registry</small></span>
           </Link>
 
           <div className="site-nav-desktop">

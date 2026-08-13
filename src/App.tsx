@@ -13,6 +13,8 @@ import { SitePageKey } from './config/sitePages';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
+const RulesPage = lazy(() => import('./pages/RulesPage'));
+const LorePage = lazy(() => import('./pages/LorePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const CharacterPage = lazy(() => import('./pages/CharacterPage'));
 const CharacterProfilePage = lazy(() => import('./pages/CharacterProfilePage'));
@@ -61,6 +63,9 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<PageGate pageKey="home"><HomePage /></PageGate>} />
         <Route path="/about" element={<PageGate pageKey="about"><AboutPage /></PageGate>} />
+        <Route path="/rules" element={<RulesPage />} />
+        <Route path="/lore" element={<PageGate pageKey="lore"><LorePage /></PageGate>} />
+        <Route path="/lore/:slug" element={<PageGate pageKey="lore"><LorePage /></PageGate>} />
         <Route path="/characters" element={<PageGate pageKey="characters"><CharacterPage /></PageGate>} />
         <Route path="/characters/:characterId" element={<PageGate pageKey="characters"><CharacterProfilePage /></PageGate>} />
         <Route path="/citizens" element={<PageGate pageKey="citizens"><CitizenRegistryPage /></PageGate>} />
@@ -115,13 +120,13 @@ function App() {
 
 function AppLayout() {
   const location = useLocation();
-  const isStandaloneTicketArchive = location.pathname.startsWith('/ticket-log');
+  const isPublicResource = location.pathname.startsWith('/ticket-log') || location.pathname === '/rules';
   const hideFooter = location.pathname === '/';
 
-  if (isStandaloneTicketArchive) {
+  if (isPublicResource) {
     return (
-      <div className="site-app-shell">
-        <main>
+      <div className="site-app-shell public-resource-shell min-h-screen">
+        <main className="site-main">
           <AppRoutes />
         </main>
       </div>

@@ -22,6 +22,7 @@ export interface UserProfile {
   lastActive: Date;
   isOnline: boolean;
   isAdmin?: boolean;
+  isLoremaster?: boolean;
   primaryGuildId?: string;
   settings: {
     allowWallPosts: boolean;
@@ -562,6 +563,27 @@ export interface NewsComment {
   authorName: string;
   body: string;
   isEdited: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type LoreCategory = 'Places' | 'People' | 'Factions' | 'History' | 'Mysteries' | 'Artifacts';
+export type LoreEntryStatus = 'draft' | 'published';
+
+export interface LoreEntry {
+  _id?: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  slug: string;
+  summary: string;
+  bodyHtml: string;
+  category: LoreCategory;
+  tags: string[];
+  status: LoreEntryStatus;
+  imageUrl?: string;
+  isFeatured: boolean;
+  publishedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { CheckCircle, Loader2, Shield, ToggleLeft, ToggleRight, XCircle } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { BookOpen, CheckCircle, Loader2, Search, Shield, ToggleLeft, ToggleRight, XCircle } from 'lucide-react';
 import { sitePages, SitePageKey } from '../config/sitePages';
 import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
+import UserService, { type LoremasterCandidate } from '../services/userService';
 
 const AdminPage: React.FC = () => {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -10,7 +11,26 @@ const AdminPage: React.FC = () => {
   const [savingPageKey, setSavingPageKey] = useState<SitePageKey | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [loremasterQuery, setLoremasterQuery] = useState('');
+  const [loremasterCandidates, setLoremasterCandidates] = useState<LoremasterCandidate[]>([]);
+  const [loremasterLoading, setLoremasterLoading] = useState(false);
+  const [savingLoremasterId, setSavingLoremasterId] = useState<string | null>(null);
   const isAdmin = Boolean(user?.isAdmin || user?.profile?.isAdmin);
+  const userService = useMemo(() => UserService.getInstance(), []);
+
+  const loadLoremasterCandidates = useCallback(async (query = '') => {
+    if (!isAdmin) return;
+    setLoremasterLoading(true);
+    const response = await userService.searchLoremasterCandidates(query);
+    if (response.success && response.data) {
+      setLoremasterCandidates(response.data);
+    } else {
+      setSaveError(response.error || 'Failed to load loremaster roles.');
+    }
+    setLoremasterLoading(false);
+  }, [isAdmin, userService]);
+
+  useEffect(() => { void loadLoremasterCandidates(); }, [loadLoremasterCandidates]);
 
   const handleTogglePage = async (pageKey: SitePageKey) => {
     if (!user?.id || savingPageKey) return;
@@ -29,6 +49,21 @@ const AdminPage: React.FC = () => {
     } finally {
       setSavingPageKey(null);
     }
+  };
+
+  const handleToggleLoremaster = async (candidate: LoremasterCandidate) => {
+    if (savingLoremasterId) return;
+    setSavingLoremasterId(candidate.userId);
+    setMessage(null);
+    setSaveError(null);
+    const response = await userService.setLoremasterRole(candidate.userId, !candidate.isLoremaster);
+    if (response.success) {
+      setLoremasterCandidates(current => current.map(item => item.userId === candidate.userId ? { ...item, isLoremaster: !item.isLoremaster } : item));
+      setMessage(response.message || 'Loremaster role updated.');
+    } else {
+      setSaveError(response.error || 'Failed to update loremaster role.');
+    }
+    setSavingLoremasterId(null);
   };
 
   if (isAuthLoading || isLoading) {
@@ -137,6 +172,29 @@ const AdminPage: React.FC = () => {
             </article>
           );
         })}
+      </section>
+
+      <section className="mt-10 rounded-xl border border-fantasy-700/30 bg-fantasy-900/30 p-6">
+        <div className="flex flex-col gap-4 border-b border-fantasy-700/30 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="flex items-center gap-3"><BookOpen className="h-7 w-7 text-yellow-400" /><h2 className="font-fantasy text-3xl font-bold text-white">Loremasters</h2></div>
+            <p className="mt-2 max-w-2xl text-sm text-gray-300">Grant trusted worldkeepers access to create drafts and publish entries in the living lore atlas.</p>
+          </div>
+          <form className="flex min-w-0 gap-2" onSubmit={event => { event.preventDefault(); void loadLoremasterCandidates(loremasterQuery); }}>
+            <label className="flex min-w-0 items-center gap-2 rounded-lg border border-fantasy-700/40 bg-midnight-950/70 px-3"><Search className="h-4 w-4 text-gray-400" /><input className="min-w-0 bg-transparent py-2.5 text-sm text-white outline-none" value={loremasterQuery} onChange={event => setLoremasterQuery(event.target.value)} placeholder="Find a user" /></label>
+            <button type="submit" className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-bold text-midnight-950 hover:bg-yellow-400">Search</button>
+          </form>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          {loremasterLoading ? <div className="flex justify-center py-8"><Loader2 className="h-7 w-7 animate-spin text-yellow-400" /></div> : loremasterCandidates.map(candidate => (
+            <article className="flex items-center justify-between gap-4 rounded-lg border border-fantasy-700/30 bg-midnight-900/50 p-4" key={candidate.userId}>
+              <div className="flex min-w-0 items-center gap-3"><img className="h-11 w-11 rounded-full object-cover" src={candidate.avatar} alt="" /><div className="min-w-0"><h3 className="truncate font-bold text-white">{candidate.username}</h3><p className="text-xs text-gray-400">{candidate.isLoremaster ? 'Can write and publish lore' : 'No lore publishing access'}</p></div></div>
+              <button type="button" disabled={Boolean(savingLoremasterId)} onClick={() => void handleToggleLoremaster(candidate)} className={`inline-flex min-w-36 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold disabled:opacity-50 ${candidate.isLoremaster ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-yellow-500 text-midnight-950 hover:bg-yellow-400'}`}>{savingLoremasterId === candidate.userId ? <Loader2 className="h-4 w-4 animate-spin" /> : candidate.isLoremaster ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}{candidate.isLoremaster ? 'Remove role' : 'Make loremaster'}</button>
+            </article>
+          ))}
+          {!loremasterLoading && loremasterCandidates.length === 0 && <p className="py-8 text-center text-sm text-gray-400">No matching users found.</p>}
+        </div>
       </section>
     </AdminShell>
   );

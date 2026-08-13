@@ -36,10 +36,18 @@ interface UserRow {
   last_active: string;
   is_online: boolean;
   is_admin?: boolean;
+  is_loremaster?: boolean;
   settings: UserProfile['settings'];
   stats: UserProfile['stats'] & JsonObject;
   created_at: string;
   updated_at: string;
+}
+
+export interface LoremasterCandidate {
+  userId: string;
+  username: string;
+  avatar: string;
+  isLoremaster: boolean;
 }
 
 export class UserService {
@@ -325,6 +333,44 @@ export class UserService {
     }
   }
 
+  async searchLoremasterCandidates(query = ''): Promise<ApiResponse<LoremasterCandidate[]>> {
+    try {
+      const { data, error } = await this.dbService.getClient().rpc('list_loremaster_candidates_command', {
+        p_query: query.trim()
+      });
+      if (error) return { success: false, error: error.message };
+      return {
+        success: true,
+        data: (Array.isArray(data) ? data : []).map(candidate => {
+          const row = candidate as Record<string, unknown>;
+          return {
+            userId: String(row.user_id || ''),
+            username: String(row.username || 'Unknown user'),
+            avatar: String(row.avatar || '/npc-placeholder.png'),
+            isLoremaster: Boolean(row.is_loremaster)
+          };
+        })
+      };
+    } catch (error) {
+      console.error('Error loading loremaster candidates:', error);
+      return { success: false, error: 'Failed to load loremaster roles.' };
+    }
+  }
+
+  async setLoremasterRole(userId: string, enabled: boolean): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await this.dbService.getClient().rpc('set_loremaster_role_command', {
+        p_user_id: userId,
+        p_enabled: enabled
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: true, message: enabled ? 'Loremaster access granted.' : 'Loremaster access removed.' };
+    } catch (error) {
+      console.error('Error updating loremaster role:', error);
+      return { success: false, error: 'Failed to update loremaster access.' };
+    }
+  }
+
   async deleteUser(authUserId: string): Promise<ApiResponse<boolean>> {
     try {
       const supabase = this.dbService.getClient();
@@ -434,6 +480,7 @@ export class UserService {
       lastActive: new Date(dbUser.last_active),
       isOnline: dbUser.is_online,
       isAdmin: Boolean(dbUser.is_admin),
+      isLoremaster: Boolean(dbUser.is_loremaster),
       settings: dbUser.settings,
       stats: dbUser.stats,
       createdAt: new Date(dbUser.created_at),
