@@ -36,6 +36,7 @@ import {
   GuildCustomizationInput,
   customizationFromGuild,
   defaultGuildPalette,
+  defaultGuildSectionHeadings,
   getGuildFontStack,
   guildFontCategories,
   guildFontOptions,
@@ -61,6 +62,24 @@ const SECTION_OPTIONS: Array<{ key: keyof Guild['sectionVisibility']; label: str
   { key: 'messageBoard', label: 'Message board', description: 'A leader-authored notice or announcement.' },
   { key: 'checkIn', label: 'Daily check-in', description: 'Member check-ins and influence points.' },
   { key: 'guestbook', label: 'Guestbook', description: 'Roleplay notes from headquarters visitors.' }
+];
+const SECTION_HEADING_OPTIONS: Array<{
+  section: string;
+  labelKey: keyof Guild['sectionHeadings'];
+  titleKey?: keyof Guild['sectionHeadings'];
+}> = [
+  { section: 'Charter', labelKey: 'charterLabel', titleKey: 'charterTitle' },
+  { section: 'Requirements', labelKey: 'requirementsLabel', titleKey: 'requirementsTitle' },
+  { section: 'Headquarters', labelKey: 'headquartersLabel' },
+  { section: 'Roster', labelKey: 'rosterLabel', titleKey: 'rosterTitle' },
+  { section: 'Message board', labelKey: 'messageBoardLabel', titleKey: 'messageBoardTitle' },
+  { section: 'Check-in', labelKey: 'checkInLabel', titleKey: 'checkInTitle' },
+  { section: 'Guestbook', labelKey: 'guestbookLabel', titleKey: 'guestbookTitle' },
+  { section: 'Guild leader', labelKey: 'leaderLabel' },
+  { section: 'Your membership', labelKey: 'membershipLabel', titleKey: 'membershipTitle' },
+  { section: 'Join request', labelKey: 'petitionLabel', titleKey: 'petitionTitle' },
+  { section: 'Founders', labelKey: 'foundersLabel', titleKey: 'foundersTitle' },
+  { section: 'Applications', labelKey: 'applicationsLabel', titleKey: 'applicationsTitle' }
 ];
 
 const formatTimestamp = (date?: Date) => date
@@ -411,8 +430,8 @@ const GuildProfilePage: React.FC = () => {
         <div className="guild-profile-layout">
           {displayGuild.sectionVisibility.charter && (
             <section className="guild-story-panel">
-              <p className="guild-section-label">Our charter</p>
-              <h2>About the guild</h2>
+              {displayGuild.sectionHeadings.charterLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.charterLabel}</p>}
+              {displayGuild.sectionHeadings.charterTitle && <h2>{displayGuild.sectionHeadings.charterTitle}</h2>}
               <SafeRichText
                 className="guild-story-copy guild-rich-output"
                 html={displayGuild.descriptionHtml || plainTextToRichHtml(displayGuild.description || 'This guild has not yet committed its story to the registry.')}
@@ -428,7 +447,7 @@ const GuildProfilePage: React.FC = () => {
           {displayGuild.sectionVisibility.requirements && displayGuild.requirements && (
             <section className="guild-requirements-panel">
               <Sparkles size={22} />
-              <div><p className="guild-section-label">Joining the order</p><h2>Requirements</h2><p>{displayGuild.requirements}</p></div>
+              <div>{displayGuild.sectionHeadings.requirementsLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.requirementsLabel}</p>}{displayGuild.sectionHeadings.requirementsTitle && <h2>{displayGuild.sectionHeadings.requirementsTitle}</h2>}<p>{displayGuild.requirements}</p></div>
             </section>
           )}
 
@@ -440,7 +459,7 @@ const GuildProfilePage: React.FC = () => {
                   : <div><Castle /><span>Headquarters image</span></div>}
               </div>
               <div className="guild-headquarters-copy">
-                <p className="guild-section-label">Headquarters</p>
+                {displayGuild.sectionHeadings.headquartersLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.headquartersLabel}</p>}
                 <h2>{displayGuild.headquartersName || 'Stronghold undisclosed'}</h2>
                 {(displayGuild.headquartersTitleHtml || displayGuild.headquartersTitle) && (
                   <SafeRichText as="h3" inline html={displayGuild.headquartersTitleHtml || plainTextToRichHtml(displayGuild.headquartersTitle)} />
@@ -456,7 +475,7 @@ const GuildProfilePage: React.FC = () => {
           {displayGuild.sectionVisibility.roster && (
             <section className="guild-roster-panel">
               <div className="guild-section-heading">
-                <div><p className="guild-section-label">People of the banner</p><h2>The roster</h2></div>
+                <div>{displayGuild.sectionHeadings.rosterLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.rosterLabel}</p>}{displayGuild.sectionHeadings.rosterTitle && <h2>{displayGuild.sectionHeadings.rosterTitle}</h2>}</div>
                 <span><Users size={16} /> {activeRoster.length} listed</span>
               </div>
               {activeRoster.length > 0 ? (
@@ -475,8 +494,8 @@ const GuildProfilePage: React.FC = () => {
           {displayGuild.sectionVisibility.messageBoard && (
             <section className="guild-message-board">
               <div className="guild-message-board-pin" aria-hidden="true" />
-              <div className="guild-section-heading">
-                <div><p className="guild-section-label">Pinned by the guildmaster</p><h2>Message board</h2></div>
+              <div className="guild-section-heading guild-community-heading">
+                <div>{displayGuild.sectionHeadings.messageBoardLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.messageBoardLabel}</p>}{displayGuild.sectionHeadings.messageBoardTitle && <h2>{displayGuild.sectionHeadings.messageBoardTitle}</h2>}</div>
                 <span><Clock3 size={14} /> {messageBoardTimestamp}</span>
               </div>
               {displayGuild.messageBoardHtml
@@ -489,7 +508,7 @@ const GuildProfilePage: React.FC = () => {
             <section className="guild-checkin-panel">
               <div className="guild-checkin-intro">
                 <div className="guild-checkin-icon"><UserCheck /></div>
-                <div><p className="guild-section-label">Daily guild check-in</p><h2>Make your mark</h2><p>Each member character can add one influence point per day, at one guild only.</p></div>
+                <div>{displayGuild.sectionHeadings.checkInLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.checkInLabel}</p>}{displayGuild.sectionHeadings.checkInTitle && <h2>{displayGuild.sectionHeadings.checkInTitle}</h2>}<p>Each member character can add one influence point per day, at one guild only.</p></div>
                 <div className="guild-influence-total"><span>Influence</span><strong>{displayGuild.influencePoints.toLocaleString()}</strong></div>
               </div>
               {currentMemberships.length > 0 ? (
@@ -522,8 +541,8 @@ const GuildProfilePage: React.FC = () => {
 
           {displayGuild.sectionVisibility.guestbook && (displayGuild.guestbookEnabled || isGuildmaster) && (
             <section className={`guild-guestbook-panel${displayGuild.guestbookEnabled ? '' : ' is-closed'}`}>
-              <div className="guild-section-heading">
-                <div><p className="guild-section-label">At the headquarters door</p><h2>Guild guestbook</h2></div>
+              <div className="guild-section-heading guild-community-heading">
+                <div>{displayGuild.sectionHeadings.guestbookLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.guestbookLabel}</p>}{displayGuild.sectionHeadings.guestbookTitle && <h2>{displayGuild.sectionHeadings.guestbookTitle}</h2>}</div>
                 <span><BookOpen size={16} /> {displayGuild.guestbookEnabled ? 'Open to visitors' : 'Closed by the guildmaster'}</span>
               </div>
               {displayGuild.guestbookEnabled && (
@@ -556,7 +575,7 @@ const GuildProfilePage: React.FC = () => {
               <div className="guild-leader-card">
                 <div className="guild-leader-portrait"><DynamicCharacterPortrait character={leaderCharacter} fallbackSrc={characterPortrait(leaderCharacter)} alt={`${leaderCharacter?.name || displayGuild.leaderCharacterName || 'Guild leader'} portrait`} className="guild-leader-dynamic-portrait" motion="parallax" /><Crown size={20} /></div>
                 <div className="guild-leader-copy">
-                  <p className="guild-section-label">Guild leadership</p>
+                  {displayGuild.sectionHeadings.leaderLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.leaderLabel}</p>}
                   <h2>{leaderCharacter?._id ? <Link to={`/characters/${leaderCharacter._id}`}>{leaderCharacter.name}</Link> : displayGuild.leaderCharacterName || 'Unnamed guild leader'}</h2>
                   <strong>{leaderMembership?.roleTitle || displayGuild.roleLabels.Leader}</strong>
                   {leaderCharacter && <p>Level {leaderCharacter.level} {leaderCharacter.class}<br />{leaderCharacter.ancestry || leaderCharacter.race}{leaderCharacter.background ? ` / ${leaderCharacter.background}` : ''}</p>}
@@ -566,8 +585,8 @@ const GuildProfilePage: React.FC = () => {
 
             {currentMemberships.length > 0 ? (
               <div className="guild-action-card guild-membership-card">
-                <p className="guild-section-label">Your membership</p>
-                <h2>Your characters</h2>
+                {displayGuild.sectionHeadings.membershipLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.membershipLabel}</p>}
+                {displayGuild.sectionHeadings.membershipTitle && <h2>{displayGuild.sectionHeadings.membershipTitle}</h2>}
                 <div className="guild-membership-list">
                   {currentMemberships.map(membership => (
                     <div key={membership._id}>
@@ -580,8 +599,8 @@ const GuildProfilePage: React.FC = () => {
               </div>
             ) : (
               <div className="guild-action-card">
-                <p className="guild-section-label">Join the story</p>
-                <h2>Petition the guild</h2>
+                {displayGuild.sectionHeadings.petitionLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.petitionLabel}</p>}
+                {displayGuild.sectionHeadings.petitionTitle && <h2>{displayGuild.sectionHeadings.petitionTitle}</h2>}
                 <label className="guild-field"><span>Character</span><select value={applicationCharacterId} onChange={event => setApplicationCharacterId(event.target.value)}><option value="">Choose a character</option>{characters.map(character => <option key={character._id} value={character._id}>{character.name} / Level {character.level}</option>)}</select></label>
                 <label className="guild-field"><span>Requested place</span><select value={applicationRole} onChange={event => setApplicationRole(event.target.value as typeof applicationRole)}><option value="Member">{displayGuild.roleLabels.Member}</option><option value="Officer">{displayGuild.roleLabels.Officer}</option><option value="Ally">{displayGuild.roleLabels.Ally}</option></select></label>
                 <label className="guild-field"><span>Message</span><textarea rows={3} value={applicationMessage} onChange={event => setApplicationMessage(event.target.value)} placeholder="Introduce yourself..." /></label>
@@ -591,8 +610,8 @@ const GuildProfilePage: React.FC = () => {
 
             {isGuildmaster && displayGuild.status === 'Recruiting' && (
               <div className="guild-action-card">
-                <p className="guild-section-label">Founding roster</p>
-                <h2>Invite founders</h2>
+                {displayGuild.sectionHeadings.foundersLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.foundersLabel}</p>}
+                {displayGuild.sectionHeadings.foundersTitle && <h2>{displayGuild.sectionHeadings.foundersTitle}</h2>}
                 <p>A leader and three founding characters establish an active guild.</p>
                 <label className="guild-field"><span>Character search</span><div className="guild-inline-input"><input value={founderSearch} onChange={event => setFounderSearch(event.target.value)} placeholder="Type at least 2 letters" />{isSearchingFounders && <Loader2 className="guild-spin" size={16} />}</div></label>
                 <div className="guild-founder-results">
@@ -603,8 +622,8 @@ const GuildProfilePage: React.FC = () => {
 
             {isGuildmaster && (
               <div className="guild-action-card">
-                <p className="guild-section-label">Guildmaster's desk</p>
-                <h2>Applications</h2>
+                {displayGuild.sectionHeadings.applicationsLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.applicationsLabel}</p>}
+                {displayGuild.sectionHeadings.applicationsTitle && <h2>{displayGuild.sectionHeadings.applicationsTitle}</h2>}
                 {pendingApplications.length === 0 ? <p>No petitions await your decision.</p> : pendingApplications.map(application => (
                   <div className="guild-application" key={application._id}>
                     <strong>{application.character?.name || 'Unknown character'}</strong>
@@ -683,6 +702,20 @@ const GuildProfilePage: React.FC = () => {
                 })}
               </div>
               <label className="guild-switch-field"><input type="checkbox" checked={draft.guestbookEnabled} onChange={event => updateDraft('guestbookEnabled', event.target.checked)} /><span><strong>Accept guestbook entries</strong><small>Keep the section visible while closing it to new visitor messages.</small></span></label>
+            </div>
+
+            <div className="guild-editor-section">
+              <div className="guild-editor-section-heading"><h3>Section wording</h3><button type="button" onClick={() => updateDraft('sectionHeadings', { ...defaultGuildSectionHeadings })}><RotateCcw size={14} /> Restore defaults</button></div>
+              <p>Rename each small label and main title. Leave a field empty to hide that line.</p>
+              <div className="guild-heading-customization">
+                {SECTION_HEADING_OPTIONS.map(option => (
+                  <fieldset key={option.section}>
+                    <legend>{option.section}</legend>
+                    <label className="guild-field"><span>Small label</span><input maxLength={80} value={draft.sectionHeadings[option.labelKey]} onChange={event => updateDraft('sectionHeadings', { ...draft.sectionHeadings, [option.labelKey]: event.target.value })} /></label>
+                    {option.titleKey && <label className="guild-field"><span>Main title</span><input maxLength={80} value={draft.sectionHeadings[option.titleKey]} onChange={event => updateDraft('sectionHeadings', { ...draft.sectionHeadings, [option.titleKey]: event.target.value })} /></label>}
+                  </fieldset>
+                ))}
+              </div>
             </div>
 
             <div className="guild-editor-section">

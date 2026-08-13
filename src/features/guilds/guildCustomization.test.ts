@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultGuildRoleLabels, getGuildFontStack, guildCustomizationSchema, isSafeExternalImageUrl } from './guildCustomization';
+import { defaultGuildRoleLabels, defaultGuildSectionHeadings, getGuildFontStack, guildCustomizationSchema, isSafeExternalImageUrl } from './guildCustomization';
 import { plainTextToRichHtml, richTextToPlainText } from './richText';
 
 const validCustomization = {
@@ -34,6 +34,7 @@ const validCustomization = {
     checkIn: true,
     guestbook: true
   },
+  sectionHeadings: { ...defaultGuildSectionHeadings },
   emblemUrl: '',
   bannerImageUrl: '',
   headquartersName: 'The Gilded Compass',
@@ -98,6 +99,17 @@ describe('guild customization', () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it('validates editable section headings', () => {
+    expect(guildCustomizationSchema.safeParse({
+      ...validCustomization,
+      sectionHeadings: { ...validCustomization.sectionHeadings, rosterTitle: 'The Company Roll' }
+    }).success).toBe(true);
+    expect(guildCustomizationSchema.safeParse({
+      ...validCustomization,
+      sectionHeadings: { ...validCustomization.sectionHeadings, rosterTitle: 'x'.repeat(81) }
+    }).success).toBe(false);
   });
 
   it('rejects unsupported roster presentations and oversized visitor content', () => {

@@ -160,6 +160,7 @@ export interface Guild {
   layoutStyle: 'chronicle' | 'stronghold' | 'banner' | 'saga';
   rosterDisplay: 'ledger' | 'dossiers' | 'cards';
   sectionVisibility: GuildSectionVisibility;
+  sectionHeadings: GuildSectionHeadings;
   headquartersName: string;
   headquartersTitle: string;
   headquartersTitleHtml: string;
@@ -220,6 +221,31 @@ export interface GuildSectionVisibility {
   messageBoard: boolean;
   checkIn: boolean;
   guestbook: boolean;
+}
+
+export interface GuildSectionHeadings {
+  charterLabel: string;
+  charterTitle: string;
+  requirementsLabel: string;
+  requirementsTitle: string;
+  headquartersLabel: string;
+  rosterLabel: string;
+  rosterTitle: string;
+  messageBoardLabel: string;
+  messageBoardTitle: string;
+  checkInLabel: string;
+  checkInTitle: string;
+  guestbookLabel: string;
+  guestbookTitle: string;
+  leaderLabel: string;
+  membershipLabel: string;
+  membershipTitle: string;
+  petitionLabel: string;
+  petitionTitle: string;
+  foundersLabel: string;
+  foundersTitle: string;
+  applicationsLabel: string;
+  applicationsTitle: string;
 }
 
 export interface GuildRoleLabels {

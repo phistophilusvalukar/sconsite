@@ -16,6 +16,7 @@ import {
 import {
   GuildCustomizationInput,
   defaultGuildPalette,
+  defaultGuildSectionHeadings,
   defaultGuildSectionVisibility,
   defaultGuildRoleLabels,
   guildCustomizationSchema,
@@ -160,6 +161,7 @@ interface GuildRow {
   layout_style?: Guild['layoutStyle'];
   roster_display?: Guild['rosterDisplay'];
   section_visibility?: Partial<Guild['sectionVisibility']>;
+  section_headings?: Partial<Guild['sectionHeadings']>;
   headquarters_name?: string;
   headquarters_title?: string;
   headquarters_title_html?: string;
@@ -397,7 +399,7 @@ export class GuildService {
       safeProfile.headquartersTitle = richTextToPlainText(safeProfile.headquartersTitleHtml).slice(0, 140);
       safeProfile.headquartersDescription = richTextToPlainText(safeProfile.headquartersDescriptionHtml).slice(0, 3000);
 
-      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v2_command', {
         p_guild_id: guildId,
         p_profile: safeProfile
       });
@@ -975,6 +977,7 @@ export class GuildService {
       layoutStyle: dbGuild.layout_style || 'chronicle',
       rosterDisplay: dbGuild.roster_display || 'ledger',
       sectionVisibility: { ...defaultGuildSectionVisibility, ...(dbGuild.section_visibility || {}) },
+      sectionHeadings: { ...defaultGuildSectionHeadings, ...(dbGuild.section_headings || {}) },
       headquartersName: dbGuild.headquarters_name || '',
       headquartersTitle: dbGuild.headquarters_title || '',
       headquartersTitleHtml: dbGuild.headquarters_title_html || plainTextToRichHtml(dbGuild.headquarters_title || ''),

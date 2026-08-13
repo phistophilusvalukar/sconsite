@@ -55,6 +55,31 @@ export const defaultGuildSectionVisibility = {
   guestbook: true
 } as const;
 
+export const defaultGuildSectionHeadings = {
+  charterLabel: 'Our charter',
+  charterTitle: 'About the guild',
+  requirementsLabel: 'Joining the order',
+  requirementsTitle: 'Requirements',
+  headquartersLabel: 'Headquarters',
+  rosterLabel: 'People of the banner',
+  rosterTitle: 'The roster',
+  messageBoardLabel: 'Pinned by the guildmaster',
+  messageBoardTitle: 'Message board',
+  checkInLabel: 'Daily guild check-in',
+  checkInTitle: 'Make your mark',
+  guestbookLabel: 'At the headquarters door',
+  guestbookTitle: 'Guild guestbook',
+  leaderLabel: 'Guild leadership',
+  membershipLabel: 'Your membership',
+  membershipTitle: 'Your characters',
+  petitionLabel: 'Join the story',
+  petitionTitle: 'Petition the guild',
+  foundersLabel: 'Founding roster',
+  foundersTitle: 'Invite founders',
+  applicationsLabel: "Guildmaster's desk",
+  applicationsTitle: 'Applications'
+} as const;
+
 export const defaultGuildPalette = {
   baseColor: '#111615',
   fontColor: '#f0ede7',
@@ -80,6 +105,7 @@ export const isSafeExternalImageUrl = (value: string) => {
   }
 };
 const externalImageUrl = z.string().trim().max(2000).refine(isSafeExternalImageUrl, 'Use a direct HTTPS image URL.');
+const sectionHeadingText = z.string().trim().max(80, 'Section headings can be at most 80 characters.');
 
 export const guildCustomizationSchema = z.object({
   name: z.string().trim().min(2, 'Guild name must be at least 2 characters.').max(80),
@@ -112,6 +138,30 @@ export const guildCustomizationSchema = z.object({
     messageBoard: z.boolean(),
     checkIn: z.boolean(),
     guestbook: z.boolean()
+  }).strict(),
+  sectionHeadings: z.object({
+    charterLabel: sectionHeadingText,
+    charterTitle: sectionHeadingText,
+    requirementsLabel: sectionHeadingText,
+    requirementsTitle: sectionHeadingText,
+    headquartersLabel: sectionHeadingText,
+    rosterLabel: sectionHeadingText,
+    rosterTitle: sectionHeadingText,
+    messageBoardLabel: sectionHeadingText,
+    messageBoardTitle: sectionHeadingText,
+    checkInLabel: sectionHeadingText,
+    checkInTitle: sectionHeadingText,
+    guestbookLabel: sectionHeadingText,
+    guestbookTitle: sectionHeadingText,
+    leaderLabel: sectionHeadingText,
+    membershipLabel: sectionHeadingText,
+    membershipTitle: sectionHeadingText,
+    petitionLabel: sectionHeadingText,
+    petitionTitle: sectionHeadingText,
+    foundersLabel: sectionHeadingText,
+    foundersTitle: sectionHeadingText,
+    applicationsLabel: sectionHeadingText,
+    applicationsTitle: sectionHeadingText
   }).strict(),
   emblemUrl: externalImageUrl,
   bannerImageUrl: externalImageUrl,
@@ -161,6 +211,7 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   layoutStyle: guild.layoutStyle,
   rosterDisplay: guild.rosterDisplay,
   sectionVisibility: { ...guild.sectionVisibility },
+  sectionHeadings: { ...defaultGuildSectionHeadings, ...guild.sectionHeadings },
   emblemUrl: guild.emblemUrl || '',
   bannerImageUrl: guild.bannerImageUrl || '',
   headquartersName: guild.headquartersName,
