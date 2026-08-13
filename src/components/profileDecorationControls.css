@@ -1,7 +1,8 @@
 .profile-decoration-controls { display: grid; gap: .8rem; }
 .profile-decoration-preview { position: relative; display: grid; min-height: 112px; place-items: end start; overflow: hidden; border: 1px solid rgb(255 255 255 / .12); border-radius: 7px; padding: .9rem; background: #171a18; isolation: isolate; }
-.profile-decoration-preview::before { position: absolute; z-index: -1; inset: 0; background-image: var(--profile-background-pattern); background-size: 260px 260px; content: ''; opacity: .85; }
-.profile-decoration-preview.has-border { border: 6px solid transparent; border-image: var(--profile-border-image) 8 round; }
+.profile-decoration-preview::before { position: absolute; z-index: -1; inset: 0; background-color: color-mix(in srgb, var(--profile-background-decoration-color) 84%, #202528); background-image: var(--profile-background-pattern); background-position: center; background-size: cover; background-blend-mode: luminosity; content: ''; opacity: .9; }
+.profile-decoration-preview.has-border { border: 10px solid transparent; border-image-source: var(--profile-border-image); border-image-slice: 170; border-image-width: 10px; border-image-repeat: stretch; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--profile-border-decoration-color) 58%, transparent), 0 0 16px color-mix(in srgb, var(--profile-border-decoration-color) 18%, transparent); }
+.profile-decoration-preview.has-border::after { position: absolute; z-index: -1; inset: 0; background: var(--profile-border-decoration-color); mix-blend-mode: color; content: ''; opacity: .38; pointer-events: none; }
 .profile-decoration-preview i { position: absolute; z-index: -1; inset: 0; background: linear-gradient(15deg, rgb(0 0 0 / .84), transparent 68%); }
 .profile-decoration-preview div { display: grid; gap: .22rem; }
 .profile-decoration-preview span { color: #a8afa9; font: 800 .56rem/1 Inter, sans-serif; letter-spacing: .15em; text-transform: uppercase; }

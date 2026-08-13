@@ -56,7 +56,7 @@ const ProfileDecorationControls: React.FC<ProfileDecorationControlsProps> = ({ v
   return (
     <div className="profile-decoration-controls">
       <div className={`profile-decoration-preview${value.borderTheme === 'none' ? '' : ' has-border'}${value.backgroundTheme === 'none' ? '' : ' has-background'}`} style={previewStyle}>
-        <i /><div><span>Live motif</span><strong>{profileDecorationThemes.find(theme => theme.value === value.borderTheme)?.label} / {profileDecorationThemes.find(theme => theme.value === value.backgroundTheme)?.label}</strong></div>
+        <i /><div><span>Generated profile artwork</span><strong>{profileDecorationThemes.find(theme => theme.value === value.borderTheme)?.label} / {profileDecorationThemes.find(theme => theme.value === value.backgroundTheme)?.label}</strong></div>
       </div>
       <ThemeSelect
         label="Border"

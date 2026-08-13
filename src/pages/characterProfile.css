@@ -34,19 +34,26 @@
 .character-profile-atmosphere::before {
   position: absolute;
   inset: 0;
+  background-color: color-mix(in srgb, var(--profile-background-decoration-color) 82%, #24292c);
   background-image: var(--profile-background-pattern, none);
   background-position: center top;
-  background-size: min(620px, 72vw) min(620px, 72vw);
+  background-size: max(760px, 100vw) auto;
+  background-repeat: repeat-y;
+  background-blend-mode: luminosity;
   content: '';
   opacity: 0;
   transition: opacity .25s ease;
 }
 
-.character-profile-page.has-profile-background-theme .character-profile-atmosphere::before { opacity: .72; }
+.character-profile-page.has-profile-background-theme .character-profile-atmosphere::before { opacity: .66; }
 .character-profile-page.has-profile-border-theme .character-profile-document {
-  border: 6px solid transparent;
-  border-image: var(--profile-border-image) 10 round;
-  box-shadow: 0 36px 100px rgb(0 0 0 / .48), 0 0 38px color-mix(in srgb, var(--profile-border-decoration-color) 14%, transparent);
+  isolation: isolate;
+  border: 14px solid transparent;
+  border-image-source: var(--profile-border-image);
+  border-image-slice: 170;
+  border-image-width: 14px;
+  border-image-repeat: stretch;
+  box-shadow: 0 36px 100px rgb(0 0 0 / .48), inset 0 0 0 1px color-mix(in srgb, var(--profile-border-decoration-color) 72%, transparent), 0 0 42px color-mix(in srgb, var(--profile-border-decoration-color) 22%, transparent);
 }
 
 .character-profile-shell {
@@ -91,6 +98,7 @@
 }
 
 .character-profile-document {
+  position: relative;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--character-accent) 38%, transparent);
   border-radius: 4px 4px 24px 4px;
