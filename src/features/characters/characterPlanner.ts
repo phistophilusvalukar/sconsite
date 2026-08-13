@@ -35,7 +35,7 @@ const actorSchema = z.object({
     type: z.string(),
     system: z.object({
       level: z.object({ value: z.number() }).passthrough().optional(),
-      category: z.string().optional(),
+      category: z.string().nullable().optional(),
       location: z.string().nullable().optional()
     }).passthrough().optional(),
     flags: z.object({

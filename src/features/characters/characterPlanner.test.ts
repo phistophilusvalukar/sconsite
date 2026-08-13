@@ -9,7 +9,8 @@ const actor = parsePlannerActor({
     { _id: 'late', name: 'Late Feat', type: 'feat', system: { level: { value: 4 }, location: 'class-14' }, flags: {} },
     { _id: 'grant', name: 'Granted Feat', type: 'feat', system: { level: { value: 1 }, location: null }, flags: { pf2e: { grantedBy: { id: 'late' } } } },
     { _id: 'grant-action', name: 'Granted Action', type: 'action', flags: { pf2e: { grantedBy: { id: 'grant' } } } },
-    { _id: 'sword', name: 'Sword', type: 'weapon', system: {}, flags: {} }
+    { _id: 'sword', name: 'Sword', type: 'weapon', system: {}, flags: {} },
+    { _id: 'nullable-category', name: 'Invoke Rune', type: 'action', system: { category: null }, flags: {} }
   ]
 });
 
@@ -28,7 +29,7 @@ describe('character planner', () => {
   it('removes future feats and dependent grants while preserving deferred item data', () => {
     const exported = exportActorAtLevel(actor, createDefaultPlanner(actor), 12);
     expect(exported.system.details.level.value).toBe(12);
-    expect(exported.items?.map(item => item._id)).toEqual(['early', 'sword']);
+    expect(exported.items?.map(item => item._id)).toEqual(['early', 'sword', 'nullable-category']);
     expect(exported.system.skills?.athletics.rank).toBe(3);
   });
 });
