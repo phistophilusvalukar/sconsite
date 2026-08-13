@@ -27,6 +27,7 @@ import {
 import { CharacterService } from '../services/characterService';
 import { defaultCharacterProfileSectionVisibility } from '../features/characters/characterProfileCustomization';
 import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
+import CharacterLevelPlanner from '../features/characters/CharacterLevelPlanner';
 import {
   getRelationshipColor,
   getRelationshipSentimentLabel
@@ -34,7 +35,7 @@ import {
 import SafeRichText from '../features/guilds/SafeRichText';
 import { DEFAULT_NPC_PLACEHOLDER, abilityLabels, getAbilityScoresFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
-type DetailsTab = 'foundry' | 'journal' | 'relationships';
+type DetailsTab = 'foundry' | 'planner' | 'journal' | 'relationships';
 
 interface CharacterDetailsModalProps {
   character: Character;
@@ -87,6 +88,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const sectionVisibility = character.profileSectionVisibility || defaultCharacterProfileSectionVisibility;
   const visibleTabs: DetailsTab[] = [
     ...(canEdit ? ['foundry' as const] : []),
+    ...(canEdit ? ['planner' as const] : []),
     ...(sectionVisibility.journal ? ['journal' as const] : []),
     ...(canEdit || sectionVisibility.relationships ? ['relationships' as const] : [])
   ];
@@ -442,8 +444,9 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
           </section>
 
           {visibleTabs.length > 0 && <section className={pageMode ? 'character-profile-records' : 'flex min-h-[620px] flex-col'}>
-            <div className={`grid border-b border-fantasy-700/30 ${visibleTabs.length === 3 ? 'grid-cols-3' : visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className={`grid border-b border-fantasy-700/30 ${visibleTabs.length === 4 ? 'grid-cols-4' : visibleTabs.length === 3 ? 'grid-cols-3' : visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {canEdit && <TabButton active={activeTab === 'foundry'} label="Foundry" icon={<FileJson className="h-4 w-4" />} onClick={() => setActiveTab('foundry')} />}
+              {canEdit && <TabButton active={activeTab === 'planner'} label="Planner" icon={<Download className="h-4 w-4" />} onClick={() => setActiveTab('planner')} />}
               <TabButton active={activeTab === 'journal'} label="Journal" icon={<BookOpen className="h-4 w-4" />} onClick={() => setActiveTab('journal')} />
               <TabButton active={activeTab === 'relationships'} label="Relations" icon={<Network className="h-4 w-4" />} onClick={() => setActiveTab('relationships')} />
             </div>
@@ -490,6 +493,17 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                         {foundryFiles.length === 0 && <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No Foundry JSON files saved yet.</p>}
                       </div>
                     </div>
+                  )}
+
+                  {activeTab === 'planner' && canEdit && (
+                    activeFoundryJson
+                      ? <CharacterLevelPlanner
+                          characterName={character.name}
+                          sourceJson={activeFoundryJson}
+                          sourceFile={activeFoundryEntry}
+                          onFileUpdated={updated => setFoundryFiles(prev => prev.map(file => file.id === updated.id ? updated : file))}
+                        />
+                      : <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">Add a Foundry JSON before using the character planner.</p>
                   )}
 
                   {activeTab === 'journal' && (

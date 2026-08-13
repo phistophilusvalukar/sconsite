@@ -207,6 +207,7 @@ export interface FoundryJsonEntry {
   characterId?: string;
   name: string;
   json: unknown;
+  plannerData?: unknown;
   isActive?: boolean;
   sortOrder?: number;
   createdAt: string | Date;

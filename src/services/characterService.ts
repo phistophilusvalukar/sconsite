@@ -164,6 +164,7 @@ interface FoundryFileRow {
   character_id?: string;
   name: string;
   json_data: unknown;
+  planner_data?: unknown;
   is_active?: boolean;
   sort_order?: number;
   created_at: string;
@@ -580,13 +581,14 @@ export class CharacterService {
     }
   }
 
-  async updateFoundryFile(fileId: string, updates: { name?: string; sortOrder?: number; isActive?: boolean; json?: unknown }): Promise<ApiResponse<FoundryJsonEntry>> {
+  async updateFoundryFile(fileId: string, updates: { name?: string; sortOrder?: number; isActive?: boolean; json?: unknown; plannerData?: unknown }): Promise<ApiResponse<FoundryJsonEntry>> {
     try {
       const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
       if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
       if (updates.json !== undefined) updateData.json_data = updates.json;
+      if (updates.plannerData !== undefined) updateData.planner_data = updates.plannerData;
 
       const needsCurrentFile = updates.isActive === true || updates.json !== undefined;
       const { data: currentFile, error: currentFileError } = needsCurrentFile
@@ -1111,6 +1113,7 @@ export class CharacterService {
       characterId: dbFile.character_id,
       name: dbFile.name,
       json: dbFile.json_data,
+      plannerData: dbFile.planner_data,
       isActive: dbFile.is_active,
       sortOrder: dbFile.sort_order,
       createdAt: new Date(dbFile.created_at),
