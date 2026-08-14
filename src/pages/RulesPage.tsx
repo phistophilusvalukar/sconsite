@@ -98,7 +98,7 @@ const RulesPage: React.FC = () => {
     <div className="rules-page">
       <header className="rules-hero">
         <div className="rules-hero-copy">
-          <h1>Scattered Convergence Rules Document</h1>
+          <h1>Shattered Convergence Rules Document</h1>
         </div>
         <div className="rules-document-meta">
           <span>Official rules document</span>

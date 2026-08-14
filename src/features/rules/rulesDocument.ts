@@ -57,7 +57,7 @@ export const rulesSections: RuleSection[] = (structuredRules as StructuredRuleSe
 });
 
 export const rulesDocumentMeta = {
-  title: 'Scattered Convergence Rules Document',
+  title: 'Shattered Convergence Rules Document',
   version: '1.07',
   sourceUrl: 'https://docs.google.com/document/d/1-FVWYSZ3aFs0HewarSShYaTqVAFCbE5uJNdYX10HEZs/edit?tab=t.0',
   wordCount: rulesSections.reduce((total, section) => total + section.wordCount, 0)
