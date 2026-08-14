@@ -190,6 +190,6 @@ export const rulesDocumentMeta = {
   wordCount: sections.reduce((total, section) => total + section.wordCount, 0)
 };
 
-export const rulesSections = sections;
+export const rulesSections = sections.filter(section => section.title !== 'Character Creation Rules (Index)');
 
 export const rulesCategories = Array.from(new Set(rulesSections.map(section => section.category)));

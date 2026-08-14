@@ -11,6 +11,7 @@ describe('rules document index', () => {
     expect(rulesSections.some(section => section.title === 'Controlled Convergence Ritual')).toBe(true);
     expect(rulesSections.some(section => section.title === 'Replacement Character')).toBe(true);
     expect(rulesSections.some(section => section.title === 'Character Retirement')).toBe(true);
+    expect(rulesSections.some(section => section.title === 'Character Creation Rules (Index)')).toBe(false);
   });
 
   it('removes document navigation and secondary working tabs', () => {
@@ -32,7 +33,7 @@ describe('rules document index', () => {
     expect(dualClass?.searchText).toContain('primary class');
   });
 
-  it('provides destinations for character-creation index references', () => {
+  it('provides stable destinations for linked rules sections', () => {
     const sectionIds = new Set(rulesSections.map(section => section.id));
     [
       'rare-ancestries-heritages-classes-class-features-skill-feats', 'rare-backgrounds-archetypes',
