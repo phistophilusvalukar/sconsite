@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUp, BookMarked, ExternalLink, Menu, Search, ShieldCheck, X } from 'lucide-react';
+import { ArrowUp, ExternalLink, Menu, Search, X } from 'lucide-react';
 import { rulesCategories, rulesDocumentMeta, rulesSections, type RuleSection } from '../features/rules/rulesDocument';
 import './rulesLore.css';
 
@@ -12,6 +12,24 @@ const HighlightText: React.FC<{ text: string; query: string }> = ({ text, query 
   return <>{text.split(expression).map((part, index) => terms.some(term => part.toLocaleLowerCase() === term.toLocaleLowerCase()) ? <mark key={`${part}-${index}`}>{part}</mark> : part)}</>;
 };
 
+const referenceAliases = new Map([
+  ['Limited Free Archetype rules', 'free-archetype'],
+  ['Limited Free Archetype', 'free-archetype']
+]);
+const sectionReferences = [...referenceAliases.entries(), ...rulesSections.map(section => [section.title, section.id] as const)]
+  .filter(([label]) => label.length >= 5)
+  .sort(([left], [right]) => right.length - left.length);
+const referenceExpression = new RegExp(`\\b(${sectionReferences.map(([label]) => escapeRegExp(label)).join('|')})\\b`, 'gi');
+const referenceTargets = new Map(sectionReferences.map(([label, id]) => [label.toLocaleLowerCase(), id]));
+
+const LinkedRuleText: React.FC<{ text: string; query: string; currentSectionId: string }> = ({ text, query, currentSectionId }) => <>{text.split(referenceExpression).map((part, index) => {
+  const targetId = referenceTargets.get(part.toLocaleLowerCase());
+  const content = <HighlightText text={part} query={query} />;
+  return targetId && targetId !== currentSectionId
+    ? <a className="rules-cross-reference" href={`#${targetId}`} key={`${part}-${index}`}>{content}</a>
+    : <React.Fragment key={`${part}-${index}`}>{content}</React.Fragment>;
+})}</>;
+
 const RuleBody: React.FC<{ section: RuleSection; query: string }> = ({ section, query }) => {
   const blocks = section.content.split(/\n\s*\n/).map(block => block.trim()).filter(Boolean);
   const orderedServerRules = section.title === 'Server Rules';
@@ -19,7 +37,7 @@ const RuleBody: React.FC<{ section: RuleSection; query: string }> = ({ section, 
   if (orderedServerRules) {
     const rules = blocks.filter(block => /^\d+[.)]\s/.test(block));
     const notes = blocks.filter(block => !/^\d+[.)]\s/.test(block));
-    return <div className="rules-article-body"><ol className="rules-commandments">{rules.map(rule => <li key={rule}><HighlightText text={rule.replace(/^\d+[.)]\s*/, '')} query={query} /></li>)}</ol>{notes.map(note => <p className="rules-note" key={note}><HighlightText text={note} query={query} /></p>)}</div>;
+    return <div className="rules-article-body"><ol className="rules-commandments">{rules.map(rule => <li key={rule}><LinkedRuleText text={rule.replace(/^\d+[.)]\s*/, '')} query={query} currentSectionId={section.id} /></li>)}</ol>{notes.map(note => <p className="rules-note" key={note}><LinkedRuleText text={note} query={query} currentSectionId={section.id} /></p>)}</div>;
   }
 
   return (
@@ -27,12 +45,12 @@ const RuleBody: React.FC<{ section: RuleSection; query: string }> = ({ section, 
       {blocks.map((block, index) => {
         const blockLines = block.split('\n').map(line => line.trim()).filter(Boolean);
         if (blockLines.length > 0 && blockLines.every(line => /^\*\s+/.test(line))) {
-          return <ul key={index}>{blockLines.map(line => <li key={line}><HighlightText text={line.replace(/^\*\s+/, '')} query={query} /></li>)}</ul>;
+          return <ul key={index}>{blockLines.map(line => <li key={line}><LinkedRuleText text={line.replace(/^\*\s+/, '')} query={query} currentSectionId={section.id} /></li>)}</ul>;
         }
         if (blockLines.length > 2 && blockLines.some(line => /\t/.test(line))) {
-          return <pre className="rules-data-block" key={index}><HighlightText text={blockLines.join('\n')} query={query} /></pre>;
+          return <pre className="rules-data-block" key={index}><LinkedRuleText text={blockLines.join('\n')} query={query} currentSectionId={section.id} /></pre>;
         }
-        return <p key={index}><HighlightText text={blockLines.join('\n')} query={query} /></p>;
+        return <p key={index}><LinkedRuleText text={blockLines.join('\n')} query={query} currentSectionId={section.id} /></p>;
       })}
     </div>
   );
@@ -40,7 +58,6 @@ const RuleBody: React.FC<{ section: RuleSection; query: string }> = ({ section, 
 
 const RulesPage: React.FC = () => {
   const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All rules');
   const [isContentsOpen, setIsContentsOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -63,10 +80,9 @@ const RulesPage: React.FC = () => {
 
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const visibleSections = useMemo(() => rulesSections.filter(section => {
-    const matchesCategory = activeCategory === 'All rules' || section.category === activeCategory;
     const matchesQuery = !normalizedQuery || normalizedQuery.split(/\s+/).every(term => section.searchText.includes(term));
-    return matchesCategory && matchesQuery;
-  }), [activeCategory, normalizedQuery]);
+    return matchesQuery;
+  }), [normalizedQuery]);
 
   const sectionsByCategory = useMemo(() => rulesCategories.map(category => ({
     category,
@@ -83,25 +99,18 @@ const RulesPage: React.FC = () => {
     <div className="rules-page">
       <header className="rules-hero">
         <div className="rules-hero-copy">
-          <p className="site-kicker"><ShieldCheck /> The server concordance</p>
-          <h1>Rules for a world<br /><em>shared by many.</em></h1>
-          <p>Everything needed to create a character, join an expedition, run a game, and leave the Convergence richer than you found it.</p>
+          <h1>Scattered Convergence Rules Document</h1>
         </div>
-        <div className="rules-edition-card">
-          <BookMarked />
-          <span>Current edition</span>
+        <div className="rules-document-meta">
+          <span>Official rules document</span>
           <strong>Version {rulesDocumentMeta.version}</strong>
-          <small>{rulesDocumentMeta.wordCount.toLocaleString()} indexed words</small>
-          <a href={rulesDocumentMeta.sourceUrl} target="_blank" rel="noreferrer">Original document <ExternalLink /></a>
+          <a href={rulesDocumentMeta.sourceUrl} target="_blank" rel="noreferrer">View source <ExternalLink /></a>
         </div>
       </header>
 
       <section className="rules-search-panel" aria-label="Search rules">
         <div className="rules-search-field"><Search /><input ref={searchRef} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search dual class, downtime, resurrection…" aria-label="Search all rules" />{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X /></button>}<kbd>/</kbd></div>
         <button type="button" className="rules-contents-toggle" onClick={() => setIsContentsOpen(current => !current)} aria-expanded={isContentsOpen}><Menu /> Contents</button>
-        <div className="rules-category-filters" role="group" aria-label="Filter rule categories">
-          {['All rules', ...rulesCategories].map(category => <button type="button" className={activeCategory === category ? 'is-active' : ''} aria-pressed={activeCategory === category} onClick={() => setActiveCategory(category)} key={category}>{category}</button>)}
-        </div>
         <p><strong>{visibleSections.length}</strong> sections shown{normalizedQuery ? ` for “${query.trim()}”` : ''}</p>
       </section>
 
@@ -118,7 +127,7 @@ const RulesPage: React.FC = () => {
               <RuleBody section={section} query={query} />
             </article>
           ))}
-          {visibleSections.length === 0 && <div className="rules-empty"><Search /><h2>No passage found</h2><p>Try a broader phrase, or return to all rule categories.</p><button type="button" onClick={() => { setQuery(''); setActiveCategory('All rules'); }}>Clear filters</button></div>}
+          {visibleSections.length === 0 && <div className="rules-empty"><Search /><h2>No passage found</h2><p>Try a broader phrase.</p><button type="button" onClick={() => setQuery('')}>Clear search</button></div>}
         </main>
       </div>
 
