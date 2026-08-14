@@ -16,7 +16,18 @@ describe('rules document index', () => {
 
   it('removes document navigation and secondary working tabs', () => {
     expect(rulesSections.some(section => section.title === 'Table of Contents')).toBe(false);
+    expect(rulesSections.some(section => section.title === 'Character Creation Rules (Index)')).toBe(false);
     expect(rulesSections.some(section => section.title.includes('Reformat test'))).toBe(false);
+  });
+
+  it('removes the character-creation overview without duplicating detailed sections', () => {
+    expect(rulesSections.some(section => section.title === 'Variant Rules')).toBe(false);
+    ['Rarity', 'Bans/Blacklists', 'Server House Rules/Tweaks/Clarifications'].forEach(title => {
+      expect(rulesSections.filter(section => section.title === title)).toHaveLength(1);
+    });
+    expect(rulesSections.some(section => section.title === 'Dual Class')).toBe(true);
+    expect(rulesSections.some(section => section.title === 'Free Archetype')).toBe(true);
+    expect(rulesSections.find(section => section.title === 'Rarity')?.searchText).not.toContain('limited free archetype rules');
   });
 
   it('provides useful reading categories and searchable text', () => {
@@ -42,5 +53,14 @@ describe('rules document index', () => {
       'experience-levelling-and-tiers', 'ancestry-tweaks', 'class-tweaks', 'archetype-tweaks',
       'item-tweaks', 'miscellaneous', 'character-retirement'
     ].forEach(id => expect(sectionIds.has(id), `Missing rules section #${id}`).toBe(true));
+  });
+
+  it('stores document structure explicitly', () => {
+    expect(rulesSections.every(section => section.blocks.length > 0)).toBe(true);
+    const tiers = rulesSections.find(section => section.title === 'Experience, Levelling, and Tiers');
+    const retirement = rulesSections.find(section => section.title === 'Character Retirement');
+    expect(tiers?.blocks.some(block => block.type === 'table')).toBe(true);
+    expect(retirement?.blocks.some(block => block.type === 'table')).toBe(true);
+    expect(rulesSections.find(section => section.title === 'Server Rules')?.blocks[0]?.type).toBe('ordered-list');
   });
 });
