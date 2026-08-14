@@ -31,4 +31,15 @@ describe('rules document index', () => {
     const dualClass = rulesSections.find(section => section.title === 'Dual Class');
     expect(dualClass?.searchText).toContain('primary class');
   });
+
+  it('provides destinations for character-creation index references', () => {
+    const sectionIds = new Set(rulesSections.map(section => section.id));
+    [
+      'rare-ancestries-heritages-classes-class-features-skill-feats', 'rare-backgrounds-archetypes',
+      'rare-spells', 'rare-items', 'banned-archetypes', 'banned-backgrounds', 'banned-class-features',
+      '3rd-party-material-battlezoo', 'server-house-rules-tweaks-clarifications',
+      'experience-levelling-and-tiers', 'ancestry-tweaks', 'class-tweaks', 'archetype-tweaks',
+      'item-tweaks', 'miscellaneous', 'character-retirement'
+    ].forEach(id => expect(sectionIds.has(id), `Missing rules section #${id}`).toBe(true));
+  });
 });

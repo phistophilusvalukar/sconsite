@@ -14,7 +14,10 @@ const HighlightText: React.FC<{ text: string; query: string }> = ({ text, query 
 
 const referenceAliases = new Map([
   ['Limited Free Archetype rules', 'free-archetype'],
-  ['Limited Free Archetype', 'free-archetype']
+  ['Limited Free Archetype', 'free-archetype'],
+  ['Ancestries, Heritages, Classes, Class Features, Skill Feats', 'rare-ancestries-heritages-classes-class-features-skill-feats'],
+  ['Backgrounds, Archetypes', 'rare-backgrounds-archetypes'],
+  ['Server House Rules/Tweaks', 'server-house-rules-tweaks-clarifications']
 ]);
 const sectionReferences = [...referenceAliases.entries(), ...rulesSections.map(section => [section.title, section.id] as const)]
   .filter(([label]) => label.length >= 5)
@@ -30,9 +33,39 @@ const LinkedRuleText: React.FC<{ text: string; query: string; currentSectionId: 
     : <React.Fragment key={`${part}-${index}`}>{content}</React.Fragment>;
 })}</>;
 
+const experienceRows = [
+  ['1', '2–3', '2'], ['2', '4–6', '3'], ['3', '7–9', '3'], ['4', '10–12', '4'],
+  ['5', '13–15', '4'], ['6', '16–17', '5'], ['7', '18–19', '5'], ['8', '20', '5']
+];
+const retirementRows = [
+  ['1', '43.75', '—', '—'], ['2', '75', '43.75', '45'], ['3', '125', '118.75', '120'],
+  ['4', '212.5', '243.75', '250'], ['5', '337.5', '456.25', '450'], ['6', '500', '793.75', '800'],
+  ['7', '725', '1,293.75', '1,300'], ['8', '1,000', '2,018.75', '2,000'], ['9', '1,425', '3,018.75', '3,000'],
+  ['10', '2,000', '4,443.75', '4,450'], ['11', '2,875', '6,443.75', '6,450'], ['12', '4,125', '9,318.75', '9,300'],
+  ['13', '6,250', '13,443.75', '13,500'], ['14', '9,125', '19,693.75', '19,500'], ['15', '13,625', '28,818.75', '29,000'],
+  ['16', '20,625', '42,443.75', '42,500'], ['17', '32,000', '63,068.75', '63,000'], ['18', '52,000', '95,068.75', '95,000'],
+  ['19', '88,750', '147,068.75', '147,000'], ['20', '122,500', '235,818.75', '235,800']
+];
+
+const RulesTable: React.FC<{ headers: string[]; rows: string[][] }> = ({ headers, rows }) => <div className="rules-table-wrap"><table className="rules-table"><thead><tr>{headers.map(header => <th key={header} scope="col">{header}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={row[0]}>{row.map((cell, index) => index === 0 ? <th key={index} scope="row">{cell}</th> : <td key={index}>{cell}</td>)}</tr>)}</tbody></table></div>;
+
+const indexTargets: Record<string, Record<string, string>> = {
+  Rarity: {
+    'Ancestries, Heritages, Classes, Class Features, Skill Feats': 'rare-ancestries-heritages-classes-class-features-skill-feats',
+    'Backgrounds, Archetypes': 'rare-backgrounds-archetypes', Spells: 'rare-spells', Items: 'rare-items'
+  },
+  'Bans/Blacklists': { Archetypes: 'banned-archetypes', Backgrounds: 'banned-backgrounds', 'Class feats': 'banned-class-features' },
+  '3rd Party Material': { Battlezoo: '3rd-party-material-battlezoo' },
+  'Server House Rules/Tweaks': {
+    'Experience, Levelling, and Tiers': 'experience-levelling-and-tiers', Ancestry: 'ancestry-tweaks', Class: 'class-tweaks',
+    Archetype: 'archetype-tweaks', Item: 'item-tweaks', Miscellaneous: 'miscellaneous'
+  }
+};
+
 const RuleBody: React.FC<{ section: RuleSection; query: string }> = ({ section, query }) => {
   const blocks = section.content.split(/\n\s*\n/).map(block => block.trim()).filter(Boolean);
   const orderedServerRules = section.title === 'Server Rules';
+  let indexGroup = '';
 
   if (orderedServerRules) {
     const rules = blocks.filter(block => /^\d+[.)]\s/.test(block));
@@ -44,13 +77,35 @@ const RuleBody: React.FC<{ section: RuleSection; query: string }> = ({ section, 
     <div className="rules-article-body">
       {blocks.map((block, index) => {
         const blockLines = block.split('\n').map(line => line.trim()).filter(Boolean);
-        if (blockLines.length > 0 && blockLines.every(line => /^\*\s+/.test(line))) {
-          return <ul key={index}>{blockLines.map(line => <li key={line}><LinkedRuleText text={line.replace(/^\*\s+/, '')} query={query} currentSectionId={section.id} /></li>)}</ul>;
+        if (section.title === 'Character Creation Rules (Index)' && blockLines.length === 1) {
+          const possibleGroup = blockLines[0].replace(/:$/, '');
+          if (indexTargets[possibleGroup]) indexGroup = possibleGroup;
+        }
+        if (section.title === 'Experience, Levelling, and Tiers' && blockLines[0] === 'Tier:') {
+          return <React.Fragment key={index}><RulesTable headers={['Tier', 'Character levels', 'XP for next level']} rows={experienceRows} /><p>The “XP for next level” column indicates the XP required to level up based on the character level shown in the second column.</p></React.Fragment>;
+        }
+        if (section.title === 'Character Retirement' && blockLines[0] === 'Level') {
+          return <RulesTable headers={['Level', 'Level rewards', 'Start wealth', 'Start wealth rounded']} rows={retirementRows} key={index} />;
+        }
+        const isBullet = (line: string) => /^(?:\*|•|-)\s+/.test(line);
+        if (blockLines.some(isBullet)) {
+          const groups = blockLines.reduce<Array<{ type: 'list' | 'text'; lines: string[] }>>((result, line) => {
+            const type = isBullet(line) ? 'list' : 'text';
+            const current = result[result.length - 1];
+            if (current?.type === type) current.lines.push(line);
+            else result.push({ type, lines: [line] });
+            return result;
+          }, []);
+          return <React.Fragment key={index}>{groups.map((group, groupIndex) => group.type === 'list' ? <ul key={groupIndex}>{group.lines.map(line => {
+            const text = line.replace(/^(?:\*|•|-)\s+/, '').replace(/^\*\*(.+)\*\*$/, '$1');
+            const directTarget = section.title === 'Character Creation Rules (Index)' ? indexTargets[indexGroup]?.[text] : undefined;
+            return <li key={line}>{directTarget ? <a className="rules-cross-reference" href={`#${directTarget}`}><HighlightText text={text} query={query} /></a> : <LinkedRuleText text={text} query={query} currentSectionId={section.id} />}</li>;
+          })}</ul> : <p key={groupIndex}><LinkedRuleText text={group.lines.join(' ')} query={query} currentSectionId={section.id} /></p>)}</React.Fragment>;
         }
         if (blockLines.length > 2 && blockLines.some(line => /\t/.test(line))) {
           return <pre className="rules-data-block" key={index}><LinkedRuleText text={blockLines.join('\n')} query={query} currentSectionId={section.id} /></pre>;
         }
-        return <p key={index}><LinkedRuleText text={blockLines.join('\n')} query={query} currentSectionId={section.id} /></p>;
+        return <p key={index}><LinkedRuleText text={blockLines.join(' ')} query={query} currentSectionId={section.id} /></p>;
       })}
     </div>
   );

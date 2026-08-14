@@ -166,6 +166,7 @@ documentLines.forEach(rawLine => {
     || line === 'Mission Statement'
     || line === 'Lore'
     || line === 'Character Creation Rules (Index)'
+    || topLevelHeadings.has(normalized)
     || separatorHeading
     || (knownHeading && !isIndexRepeat)
   );
