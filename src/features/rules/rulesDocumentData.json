@@ -90,8 +90,10 @@
         ]
       },
       {
-        "type": "paragraph",
-        "text": "Example: A Kineticist/Fighter boosts Constitution, and uses Constitution for their Kineticist Class DC, and chooses Dexterity for their Fighter Class DC. They may now choose to boost any of the other five abilities besides Constitution."
+        "type": "callout",
+        "tone": "example",
+        "title": "Example",
+        "text": "A Kineticist/Fighter boosts Constitution, and uses Constitution for their Kineticist Class DC, and chooses Dexterity for their Fighter Class DC. They may now choose to boost any of the other five abilities besides Constitution."
       },
       {
         "type": "paragraph",
@@ -100,6 +102,12 @@
       {
         "type": "paragraph",
         "text": "We have Foundry automation to help correctly set up your Dual Class and ability boosts, so it’s easier than it sounds. Instructions on how to use these will be in the Character Creation section."
+      }
+    ],
+    "references": [
+      {
+        "label": "Dual-Class PCs",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=1328"
       }
     ]
   },
@@ -112,6 +120,12 @@
         "type": "paragraph",
         "text": "Unaltered, as described in Ancestry Paragon."
       }
+    ],
+    "references": [
+      {
+        "label": "Ancestry Paragon",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=1336"
+      }
     ]
   },
   {
@@ -122,6 +136,12 @@
       {
         "type": "paragraph",
         "text": "Unaltered, as described in Mixed Ancestry. Subject to approval on character submission."
+      }
+    ],
+    "references": [
+      {
+        "label": "Mixed Ancestry",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=2085&Redirected=1"
       }
     ]
   },
@@ -150,6 +170,16 @@
       {
         "type": "paragraph",
         "text": "e.g.; If you take Familiar Master at 2 with a normal class feat, you may still take Chronoskimmer at 2 with a FA feat. You will not normally be able to take another archetype until you have two feats from Familiar Master and Chronoskimmer; however, you will be able to take Scions of Domora due to having the Familiar Master dedication. After that, all archetypes need to be completed before starting another one."
+      }
+    ],
+    "references": [
+      {
+        "label": "Free Archetype",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=994"
+      },
+      {
+        "label": "Dedication rules",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=2128"
       }
     ]
   },
@@ -602,9 +632,12 @@
         ]
       },
       {
+        "type": "subheading",
+        "text": "For the sake of Kineticists interacting with Commander Tactics"
+      },
+      {
         "type": "list",
         "items": [
-          "For the sake of Kineticists interacting with Commander Tactics:",
           "1-action Elemental Blasts may be treated as Strikes.",
           "2-action Elemental Blasts may be treated as Cantrips.",
           "Impulses may be treated as Spells cast from spell slots."
@@ -690,9 +723,12 @@
         ]
       },
       {
+        "type": "subheading",
+        "text": "Runesmith"
+      },
+      {
         "type": "list",
         "items": [
-          "Runesmith:",
           "Trace Rune can be used as 1 action on a creature or valid target within your hand’s reach, not only on adjacent targets.",
           "Smithing Weapons allows you to Trace Rune as 1 action on a creature or valid target within the reach of your Smithing Weapon.",
           "Engraving Maneuver allows you to Trace a Rune on the target of your trip, shove, or disarm.",
@@ -701,9 +737,12 @@
         ]
       },
       {
+        "type": "subheading",
+        "text": "Necromancer"
+      },
+      {
         "type": "list",
         "items": [
-          "Necromancer:",
           "Necromancers are able to learn spells & add them to their dirge to prepare, as other prepared casters may do. The wording of the feature was unclear; this was our interpretation.",
           "You may select Osteo Armaments to be an ikon. When doing so, you must pick one weapon to gain the ikon’s effects; creating any other weapon will not benefit from the ikon.",
           "Draining Strike only heals for the amount of spirit damage done by Draining Strike itself, not all the spirit damage done by the strike."
@@ -741,9 +780,12 @@
         ]
       },
       {
+        "type": "subheading",
+        "text": "Battleform Tweaks/Clarifications"
+      },
+      {
         "type": "list",
         "items": [
-          "Battleform Tweaks/Clarifications:",
           "Special Statistics refers to attack modifiers, skill modifiers, AC, speeds, and damage (including the number of weapon damage dice, dice size, additional damage, and traits).",
           "As such, Battleforms cannot benefit from damage bonuses such as Rage, Sneak Attack, Precise Strike, Weapon Property Runes, etc – anything that isn’t a circumstance or status bonus to damage. They can still benefit from non-activated weapon property runes, such as Rooting and Ghost Touch (including when as part of an Astral Rune).",
           "Any resistances and weaknesses possessed by the PC are retained unless exceeded by the battleform.",
@@ -973,8 +1015,10 @@
         ]
       },
       {
-        "type": "paragraph",
-        "text": "Example: Dragon Disciple, Kobold Breath."
+        "type": "callout",
+        "tone": "example",
+        "title": "Example",
+        "text": "Dragon Disciple, Kobold Breath."
       },
       {
         "type": "list",
@@ -983,8 +1027,10 @@
         ]
       },
       {
-        "type": "paragraph",
-        "text": "Example: Someone can only benefit from a Nymph (Battlezoo)'s Inspiration, the Fireproof spell, or the Harrowing ritual's buffs when in session with the character who produced the effects."
+        "type": "callout",
+        "tone": "example",
+        "title": "Example",
+        "text": "Someone can only benefit from a Nymph (Battlezoo)'s Inspiration, the Fireproof spell, or the Harrowing ritual's buffs when in session with the character who produced the effects."
       },
       {
         "type": "list",
@@ -993,8 +1039,10 @@
         ]
       },
       {
-        "type": "paragraph",
-        "text": "Example: When taking the Runescarred Archetype, instead of taking Thassilon Lore, someone might choose to take Axiom Lore, Floria Lore, or Agnivar Lore instead of Thassalon Lore. See the #setting-lore channel for ideas."
+        "type": "callout",
+        "tone": "example",
+        "title": "Example",
+        "text": "When taking the Runescarred Archetype, instead of taking Thassilon Lore, someone might choose to take Axiom Lore, Floria Lore, or Agnivar Lore instead of Thassalon Lore. See the #setting-lore channel for ideas."
       },
       {
         "type": "list",
@@ -1003,9 +1051,12 @@
         ]
       },
       {
+        "type": "subheading",
+        "text": "Learn a Spell tweaks"
+      },
+      {
         "type": "list",
         "items": [
-          "Learn a Spell tweaks:",
           "On a failure or crit failure during the Learn a Spell downtime activity, you only need to wait until 12am Monday in your local time."
         ]
       },
@@ -1024,9 +1075,12 @@
         "text": "(This rule also affects ritual casting. Rituals still cost days of downtime spent and anything under 8hrs is one day, but multiple rituals can be combined as long as the total is 8 hours or less)"
       },
       {
+        "type": "subheading",
+        "text": "Bonded Animal has the following modifications and restrictions added"
+      },
+      {
         "type": "list",
         "items": [
-          "Bonded Animal has the following modifications and restrictions added:",
           "Downtime required is reduced to 4 days.",
           "You must have a way of keeping the animal Friendly/Helpful for the duration (Domesticated Animals are assumed to be always Friendly).",
           "Target animal must be Common (NOT Uncommon).",
@@ -1034,9 +1088,12 @@
         ]
       },
       {
+        "type": "subheading",
+        "text": "Spells with missing stats"
+      },
+      {
         "type": "list",
         "items": [
-          "Spells with missing stats:",
           "Boneshaker’s enfeebled condition is missing a duration. Use a duration of 1 round."
         ]
       },
@@ -1047,9 +1104,12 @@
         ]
       },
       {
+        "type": "subheading",
+        "text": "Animal Companion Tweaks"
+      },
+      {
         "type": "list",
         "items": [
-          "Animal Companion Tweaks:",
           "Fundamental Armor Runes may be inscribed onto Animal Companion Barding.",
           "See the items tab of the hub foundry for the relevant items.",
           "Barding is found under Items->Convergence Items->Barding.",
@@ -1098,6 +1158,12 @@
         "items": [
           "The Heartbond Ritual is an exception to the rule regarding benefitting from buffs provided by another player–you do not need to be in the same session as the primary caster of Heartbond in order to have and use the benefits of the ritual. Similarly, you are allowed to undergo a heartbond between two of the same player’s PCs."
         ]
+      }
+    ],
+    "references": [
+      {
+        "label": "Learn a Spell",
+        "url": "https://2e.aonprd.com/Skills.aspx?General=true&ID=23&Redirected=1"
       }
     ]
   },
@@ -1186,9 +1252,12 @@
         ]
       },
       {
+        "type": "subheading",
+        "text": "Start with the following equipment"
+      },
+      {
         "type": "list",
         "items": [
-          "Start with the following equipment:",
           "45gp (which you may immediately start spending on common/uncommon level 0-2 equipment and items).",
           "A free Convergence Wayfinder (from the server’s items tab)."
         ]
@@ -1246,7 +1315,11 @@
     "blocks": [
       {
         "type": "paragraph",
-        "text": "When starting out on Shattered Convergence, a player has three character slots. Additional character slots can be unlocked by progressing a character through different tiers, allowing more characters to be active at once. The first time a character for each player reaches the cap of Tier 4, and every tier afterwards, a new character slot is unlocked. For example, a player will start with 3 slots, unlock a 4th when a character reaches level 12, and a 5th when a character reaches level 15. These unlocks only happen the first time a player’s character reaches these levels, not on any subsequent characters (so getting a second character to level 12 will not unlock an additional slot). These unlocks are permanent, so even if a character dies or is retired, the player will retain access to these additional character slots."
+        "text": "When starting out on Shattered Convergence, a player has three character slots. Additional character slots can be unlocked by progressing a character through different tiers, allowing more characters to be active at once. The first time a character for each player reaches the cap of Tier 4, and every tier afterwards, a new character slot is unlocked."
+      },
+      {
+        "type": "paragraph",
+        "text": "For example, a player will start with 3 slots, unlock a 4th when a character reaches level 12, and a 5th when a character reaches level 15. These unlocks only happen the first time a player’s character reaches these levels, not on any subsequent characters (so getting a second character to level 12 will not unlock an additional slot). These unlocks are permanent, so even if a character dies or is retired, the player will retain access to these additional character slots."
       }
     ]
   },
@@ -1621,6 +1694,12 @@
         "type": "paragraph",
         "text": "Shattered Convergence also has some modifications to downtime and retraining rules, which can be found here."
       }
+    ],
+    "references": [
+      {
+        "label": "Downtime and retraining",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=2263"
+      }
     ]
   },
   {
@@ -1703,6 +1782,12 @@
         "type": "paragraph",
         "text": "Axiom is an energetic hub of the trades of goods and services, and as such any skills or lores may be used to Earn Income. We suggest that you come up with how your character is using that particular skill to earn income. Earned Income must be spent in batches of no larger than 7-day increments to represent a work week. Look here for the Earn Income Table."
       }
+    ],
+    "references": [
+      {
+        "label": "Earn Income",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=2263"
+      }
     ]
   },
   {
@@ -1742,6 +1827,12 @@
         "type": "paragraph",
         "text": "There is no monetary cost for retraining. Ancestry, Background, and Classes may not be retrained. For more complete overhauls of character choices such as these, use the Rebuild Ritual."
       }
+    ],
+    "references": [
+      {
+        "label": "Retraining",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=2263"
+      }
     ]
   },
   {
@@ -1775,6 +1866,12 @@
       {
         "type": "paragraph",
         "text": "If your character has signature crafting they may optionally use it for each craft when they make the check. Any crafter can also choose or roll from the Item Quirks table for any item they craft, although these quirks cannot have any mechanical impact."
+      }
+    ],
+    "references": [
+      {
+        "label": "Item crafting",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=2452"
       }
     ]
   },
@@ -1826,19 +1923,85 @@
     "blocks": [
       {
         "type": "paragraph",
-        "text": "The Specialty Crafting table has been greatly altered, in order to make each specialty worthwhile to take. The altered table is as follows: Specialty Applicable Items Alchemy Grafts, Potions, and all items with the Alchemical trait. Artistry Armour: Natural/Innate armor. Fine art, including jewelry. Charms, Eyepieces, Medals, Spellhearts, Talismans, Tattoos, Whetstones (read the item descriptions), Equipment when made out of Porcelain (some masks). Runes etched onto any Artistry items. Blacksmithing Weapons: Groups: Axe, Dart, Firearm, Flail (except whips), Hammer, Knife, Pick, Sword. Armour: Groups: Chain, Composite, Plate (except Ceramic Plate) natural (Reinforced Chassis), Metal Shields (incl. Fortress Shield). Metal equipment. Runes etched onto any Blacksmithing items. Leatherworking Weapons: Sling group, Whips, Beastguns, Handwraps, Equipment from monster parts, leather weapons. Armour: Groups: Leather, Skeletal. Leather Lamellar, Equipment from monster parts, natural (Scales). Leather items, and any items made of cloth when made out of leather instead (most boots, gloves, some cloaks). Objects made from monster parts, e.g. Amphisbaena Handwraps. Runes etched onto any Leatherworking items. Stonemasonry Weapons: Groups: Hammer, Pick. Armor: Ceramic Plate, Fortress Shield. Gems, aeon stones, stone items. Runes into Stonemasonry items, Runestones of any Rune and onto any item. Tailoring Weapons: Handwraps. Armor: Cloth group, Robes. Cloth items, clothing, and any leather items when made out of thick cloth and similar materials instead (some boots, gloves, most cloaks etc.). Banners, Runes etched onto any Tailoring items. Woodworking Weapons: Groups: Axe, Bow, Club, Crossbow, Polearm, Spear. Armor: Groups: Wood, Skeletal. Wooden shields (incl. Tower, Fortress). Wood equipment. Scrolls, Wands, Staves, Grimoires. Runes etched onto any Woodworking items."
+        "text": "The standard Specialty Crafting categories are adjusted so that every specialty has a useful and clearly defined scope."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Specialty",
+          "Applicable items"
+        ],
+        "rows": [
+          [
+            "Alchemy",
+            "Grafts, potions, and all items with the Alchemical trait."
+          ],
+          [
+            "Artistry",
+            "Natural or innate armor; fine art and jewelry; charms, eyepieces, medals, spellhearts, talismans, tattoos, and whetstones; porcelain equipment; and runes applied to Artistry items."
+          ],
+          [
+            "Blacksmithing",
+            "Axes, darts, firearms, most flails, hammers, knives, picks, and swords; chain, composite, and plate armor; reinforced chassis and metal shields; metal equipment; and associated runes."
+          ],
+          [
+            "Leatherworking",
+            "Slings, whips, beastguns, handwraps, leather weapons, leather and skeletal armor, leather lamellar, monster-part equipment, leather goods, and associated runes."
+          ],
+          [
+            "Stonemasonry",
+            "Hammers and picks; ceramic plate and fortress shields; gems, aeon stones, stone items, runestones, and associated runes."
+          ],
+          [
+            "Tailoring",
+            "Handwraps; cloth armor and robes; clothing, cloth goods, banners, and associated runes."
+          ],
+          [
+            "Woodworking",
+            "Axes, bows, clubs, crossbows, polearms, and spears; wood and skeletal armor; wooden shields; wood equipment, scrolls, wands, staves, grimoires, and associated runes."
+          ]
+        ]
+      },
+      {
+        "type": "subheading",
+        "text": "Removed specialties"
       },
       {
         "type": "paragraph",
-        "text": "The following categories have been removed from the standard Specialty Crafting table, and their affected items split up into the following categories:"
+        "text": "The following standard categories are removed and folded into the listed specialties."
       },
       {
-        "type": "paragraph",
-        "text": "Removed speciality New speciality/ies Bookmaking Woodcarving/Artistry Glassmaking Alchemical/Artistry Pottery Artistry/Stonemasonry Shipbuilding Woodcarving Weaving Tailoring"
+        "type": "table",
+        "headers": [
+          "Removed specialty",
+          "Use instead"
+        ],
+        "rows": [
+          [
+            "Bookmaking",
+            "Woodworking or Artistry"
+          ],
+          [
+            "Glassmaking",
+            "Alchemy or Artistry"
+          ],
+          [
+            "Pottery",
+            "Artistry or Stonemasonry"
+          ],
+          [
+            "Shipbuilding",
+            "Woodworking"
+          ],
+          [
+            "Weaving",
+            "Tailoring"
+          ]
+        ]
       },
       {
-        "type": "paragraph",
-        "text": "SPECIFIC RULES FOR NON-WEAPONS/ARMOUR SPECIALISATION:"
+        "type": "subheading",
+        "text": "Non-weapon and non-armor items"
       },
       {
         "type": "list",
@@ -1849,6 +2012,12 @@
           "When upgrading an item that was crafted with a speciality, you must use the speciality that was used to craft the item in the first place. This speciality cannot be changed, and the materials of the item cannot be changed later.",
           "When crafting an item made with monster materials, Leatherworking is an optional specialty–you can always use the item’s default specialty (e.g. Amphisbaena Handwraps can be made with Tailoring)."
         ]
+      }
+    ],
+    "references": [
+      {
+        "label": "Item crafting",
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=2452"
       }
     ]
   },
@@ -1871,7 +2040,7 @@
       },
       {
         "type": "paragraph",
-        "text": "Step 4: Use the specialty that the item belongs to based on the above specialty list. ________________________________"
+        "text": "Step 4: Use the specialty that the item belongs to based on the above specialty list."
       }
     ]
   },
@@ -1956,7 +2125,11 @@
       },
       {
         "type": "paragraph",
-        "text": "In addition to the cost and tier, each room has a benefit of some kind tied to it. In most cases, this is a skill feat or general feat judged to be unimpactful enough to warrant being obtained through the housing system, such as Predict Weather, Sign Language, or A Home In Every Port. Housing can also be used to obtain extra known languages and certain Lore skills, such as Cooking Lore or Alcohol Lore. Housing also gives a character a once per session ability called “Thoughts of Home.” This ability can be used as a free action to heal for an amount equal to 1/3rd your BP rounded down or your current level in the session, whichever is lower. In the Convergence Items tab on the main foundry, you can find the Thoughts of Home ability and the corresponding Build Points item, which automatically scales the healing from Thoughts of Home."
+        "text": "In addition to the cost and tier, each room has a benefit of some kind tied to it. In most cases, this is a skill feat or general feat judged to be unimpactful enough to warrant being obtained through the housing system, such as Predict Weather, Sign Language, or A Home In Every Port. Housing can also be used to obtain extra known languages and certain Lore skills, such as Cooking Lore or Alcohol Lore."
+      },
+      {
+        "type": "paragraph",
+        "text": "Housing also gives a character a once per session ability called “Thoughts of Home.” This ability can be used as a free action to heal for an amount equal to 1/3rd your BP rounded down or your current level in the session, whichever is lower. In the Convergence Items tab on the main foundry, you can find the Thoughts of Home ability and the corresponding Build Points item, which automatically scales the healing from Thoughts of Home."
       }
     ]
   },
@@ -1993,32 +2166,66 @@
         "text": "Once completed, you may rebuild any and every aspect of your character aside from backstory (as it is still the same character). You also gain access to your original ancestry for the purposes of Adopted Ancestry, even if it was Rare. This uses the same method and rules as the standard Reincarnate Ritual, with some modified costs and outcomes as follows:"
       },
       {
-        "type": "paragraph",
-        "text": "Critical Success: The ritual succeeds with no complication. You may rebuild your character (while keeping the same backstory)."
+        "type": "callout",
+        "tone": "outcome",
+        "title": "Critical Success",
+        "text": "The ritual succeeds with no complication. You may rebuild your character (while keeping the same backstory)."
+      },
+      {
+        "type": "callout",
+        "tone": "outcome",
+        "title": "Success",
+        "text": "As critical success, but your character needs a week to recover from the drastic changes that have occurred. Your character gains the Convergence Recovery effect with a duration of 7 (real-time) days, which causes Clumsy 2, Enfeebled 2, and Drained 2. You may re-attempt the ritual in order to erase this penalty by achieving a higher degree of success, but otherwise you may not reduce or remove this penalty by any other means"
+      },
+      {
+        "type": "callout",
+        "tone": "outcome",
+        "title": "Failure",
+        "text": "The ritual underwent more severe complications. As success, but the Convergence Recovery effect has a duration of 14 days. This duration can be reduced as your character rests and recovers in a medical environment, using 1 point of downtime per day. The duration cannot be reduced below 7 days in this way."
+      },
+      {
+        "type": "callout",
+        "tone": "outcome",
+        "title": "Critical Failure",
+        "text": "The Convergence goes wild, and the backlash is severe. As failure, but the Convergence Recovery effect has a duration of 30 days."
+      },
+      {
+        "type": "subheading",
+        "text": "Target Changes"
       },
       {
         "type": "paragraph",
-        "text": "Success: As critical success, but your character needs a week to recover from the drastic changes that have occurred. Your character gains the Convergence Recovery effect with a duration of 7 (real-time) days, which causes Clumsy 2, Enfeebled 2, and Drained 2. You may re-attempt the ritual in order to erase this penalty by achieving a higher degree of success, but otherwise you may not reduce or remove this penalty by any other means (continued on next page) Failure: The ritual underwent more severe complications. As success, but the Convergence Recovery effect has a duration of 14 days. This duration can be reduced as your character rests and recovers in a medical environment, using 1 point of downtime per day. The duration cannot be reduced below 7 days in this way."
+        "text": "Owing to the ritual’s purpose as a rebuild, the target of the ritual is changed to “1 living creature up to [x] level,” in accordance with the original Reincarnate ritual’s heightening. The target of this ritual cannot be one of the Primary or Secondary Casters."
+      },
+      {
+        "type": "subheading",
+        "text": "Cost Changes"
       },
       {
         "type": "paragraph",
-        "text": "Critical Failure: The Convergence goes wild, and the backlash is severe. As failure, but the Convergence Recovery effect has a duration of 30 days."
+        "text": "The costs of this ritual have changed, using the amount seen here and doubling the overall cost. This cost cannot be reduced like most other rituals. Specialized Ritualists may charge a “service fee” for their better dice rolls than an NPCs’, however this service fee cannot exceed the total income they could earn with 7 days of Earn Income (Success) each. You may also replace one or both of the secondary casters with an NPC but they always roll a critical failure. (i.e. group of Lvl 9 ritualists may not charge a service fee more than 21gp each. Which is lvl 9 earned Income 3gp x 7)"
+      },
+      {
+        "type": "subheading",
+        "text": "Reduction of the Debuff"
       },
       {
         "type": "paragraph",
-        "text": "Target Changes: Owing to the ritual’s purpose as a rebuild, the target of the ritual is changed to “1 living creature up to [x] level,” in accordance with the original Reincarnate ritual’s heightening. The target of this ritual cannot be one of the Primary or Secondary Casters."
+        "text": "A character may reduce the debuff length of time using their downtime days to recover in a medical environment at a 1:1 ratio. This debuff cannot be reduced to less than 7 days remaining without the result of a critical success from the ritual itself."
+      },
+      {
+        "type": "subheading",
+        "text": "Recovery Period"
       },
       {
         "type": "paragraph",
-        "text": "Cost Changes: The costs of this ritual have changed, using the amount seen here and doubling the overall cost. This cost cannot be reduced like most other rituals. Specialized Ritualists may charge a “service fee” for their better dice rolls than an NPCs’, however this service fee cannot exceed the total income they could earn with 7 days of Earn Income (Success) each. You may also replace one or both of the secondary casters with an NPC but they always roll a critical failure. (i.e. group of Lvl 9 ritualists may not charge a service fee more than 21gp each. Which is lvl 9 earned Income 3gp x 7)"
-      },
+        "text": "Regardless of the result of the ritual, your character may not undergo the ritual again for 30 (real-time) days, except to re-attempt for a higher degree of success."
+      }
+    ],
+    "references": [
       {
-        "type": "paragraph",
-        "text": "Reduction of the Debuff: A character may reduce the debuff length of time using their downtime days to recover in a medical environment at a 1:1 ratio. This debuff cannot be reduced to less than 7 days remaining without the result of a critical success from the ritual itself."
-      },
-      {
-        "type": "paragraph",
-        "text": "Recovery Period: Regardless of the result of the ritual, your character may not undergo the ritual again for 30 (real-time) days, except to re-attempt for a higher degree of success. ________________________________"
+        "label": "Resurrect ritual",
+        "url": "https://2e.aonprd.com/Rituals.aspx?ID=123&Redirected=1"
       }
     ]
   },
@@ -2076,6 +2283,16 @@
         "type": "paragraph",
         "text": "Note: The Reincarnation (Ritual 3) ritual is currently banned, but has been repurposed as a means of retraining ancestry feats, heritages, or other normally-innate traits. See Controlled Convergence."
       }
+    ],
+    "references": [
+      {
+        "label": "Raise Dead",
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1645"
+      },
+      {
+        "label": "Resurrect ritual",
+        "url": "https://2e.aonprd.com/Rituals.aspx?ID=123&Redirected=1"
+      }
     ]
   },
   {
@@ -2117,6 +2334,12 @@
       {
         "type": "paragraph",
         "text": "Coercion of other players to pay for the other half will not be tolerated in any capacity. You may ask and solicit others, but you cannot guilt trip them, threaten them, or otherwise try to push the issue if they do not agree to do so."
+      }
+    ],
+    "references": [
+      {
+        "label": "Resurrect ritual",
+        "url": "https://2e.aonprd.com/Rituals.aspx?ID=123&Redirected=1"
       }
     ]
   },

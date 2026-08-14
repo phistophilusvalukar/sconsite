@@ -62,5 +62,9 @@ describe('rules document index', () => {
     expect(tiers?.blocks.some(block => block.type === 'table')).toBe(true);
     expect(retirement?.blocks.some(block => block.type === 'table')).toBe(true);
     expect(rulesSections.find(section => section.title === 'Server Rules')?.blocks[0]?.type).toBe('ordered-list');
+    expect(rulesSections.find(section => section.title === 'Specialty Crafting Rules/Table')?.blocks.filter(block => block.type === 'table')).toHaveLength(2);
+    expect(rulesSections.some(section => section.blocks.some(block => block.type === 'subheading'))).toBe(true);
+    expect(rulesSections.some(section => section.blocks.some(block => block.type === 'callout'))).toBe(true);
+    expect(rulesSections.flatMap(section => section.references || []).every(reference => reference.url.startsWith('https://2e.aonprd.com/'))).toBe(true);
   });
 });

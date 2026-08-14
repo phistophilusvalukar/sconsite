@@ -6,12 +6,16 @@ export interface RuleSection {
   category: string;
   level: 1 | 2;
   blocks: RuleBlock[];
+  references?: RuleReference[];
   searchText: string;
   wordCount: number;
 }
 
+export interface RuleReference { label: string; url: string }
+
 export type RuleBlock =
-  | { type: 'paragraph' | 'note' | 'data'; text: string }
+  | { type: 'paragraph' | 'note' | 'data' | 'subheading'; text: string }
+  | { type: 'callout'; tone: 'example' | 'outcome' | 'note'; title: string; text: string }
   | { type: 'list' | 'ordered-list'; items: string[] }
   | { type: 'table'; headers: string[]; rows: string[][] };
 
@@ -20,6 +24,7 @@ interface StructuredRuleSection {
   category: string;
   level: 1 | 2;
   blocks: RuleBlock[];
+  references?: RuleReference[];
 }
 
 const slugify = (value: string) => value
@@ -36,6 +41,7 @@ export const rulesSections: RuleSection[] = (structuredRules as StructuredRuleSe
   usedIds.set(baseId, idCount + 1);
   const id = idCount === 0 ? baseId : `${baseId}-${idCount + 1}`;
   const searchableContent = section.blocks.flatMap(block => {
+    if (block.type === 'callout') return [block.title, block.text];
     if ('text' in block) return [block.text];
     if ('items' in block) return block.items;
     return [...block.headers, ...block.rows.flat()];

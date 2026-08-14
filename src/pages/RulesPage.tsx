@@ -33,7 +33,10 @@ const LinkedRuleText: React.FC<{ text: string; query: string; currentSectionId: 
     : <React.Fragment key={`${part}-${index}`}>{content}</React.Fragment>;
 })}</>;
 
-const RulesTable: React.FC<{ headers: string[]; rows: string[][] }> = ({ headers, rows }) => <div className="rules-table-wrap"><table className="rules-table"><thead><tr>{headers.map(header => <th key={header} scope="col">{header}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={row[0]}>{row.map((cell, index) => index === 0 ? <th key={index} scope="row">{cell}</th> : <td key={index}>{cell}</td>)}</tr>)}</tbody></table></div>;
+const RulesTable: React.FC<{ headers: string[]; rows: string[][] }> = ({ headers, rows }) => {
+  const hasProseCells = rows.some(row => row.some(cell => cell.length > 80));
+  return <div className="rules-table-wrap"><table className={`rules-table${hasProseCells ? ' rules-table-prose' : ''}`}><thead><tr>{headers.map(header => <th key={header} scope="col">{header}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={row[0]}>{row.map((cell, index) => index === 0 ? <th key={index} scope="row">{cell}</th> : <td key={index}>{cell}</td>)}</tr>)}</tbody></table></div>;
+};
 
 const RuleBody: React.FC<{ section: RuleSection; query: string }> = ({ section, query }) => {
   return (
@@ -43,8 +46,11 @@ const RuleBody: React.FC<{ section: RuleSection; query: string }> = ({ section, 
         if (block.type === 'list') return <ul key={index}>{block.items.map(item => <li key={item}><LinkedRuleText text={item} query={query} currentSectionId={section.id} /></li>)}</ul>;
         if (block.type === 'ordered-list') return <ol className="rules-commandments" key={index}>{block.items.map(item => <li key={item}><LinkedRuleText text={item} query={query} currentSectionId={section.id} /></li>)}</ol>;
         if (block.type === 'data') return <pre className="rules-data-block" key={index}><LinkedRuleText text={block.text} query={query} currentSectionId={section.id} /></pre>;
+        if (block.type === 'subheading') return <h3 className="rules-subheading" key={index}>{block.text}</h3>;
+        if (block.type === 'callout') return <aside className={`rules-callout rules-callout-${block.tone}`} key={index}><strong>{block.title}</strong><p><LinkedRuleText text={block.text} query={query} currentSectionId={section.id} /></p></aside>;
         return <p className={block.type === 'note' ? 'rules-note' : undefined} key={index}><LinkedRuleText text={block.text} query={query} currentSectionId={section.id} /></p>;
       })}
+      {section.references && section.references.length > 0 && <nav className="rules-official-references" aria-label="Official Pathfinder references"><span>Archives of Nethys</span>{section.references.map(reference => <a href={reference.url} target="_blank" rel="noreferrer" key={reference.url}>{reference.label}<ExternalLink /></a>)}</nav>}
     </div>
   );
 };
@@ -92,7 +98,7 @@ const RulesPage: React.FC = () => {
     <div className="rules-page">
       <header className="rules-hero">
         <div className="rules-hero-copy">
-          <h1>Shattered Convergence Rules Document</h1>
+          <h1>Scattered Convergence Rules Document</h1>
         </div>
         <div className="rules-document-meta">
           <span>Official rules document</span>
