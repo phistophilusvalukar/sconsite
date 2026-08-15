@@ -659,6 +659,7 @@ export class CharacterService {
 
       if (error) return { success: false, error: error.message };
       if (typeof data !== 'boolean') return { success: false, error: 'Unexpected character profile response.' };
+      if (!data) return { success: false, error: 'The character profile was not saved.' };
       return { success: true, data, message: 'Character page updated.' };
     } catch (error) {
       console.error('Error updating character profile:', error);
