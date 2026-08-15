@@ -122,8 +122,7 @@ BEGIN
   INTO v_character
   FROM public.characters c
   WHERE c.id = p_character_id
-    AND c.profile_is_public = true
-    AND c.is_active = true;
+    AND c.profile_is_public = true;
 
   IF NOT FOUND THEN
     RETURN NULL;
