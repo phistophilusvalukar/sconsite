@@ -669,7 +669,7 @@ export class CharacterService {
 
   async getPublicCharacterProfile(characterId: string): Promise<ApiResponse<PublicCharacterProfileBundle>> {
     try {
-      const { data, error } = await this.dbService.getClient().rpc('get_public_character_page', {
+      const { data, error } = await this.dbService.getClient().rpc('get_public_character_profile', {
         p_character_id: characterId
       });
       if (error) return { success: false, error: error.message };
