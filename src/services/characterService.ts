@@ -337,9 +337,9 @@ const publicCharacterRowSchema = z.object({
 
 const publicCharacterProfileBundleSchema = z.object({
   character: publicCharacterRowSchema,
-  journalEntries: z.array(publicJournalEntrySchema),
-  relationships: z.array(publicRelationshipSchema),
-  relatedCharacterNames: z.record(z.string(), z.string())
+  journalEntries: z.array(z.unknown()),
+  relationships: z.array(z.unknown()),
+  relatedCharacterNames: z.unknown()
 });
 
 export interface PublicCharacterProfileBundle {
@@ -680,12 +680,29 @@ export class CharacterService {
         return { success: false, error: 'The public character page could not be read.' };
       }
 
+      const journalEntries = parsed.data.journalEntries.flatMap(entry => {
+        const result = publicJournalEntrySchema.safeParse(entry);
+        if (!result.success) {
+          console.warn('Skipping invalid public journal entry:', result.error);
+          return [];
+        }
+        return [result.data];
+      });
+      const relationships = parsed.data.relationships.flatMap(relationship => {
+        const result = publicRelationshipSchema.safeParse(relationship);
+        if (!result.success) {
+          console.warn('Skipping invalid public relationship:', result.error);
+          return [];
+        }
+        return [result.data];
+      });
+      const relatedCharacterNamesResult = z.record(z.string(), z.string()).safeParse(parsed.data.relatedCharacterNames);
       const character = this.transformCharacterFromDb(parsed.data.character as unknown as CharacterRow);
       return {
         success: true,
         data: {
           character,
-          journalEntries: parsed.data.journalEntries.map(entry => ({
+          journalEntries: journalEntries.map(entry => ({
             ...entry,
             createdAt: new Date(entry.createdAt),
             updatedAt: new Date(entry.updatedAt),
@@ -695,7 +712,7 @@ export class CharacterService {
               updatedAt: new Date(comment.updatedAt)
             }))
           })),
-          relationships: parsed.data.relationships.map(relationship => ({
+          relationships: relationships.map(relationship => ({
             ...relationship,
             tag: relationship.tag || undefined,
             status: 'confirmed' as const,
@@ -703,7 +720,7 @@ export class CharacterService {
             createdAt: new Date(relationship.createdAt),
             updatedAt: new Date(relationship.updatedAt)
           })),
-          relatedCharacterNames: parsed.data.relatedCharacterNames
+          relatedCharacterNames: relatedCharacterNamesResult.success ? relatedCharacterNamesResult.data : {}
         }
       };
     } catch (error) {

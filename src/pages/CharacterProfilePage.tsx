@@ -8,6 +8,7 @@ import {
   EyeOff,
   Globe2,
   HelpCircle,
+  FileJson,
   Loader2,
   Palette,
   Pencil,
@@ -247,7 +248,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   }
 
   if (!displayCharacter || loadError) {
-    return <main className="character-profile-state"><Shield /><h1>{publicView ? 'This character page is private or unavailable.' : (loadError || 'Character not found.')}</h1>{!publicView && <Link to="/characters">Return to characters</Link>}</main>;
+    return <main className="character-profile-state"><Shield /><h1>{loadError || (publicView ? 'This character page is private or unavailable.' : 'Character not found.')}</h1>{!publicView && <Link to="/characters">Return to characters</Link>}</main>;
   }
 
   const publicPageUrl = `${window.location.origin}/public/characters/${displayCharacter._id}`;
@@ -288,6 +289,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
             : <Link to="/characters"><ArrowLeft size={17} /> Character registry</Link>}
           <div>
             <button type="button" onClick={() => void copyPageLink(publicView || displayCharacter.profileIsPublic ? publicPageUrl : window.location.href)}><Copy size={16} /> {linkMessage || (displayCharacter.profileIsPublic ? 'Copy public link' : 'Copy page link')}</button>
+            {isOwner && <Link to={`/characters/${displayCharacter._id}/planner`}><FileJson size={17} /> Foundry planner</Link>}
             {isOwner && <button type="button" onClick={openEditor}><Palette size={17} /> Customize page</button>}
           </div>
         </nav>

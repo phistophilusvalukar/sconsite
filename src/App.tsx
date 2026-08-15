@@ -18,6 +18,7 @@ const LorePage = lazy(() => import('./pages/LorePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const CharacterPage = lazy(() => import('./pages/CharacterPage'));
 const CharacterProfilePage = lazy(() => import('./pages/CharacterProfilePage'));
+const CharacterPlannerPage = lazy(() => import('./pages/CharacterPlannerPage'));
 const CitizenRegistryPage = lazy(() => import('./pages/CitizenRegistryPage'));
 const GuildsPage = lazy(() => import('./pages/GuildsPage'));
 const GuildProfilePage = lazy(() => import('./pages/GuildProfilePage'));
@@ -68,6 +69,7 @@ function AppRoutes() {
         <Route path="/lore/:slug" element={<PageGate pageKey="lore"><LorePage /></PageGate>} />
         <Route path="/characters" element={<PageGate pageKey="characters"><CharacterPage /></PageGate>} />
         <Route path="/characters/:characterId" element={<PageGate pageKey="characters"><CharacterProfilePage /></PageGate>} />
+        <Route path="/characters/:characterId/planner" element={<PageGate pageKey="characters"><CharacterPlannerPage /></PageGate>} />
         <Route path="/public/characters/:characterId" element={<CharacterProfilePage publicView />} />
         <Route path="/citizens" element={<PageGate pageKey="citizens"><CitizenRegistryPage /></PageGate>} />
         <Route path="/guilds" element={<PageGate pageKey="guilds"><GuildsPage /></PageGate>} />
