@@ -166,7 +166,8 @@ BEGIN
     'notes', CASE WHEN v_show_notes THEN v_character.notes ELSE NULL END,
     'is_active', true,
     'profile_is_public', true,
-    'guild_id', NULL,
+    'guild_id', NULL
+  ) || jsonb_build_object(
     'profile_subtitle', v_character.profile_subtitle,
     'profile_title_font_family', v_character.profile_title_font_family,
     'profile_subtitle_font_family', v_character.profile_subtitle_font_family,
