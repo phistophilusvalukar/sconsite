@@ -49,7 +49,11 @@ const ProfileTypographyControls: React.FC<ProfileTypographyControlsProps> = ({ v
             <select value={fontValue} style={{ fontFamily: fontStack }} onChange={event => onChange({ [role.fontKey]: event.target.value as ProfileFontFamily })}>
               {categories.map(category => (
                 <optgroup label={category} key={category}>
-                  {fontOptions.filter(option => option.category === category).map(option => <option value={option.value} key={option.value}>{option.label}</option>)}
+                  {fontOptions.filter(option => option.category === category).map(option => (
+                    <option value={option.value} key={option.value} style={{ fontFamily: option.stack }}>
+                      {option.label} — Aa Bb Cc
+                    </option>
+                  ))}
                 </optgroup>
               ))}
             </select>

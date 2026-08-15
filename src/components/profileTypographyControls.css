@@ -8,6 +8,6 @@
 .profile-typography-role > label > span { color: #8f8995; font: 750 .62rem/1 Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
 .profile-typography-role select { min-width: 0; width: 100%; border: 1px solid rgb(255 255 255 / .12); border-radius: 4px; padding: .55rem .65rem; outline: 0; background: #211c25; color: #f5f1f6; font-size: .82rem; }
 .profile-typography-role select:focus { border-color: #c7a45d; }
-.profile-typography-role select option,
+.profile-typography-role select option { background: #211c25; color: #f5f1f6; }
 .profile-typography-role select optgroup { background: #211c25; color: #f5f1f6; font-family: Inter, sans-serif; }
 .profile-typography-role input[type='range'] { width: 100%; accent-color: #c7a45d; }
