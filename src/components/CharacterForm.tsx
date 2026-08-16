@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Save, Upload, X } from 'lucide-react';
+import { Save, Trash2, Upload, X } from 'lucide-react';
+import { z } from 'zod';
 import { Character, CharacterRoleBadge, CharacterRoleCategory } from '../types/database';
 import { CharacterService, FoundryCharacterData } from '../services/characterService';
 import { mainRoleOptions, roleBadgeMap, roleBadgeTone, roleCategories, rolePillTone } from '../utils/characterRoles';
@@ -10,6 +11,20 @@ interface CharacterFormProps {
   onCancel: () => void;
   userId: string;
 }
+
+type CompanionDraft = {
+  id?: string;
+  companionType: 'familiar' | 'animal_companion';
+  name: string;
+  fileName: string;
+  json: unknown;
+};
+
+const companionActorSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  img: z.string().optional(),
+  type: z.string().optional()
+}).passthrough();
 
 const CharacterForm: React.FC<CharacterFormProps> = ({
   character,
@@ -34,10 +49,13 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [importFileName, setImportFileName] = useState('');
   const [importedJson, setImportedJson] = useState<FoundryCharacterData | null>(null);
+  const [companionDrafts, setCompanionDrafts] = useState<CompanionDraft[]>([]);
+  const [removedCompanionIds, setRemovedCompanionIds] = useState<string[]>([]);
 
   const characterService = CharacterService.getInstance();
 
   useEffect(() => {
+    let cancelled = false;
     if (character) {
       setFormData({
         name: character.name,
@@ -55,8 +73,24 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
       });
       setImportedJson(character.foundryJson || null);
       setImportFileName(character.foundryFileName || '');
+      if (character._id) {
+        void characterService.getCompanionFiles(character._id).then(response => {
+          if (cancelled || !response.success) return;
+          setCompanionDrafts((response.data || []).map(companion => ({
+            id: companion.id,
+            companionType: companion.companionType,
+            name: companion.name,
+            fileName: companion.fileName || `${companion.name}.json`,
+            json: companion.json
+          })));
+        });
+      }
+    } else {
+      setCompanionDrafts([]);
     }
-  }, [character]);
+    setRemovedCompanionIds([]);
+    return () => { cancelled = true; };
+  }, [character, characterService]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -108,6 +142,29 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
     }
   };
 
+  const handleCompanionImport = async (event: React.ChangeEvent<HTMLInputElement>, companionType: CompanionDraft['companionType']) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+    try {
+      const imported = await Promise.all(files.map(async file => {
+        const parsed = companionActorSchema.safeParse(JSON.parse(await readFileAsText(file)));
+        if (!parsed.success) throw new Error(`${file.name} is not a valid Foundry actor export.`);
+        return { companionType, name: parsed.data.name, fileName: file.name, json: parsed.data } satisfies CompanionDraft;
+      }));
+      setCompanionDrafts(current => [...current, ...imported]);
+      event.target.value = '';
+    } catch (error) {
+      console.error('Error importing companion:', error);
+      alert(error instanceof Error ? error.message : 'Failed to import companion JSON.');
+    }
+  };
+
+  const removeCompanion = (index: number) => {
+    const target = companionDrafts[index];
+    if (target?.id) setRemovedCompanionIds(ids => [...ids, target.id!]);
+    setCompanionDrafts(current => current.filter((_, itemIndex) => itemIndex !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -141,6 +198,23 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         : await characterService.createCharacter(characterData);
 
       if (result.success && result.data) {
+        if (!result.data._id) throw new Error('Saved character is missing its identifier.');
+        const companionResults = await Promise.all([
+          ...removedCompanionIds.map(id => characterService.deleteFoundryFile(id)),
+          ...companionDrafts.filter(companion => !companion.id).map((companion, index) => characterService.addFoundryFile(
+            result.data!._id!,
+            userId,
+            companion.fileName,
+            companion.json,
+            index,
+            companion.companionType
+          ))
+        ]);
+        const companionFailure = companionResults.find(response => !response.success);
+        if (companionFailure) {
+          alert(companionFailure.error || 'The character saved, but a companion file could not be updated.');
+          return;
+        }
         onSave(result.data);
       } else {
         alert(result.error || 'Failed to save character');
@@ -373,6 +447,27 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
                 </div>
               ))}
             </div>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-lg font-semibold text-white">Familiars and animal companions</h3>
+            <p className="mb-3 text-sm text-gray-400">Attach separate Foundry actor exports. You can add multiple companions of either type.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-fantasy-700/50 p-3 text-gray-300 transition-colors hover:border-yellow-400/50">
+                <Upload className="h-5 w-5" /><span>Add familiar JSON</span>
+                <input type="file" accept=".json,application/json" multiple onChange={event => void handleCompanionImport(event, 'familiar')} className="hidden" />
+              </label>
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-fantasy-700/50 p-3 text-gray-300 transition-colors hover:border-yellow-400/50">
+                <Upload className="h-5 w-5" /><span>Add animal companion JSON</span>
+                <input type="file" accept=".json,application/json" multiple onChange={event => void handleCompanionImport(event, 'animal_companion')} className="hidden" />
+              </label>
+            </div>
+            {companionDrafts.length > 0 && <div className="mt-3 space-y-2">{companionDrafts.map((companion, index) => (
+              <div key={companion.id || `${companion.fileName}-${index}`} className="flex items-center gap-3 rounded-lg border border-fantasy-700/30 bg-fantasy-800/30 p-3">
+                <div className="min-w-0 flex-1"><strong className="block truncate text-white">{companion.name}</strong><span className="text-xs text-gray-400">{companion.companionType === 'familiar' ? 'Familiar' : 'Animal companion'} · {companion.fileName}</span></div>
+                <button type="button" onClick={() => removeCompanion(index)} className="rounded-md p-2 text-gray-400 hover:bg-red-500/20 hover:text-red-200" aria-label={`Remove ${companion.name}`}><Trash2 className="h-4 w-4" /></button>
+              </div>
+            ))}</div>}
           </div>
 
           <div>

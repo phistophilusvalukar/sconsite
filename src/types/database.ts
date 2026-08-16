@@ -321,6 +321,20 @@ export interface FoundryJsonEntry {
   sortOrder?: number;
   createdAt: string | Date;
   updatedAt?: string | Date;
+  subjectType?: 'character' | 'familiar' | 'animal_companion';
+}
+
+export interface CharacterCompanion {
+  id: string;
+  companionType: 'familiar' | 'animal_companion';
+  name: string;
+  imageUrl?: string;
+  creatureType?: string;
+  level?: number | null;
+  hpValue?: number | null;
+  hpMax?: number | null;
+  json?: unknown;
+  fileName?: string;
 }
 
 export interface CharacterJournalEntry {

@@ -10,6 +10,7 @@ import {
   CharacterJournalComment,
   CharacterJournalEntry,
   CharacterRelationship,
+  CharacterCompanion,
   FoundryJsonEntry,
   JsonValue
 } from '../types/database';
@@ -237,6 +238,7 @@ interface FoundryFileRow {
   sort_order?: number;
   created_at: string;
   updated_at?: string;
+  subject_type?: FoundryJsonEntry['subjectType'];
 }
 
 interface JournalEntryRow {
@@ -347,7 +349,17 @@ const publicCharacterProfileBundleSchema = z.object({
   character: publicCharacterRowSchema,
   journalEntries: z.array(z.unknown()),
   relationships: z.array(z.unknown()),
-  relatedCharacterNames: z.unknown()
+  relatedCharacterNames: z.unknown(),
+  companions: z.array(z.object({
+    id: z.string().uuid(),
+    companionType: z.enum(['familiar', 'animal_companion']),
+    name: z.string(),
+    imageUrl: z.string().optional().nullable(),
+    creatureType: z.string().optional().nullable(),
+    level: z.coerce.number().optional().nullable(),
+    hpValue: z.coerce.number().optional().nullable(),
+    hpMax: z.coerce.number().optional().nullable()
+  })).default([])
 });
 
 export interface PublicCharacterProfileBundle {
@@ -355,6 +367,7 @@ export interface PublicCharacterProfileBundle {
   journalEntries: CharacterJournalEntry[];
   relationships: CharacterRelationship[];
   relatedCharacterNames: Record<string, string>;
+  companions: CharacterCompanion[];
 }
 
 export class CharacterService {
@@ -740,7 +753,12 @@ export class CharacterService {
             createdAt: new Date(relationship.createdAt),
             updatedAt: new Date(relationship.updatedAt)
           })),
-          relatedCharacterNames: relatedCharacterNamesResult.success ? relatedCharacterNamesResult.data : {}
+          relatedCharacterNames: relatedCharacterNamesResult.success ? relatedCharacterNamesResult.data : {},
+          companions: parsed.data.companions.map(companion => ({
+            ...companion,
+            imageUrl: isSafeCharacterBannerImageUrl(companion.imageUrl || '') ? companion.imageUrl || undefined : undefined,
+            creatureType: companion.creatureType || undefined
+          }))
         }
       };
     } catch (error) {
@@ -755,6 +773,7 @@ export class CharacterService {
         .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
         .select('*')
         .eq('character_id', characterId)
+        .eq('subject_type', 'character')
         .order('sort_order', { ascending: true });
 
       if (error) return { success: false, error: error.message };
@@ -769,14 +788,15 @@ export class CharacterService {
     }
   }
 
-  async addFoundryFile(characterId: string, ownerId: string, name: string, json: unknown, sortOrder: number): Promise<ApiResponse<FoundryJsonEntry>> {
+  async addFoundryFile(characterId: string, ownerId: string, name: string, json: unknown, sortOrder: number, subjectType: FoundryJsonEntry['subjectType'] = 'character'): Promise<ApiResponse<FoundryJsonEntry>> {
     try {
       const { data: existingFiles } = await this.dbService.getClient()
         .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
         .select('id')
         .eq('character_id', characterId)
+        .eq('subject_type', 'character')
         .limit(1);
-      const willBeActive = !existingFiles || existingFiles.length === 0;
+      const willBeActive = subjectType === 'character' && (!existingFiles || existingFiles.length === 0);
 
       const { data, error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
@@ -786,7 +806,8 @@ export class CharacterService {
           name,
           json_data: json,
           is_active: willBeActive,
-          sort_order: sortOrder
+          sort_order: sortOrder,
+          subject_type: subjectType
         })
         .select()
         .single();
@@ -804,6 +825,22 @@ export class CharacterService {
     } catch (error) {
       console.error('Error adding Foundry file:', error);
       return { success: false, error: 'Failed to add Foundry file' };
+    }
+  }
+
+  async getCompanionFiles(characterId: string): Promise<ApiResponse<CharacterCompanion[]>> {
+    try {
+      const { data, error } = await this.dbService.getClient()
+        .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
+        .select('*')
+        .eq('character_id', characterId)
+        .in('subject_type', ['familiar', 'animal_companion'])
+        .order('sort_order', { ascending: true });
+      if (error) return { success: false, error: error.message };
+      return { success: true, data: (data || []).map(file => this.transformCompanionFromDb(file)) };
+    } catch (error) {
+      console.error('Error fetching companion files:', error);
+      return { success: false, error: 'Failed to fetch companion files' };
     }
   }
 
@@ -1369,7 +1406,29 @@ export class CharacterService {
       isActive: dbFile.is_active,
       sortOrder: dbFile.sort_order,
       createdAt: new Date(dbFile.created_at),
-      updatedAt: new Date(dbFile.updated_at ?? dbFile.created_at)
+      updatedAt: new Date(dbFile.updated_at ?? dbFile.created_at),
+      subjectType: dbFile.subject_type || 'character'
+    };
+  }
+
+  private transformCompanionFromDb(dbFile: FoundryFileRow): CharacterCompanion {
+    const json = dbFile.json_data as {
+      name?: unknown;
+      img?: unknown;
+      system?: { details?: { creature?: { value?: unknown }; level?: { value?: unknown } }; attributes?: { hp?: { value?: unknown; max?: unknown } } };
+    };
+    const numberOrNull = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null;
+    return {
+      id: dbFile.id,
+      companionType: dbFile.subject_type === 'animal_companion' ? 'animal_companion' : 'familiar',
+      name: typeof json?.name === 'string' && json.name.trim() ? json.name : dbFile.name,
+      imageUrl: typeof json?.img === 'string' ? normalizeFoundryAvatar(json.img) : undefined,
+      creatureType: typeof json?.system?.details?.creature?.value === 'string' ? json.system.details.creature.value : undefined,
+      level: numberOrNull(json?.system?.details?.level?.value),
+      hpValue: numberOrNull(json?.system?.attributes?.hp?.value),
+      hpMax: numberOrNull(json?.system?.attributes?.hp?.max),
+      json: dbFile.json_data,
+      fileName: dbFile.name
     };
   }
 

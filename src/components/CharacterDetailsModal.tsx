@@ -3,6 +3,7 @@ import {
   ArrowDown,
   ArrowUp,
   BookOpen,
+  ChevronRight,
   Download,
   FileJson,
   Heart,
@@ -21,6 +22,7 @@ import { DATABASE_TABLES } from '../config/database';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import {
   Character,
+  CharacterCompanion,
   CharacterJournalEntry,
   CharacterRelationship,
   FoundryJsonEntry
@@ -47,7 +49,7 @@ interface CharacterDetailsModalProps {
   onEdit?: (character: Character) => void;
   onRelationshipsChanged?: () => void | Promise<void>;
   pageMode?: boolean;
-  readOnlyData?: Pick<PublicCharacterProfileBundle, 'journalEntries' | 'relationships' | 'relatedCharacterNames'>;
+  readOnlyData?: Pick<PublicCharacterProfileBundle, 'journalEntries' | 'relationships' | 'relatedCharacterNames' | 'companions'>;
   onChangeShape?: () => void;
   shapeVersion?: 1 | 2;
 }
@@ -71,6 +73,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const isReadOnly = Boolean(readOnlyData);
   const [activeTab, setActiveTab] = useState<DetailsTab>('backstory');
   const [foundryFiles, setFoundryFiles] = useState<FoundryJsonEntry[]>([]);
+  const [companions, setCompanions] = useState<CharacterCompanion[]>([]);
+  const [activeSubjectIndex, setActiveSubjectIndex] = useState(0);
   const [journalEntries, setJournalEntries] = useState<CharacterJournalEntry[]>([]);
   const [relationships, setRelationships] = useState<CharacterRelationship[]>([]);
   const [journalDraft, setJournalDraft] = useState({ title: '', body: '' });
@@ -90,7 +94,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const activeFoundryEntry = foundryFiles.find(file => file.isActive) || foundryFiles[0];
   const activeFoundryJson = activeFoundryEntry?.json || character.foundryJson;
   const parsedData = activeFoundryJson ? getCharacterDataFromJson(activeFoundryJson) : null;
-  const characterPortrait = character.profilePortraitImageUrl || parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
+  const activeCompanion = activeSubjectIndex > 0 ? companions[activeSubjectIndex - 1] : null;
+  const characterPortrait = activeCompanion?.imageUrl || character.profilePortraitImageUrl || parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
   const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
   const sectionVisibility = character.profileSectionVisibility || defaultCharacterProfileSectionVisibility;
@@ -129,6 +134,10 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     setRelationshipMessage('');
   }, [character._id, canEdit, initialTab, sectionVisibility.backstory, sectionVisibility.journal, sectionVisibility.relationships]);
 
+  useEffect(() => {
+    setActiveSubjectIndex(current => Math.min(current, companions.length));
+  }, [companions.length]);
+
   const loadModalData = useCallback(async (showLoading = false) => {
     if (!character._id) return;
 
@@ -137,19 +146,22 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
       setJournalEntries(readOnlyData.journalEntries);
       setRelationships(readOnlyData.relationships);
       setFoundryFiles([]);
+      setCompanions(readOnlyData.companions || []);
       setIsLoading(false);
       return;
     }
     try {
-      const [journalResponse, relationshipResponse, foundryResponse] = await Promise.all([
+      const [journalResponse, relationshipResponse, foundryResponse, companionResponse] = await Promise.all([
         characterService.getJournalEntries(character._id, currentUserId),
         characterService.getRelationshipsForCharacters([character._id], canEdit),
-        canEdit ? characterService.getFoundryFiles(character._id) : Promise.resolve({ success: true, data: [] as FoundryJsonEntry[] })
+        canEdit ? characterService.getFoundryFiles(character._id) : Promise.resolve({ success: true, data: [] as FoundryJsonEntry[] }),
+        characterService.getCompanionFiles(character._id)
       ]);
 
       if (journalResponse.success && journalResponse.data) setJournalEntries(journalResponse.data);
       if (relationshipResponse.success && relationshipResponse.data) setRelationships(relationshipResponse.data);
       if (foundryResponse.success && foundryResponse.data) setFoundryFiles(foundryResponse.data);
+      if (companionResponse.success && companionResponse.data) setCompanions(companionResponse.data);
     } finally {
       setIsLoading(false);
     }
@@ -250,6 +262,25 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadCompanion = (companion: CharacterCompanion) => {
+    if (!companion.json) return;
+    const dataBlob = new Blob([JSON.stringify(companion.json, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = companion.fileName || `${companion.name}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDeleteCompanion = async (companionId: string) => {
+    const response = await characterService.deleteFoundryFile(companionId);
+    if (response.success) setCompanions(current => current.filter(companion => companion.id !== companionId));
+    else alert(response.error || 'Failed to delete companion file');
   };
 
   const handleAddJournal = async () => {
@@ -424,16 +455,23 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
           <section className={pageMode ? 'character-profile-core' : 'border-b border-fantasy-700/30 lg:border-b-0 lg:border-r'}>
             <div className={pageMode ? `character-profile-identity${hasPortraitColumn ? '' : ' has-no-portrait'}` : 'grid gap-6 p-6 md:grid-cols-[minmax(220px,0.85fr)_1fr] lg:grid-cols-1 xl:grid-cols-[minmax(260px,0.85fr)_1fr]'}>
               {hasPortraitColumn && <div className={pageMode ? 'character-profile-portrait-column' : 'space-y-4'}>
-                {sectionVisibility.portrait && <DynamicCharacterPortrait character={character} fallbackSrc={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} motion={pageMode ? 'parallax' : 'hover'} allowDynamic={pageMode} />}
-                {pageMode && sectionVisibility.portrait && onChangeShape && <button type="button" className="character-profile-shape-button" onClick={onChangeShape} aria-label={`Change Shape — currently Version ${shapeVersion}`} data-tooltip="Change Shape"><RefreshCw size={16} /></button>}
+                {sectionVisibility.portrait && (activeCompanion
+                  ? <img src={characterPortrait} alt={`${activeCompanion.name} portrait`} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} />
+                  : <DynamicCharacterPortrait character={character} fallbackSrc={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} motion={pageMode ? 'parallax' : 'hover'} allowDynamic={pageMode} />)}
+                {pageMode && sectionVisibility.portrait && onChangeShape && !activeCompanion && <button type="button" className="character-profile-shape-button" onClick={onChangeShape} aria-label={`Change Shape — currently Version ${shapeVersion}`} data-tooltip="Change Shape"><RefreshCw size={16} /></button>}
                 {sectionVisibility.abilityMatrix && <AbilityRadarChart scores={abilityScores} pageMode={pageMode} />}
               </div>}
               <div className="space-y-5">
                 <div className={pageMode ? 'character-profile-rankline' : 'flex flex-wrap items-baseline gap-3'}>
-                  <span>Level {character.level}</span>
-                  <strong>{character.class}</strong>
+                  <span>{activeCompanion ? (activeCompanion.companionType === 'familiar' ? 'Familiar' : 'Animal companion') : `Level ${character.level}`}</span>
+                  <strong>{activeCompanion?.name || character.class}</strong>
                 </div>
-                {sectionVisibility.details && <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
+                {sectionVisibility.details && (activeCompanion ? <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
+                  <Detail label="Companion" value={activeCompanion.companionType === 'familiar' ? 'Familiar' : 'Animal companion'} />
+                  <Detail label="Creature" value={activeCompanion.creatureType || 'Unknown'} />
+                  <Detail label="Level" value={activeCompanion.level && activeCompanion.level > 0 ? activeCompanion.level : '—'} />
+                  <Detail label="Hit points" value={activeCompanion.hpMax ? `${activeCompanion.hpValue ?? 0} / ${activeCompanion.hpMax}` : activeCompanion.hpValue ?? '—'} />
+                </div> : <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
                   <Detail label="Ancestry" value={character.ancestry || character.race} />
                   <Detail label="Heritage" value={character.heritage || 'Unknown'} />
                   <Detail label="Background" value={character.background || 'Unrecorded'} />
@@ -442,7 +480,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   <Detail label="Height" value={parsedData?.height || character.stats?.height || 'Unknown'} />
                   <Detail label="Weight" value={parsedData?.weight || character.stats?.weight || 'Unknown'} />
                   <Detail label="Deity" value={parsedData?.deity || 'Unknown'} />
-                </div>}
+                </div>)}
                 {sectionVisibility.notes && character.notes && (
                   <div>
                     <h4 className="mb-2 text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">Notes</h4>
@@ -450,6 +488,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   </div>
                 )}
               </div>
+              {pageMode && companions.length > 0 && <button type="button" className="character-profile-companion-next" onClick={() => setActiveSubjectIndex(current => (current + 1) % (companions.length + 1))} aria-label={activeSubjectIndex === companions.length ? `Return to ${character.name}` : `Show ${companions[activeSubjectIndex]?.name || character.name}`} title={activeSubjectIndex === companions.length ? `Return to ${character.name}` : `Show ${companions[activeSubjectIndex]?.name || character.name}`}><ChevronRight /></button>}
             </div>
           </section>
 
@@ -507,6 +546,18 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                           </div>
                         ))}
                         {foundryFiles.length === 0 && <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No Foundry JSON files saved yet.</p>}
+                      </div>
+                      <div className="border-t border-fantasy-700/30 pt-5">
+                        <h3 className="mb-3 font-fantasy text-lg font-semibold text-white">Familiars and animal companions</h3>
+                        <div className="space-y-2">
+                          {companions.map(companion => <div key={companion.id} className="flex items-center gap-3 rounded-lg border border-fantasy-700/40 bg-fantasy-900/30 p-3">
+                            {companion.imageUrl && <img src={companion.imageUrl} alt="" className="h-10 w-10 rounded-full object-cover" />}
+                            <div className="min-w-0 flex-1"><strong className="block truncate text-white">{companion.name}</strong><span className="text-xs text-gray-400">{companion.companionType === 'familiar' ? 'Familiar' : 'Animal companion'} · {companion.fileName}</span></div>
+                            <IconButton title="Download" onClick={() => handleDownloadCompanion(companion)} icon={<Download className="h-4 w-4" />} />
+                            <IconButton title="Delete" onClick={() => void handleDeleteCompanion(companion.id)} icon={<Trash2 className="h-4 w-4" />} danger />
+                          </div>)}
+                          {companions.length === 0 && <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No familiar or animal companion JSON files saved yet. Add them from Edit character.</p>}
+                        </div>
                       </div>
                     </div>
                   )}
