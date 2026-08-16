@@ -104,7 +104,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
   const sectionVisibility = character.profileSectionVisibility || defaultCharacterProfileSectionVisibility;
   const visibleTabs: DetailsTab[] = [
-    ...(sectionVisibility.backstory ? ['backstory' as const] : []),
+    ...(sectionVisibility.details ? ['backstory' as const] : []),
     ...(sectionVisibility.journal ? ['journal' as const] : []),
     ...(canEdit || sectionVisibility.relationships ? ['relationships' as const] : []),
     ...(canEdit ? ['foundry' as const] : [])
@@ -136,7 +136,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     setActiveTab(initialTab);
     setRelationshipSearch('');
     setRelationshipMessage('');
-  }, [character._id, canEdit, initialTab, sectionVisibility.backstory, sectionVisibility.journal, sectionVisibility.relationships]);
+  }, [character._id, canEdit, initialTab, sectionVisibility.details, sectionVisibility.journal, sectionVisibility.relationships]);
 
   useEffect(() => {
     setActiveSubjectIndex(current => Math.min(current, companions.length));
@@ -473,21 +473,17 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   <span>{activeCompanion ? activeCompanionLabel : `Level ${character.level}`}</span>
                   <strong>{activeCompanion?.name || character.class}</strong>
                 </div>
-                {sectionVisibility.details && (activeCompanion ? <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
+                {activeCompanion && sectionVisibility.details && <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
                   <Detail label="Companion" value={activeCompanionIsFollower ? activeCompanion.heritage || 'Unknown' : activeCompanionLabel} />
                   <Detail label="Creature" value={activeCompanionIsFollower ? activeCompanion.className || 'Unknown' : activeCompanion.creatureType || 'Unknown'} />
                   <Detail label="Level" value={character.level} />
                   <Detail label="Hit points" value={activeCompanion.hpMax ? `${activeCompanion.hpValue ?? 0} / ${activeCompanion.hpMax}` : activeCompanion.hpValue ?? '—'} />
-                </div> : <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
-                  <Detail label="Ancestry" value={character.ancestry || character.race} />
-                  <Detail label="Heritage" value={character.heritage || 'Unknown'} />
-                  <Detail label="Background" value={character.background || 'Unrecorded'} />
-                  <Detail label="Status" value={character.isActive ? 'Active' : 'Inactive'} />
-                  <Detail label="Age" value={parsedData?.age || character.stats?.age || 'Unknown'} />
-                  <Detail label="Height" value={parsedData?.height || character.stats?.height || 'Unknown'} />
-                  <Detail label="Weight" value={parsedData?.weight || character.stats?.weight || 'Unknown'} />
-                  <Detail label="Deity" value={parsedData?.deity || 'Unknown'} />
-                </div>)}
+                </div>}
+                {!activeCompanion && sectionVisibility.backstory && (
+                  character.backstory
+                    ? <SafeRichText className="character-profile-backstory character-profile-main-backstory rounded-lg bg-fantasy-900/30 p-5 text-sm leading-relaxed text-gray-100" html={character.backstory} />
+                    : <p className="character-profile-main-backstory-empty rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No backstory has been added yet.</p>
+                )}
                 {activeCompanion && <div className="character-profile-companion-features">
                   <h4>{activeCompanion.companionType === 'familiar' ? 'Familiar abilities' : activeCompanion.companionType === 'eidolon' ? 'Eidolon feats' : 'Companion features'}</h4>
                   {activeCompanion.features.length > 0
@@ -506,7 +502,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
 
           {visibleTabs.length > 0 && <section className={pageMode ? 'character-profile-records' : 'flex min-h-[620px] flex-col'}>
             <div className={`grid border-b border-fantasy-700/30 ${visibleTabs.length === 4 ? 'grid-cols-4' : visibleTabs.length === 3 ? 'grid-cols-3' : visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {sectionVisibility.backstory && <TabButton active={activeTab === 'backstory'} label="Backstory" icon={<BookOpen className="h-4 w-4" />} onClick={() => setActiveTab('backstory')} />}
+              {sectionVisibility.details && <TabButton active={activeTab === 'backstory'} label="Character Info" icon={<BookOpen className="h-4 w-4" />} onClick={() => setActiveTab('backstory')} />}
               {sectionVisibility.journal && <TabButton active={activeTab === 'journal'} label="Journal" icon={<MessageCircle className="h-4 w-4" />} onClick={() => setActiveTab('journal')} />}
               {(canEdit || sectionVisibility.relationships) && <TabButton active={activeTab === 'relationships'} label="Relations" icon={<Network className="h-4 w-4" />} onClick={() => setActiveTab('relationships')} />}
               {canEdit && <TabButton active={activeTab === 'foundry'} label="Foundry" icon={<FileJson className="h-4 w-4" />} onClick={() => setActiveTab('foundry')} />}
@@ -519,11 +515,16 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                 </div>
               ) : (
                 <>
-                  {activeTab === 'backstory' && sectionVisibility.backstory && (
-                    character.backstory
-                      ? <SafeRichText className="character-profile-backstory rounded-lg bg-fantasy-900/30 p-5 text-sm leading-relaxed text-gray-100" html={character.backstory} />
-                      : <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No backstory has been added yet.</p>
-                  )}
+                  {activeTab === 'backstory' && sectionVisibility.details && <div className="character-profile-facts">
+                    <Detail label="Ancestry" value={character.ancestry || character.race} />
+                    <Detail label="Heritage" value={character.heritage || 'Unknown'} />
+                    <Detail label="Background" value={character.background || 'Unrecorded'} />
+                    <Detail label="Status" value={character.isActive ? 'Active' : 'Inactive'} />
+                    <Detail label="Age" value={parsedData?.age || character.stats?.age || 'Unknown'} />
+                    <Detail label="Height" value={parsedData?.height || character.stats?.height || 'Unknown'} />
+                    <Detail label="Weight" value={parsedData?.weight || character.stats?.weight || 'Unknown'} />
+                    <Detail label="Deity" value={parsedData?.deity || 'Unknown'} />
+                  </div>}
 
                   {activeTab === 'foundry' && canEdit && (
                     <div className="space-y-5">

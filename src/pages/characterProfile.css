@@ -250,6 +250,14 @@
   font-size: .78rem;
 }
 .character-profile-companion-features p { margin: 0; color: color-mix(in srgb, var(--character-ink) 70%, transparent); }
+.character-profile-main-backstory,
+.character-profile-main-backstory-empty {
+  min-height: clamp(260px, 34vw, 520px);
+  border: 1px solid color-mix(in srgb, var(--character-accent) 22%, transparent);
+  color: var(--character-ink);
+  background: color-mix(in srgb, var(--character-panel) 82%, transparent);
+}
+.character-profile-main-backstory { font-size: var(--character-body-size); }
 .character-profile-page .character-profile-document { transition: opacity .25s ease, filter .3s ease, transform .3s ease; }
 .character-profile-page.is-shape-changing .character-profile-document { opacity: .08; filter: blur(12px) saturate(1.8); transform: scale(.985); }
 .character-profile-page.is-shape-changing .character-profile-atmosphere { animation: character-shape-flare .7s ease both; }
