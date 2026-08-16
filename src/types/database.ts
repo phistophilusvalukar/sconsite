@@ -330,6 +330,8 @@ export interface CharacterCompanion {
   name: string;
   imageUrl?: string;
   creatureType?: string;
+  heritage?: string;
+  className?: string;
   level?: number | null;
   hpValue?: number | null;
   hpMax?: number | null;

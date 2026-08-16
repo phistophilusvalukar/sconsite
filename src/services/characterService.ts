@@ -356,6 +356,8 @@ const publicCharacterProfileBundleSchema = z.object({
     name: z.string(),
     imageUrl: z.string().optional().nullable(),
     creatureType: z.string().optional().nullable(),
+    heritage: z.string().optional().nullable(),
+    className: z.string().optional().nullable(),
     level: z.coerce.number().optional().nullable(),
     hpValue: z.coerce.number().optional().nullable(),
     hpMax: z.coerce.number().optional().nullable(),
@@ -758,7 +760,9 @@ export class CharacterService {
           companions: parsed.data.companions.map(companion => ({
             ...companion,
             imageUrl: isSafeCharacterBannerImageUrl(companion.imageUrl || '') ? companion.imageUrl || undefined : undefined,
-            creatureType: companion.creatureType || undefined
+            creatureType: companion.creatureType || undefined,
+            heritage: companion.heritage || undefined,
+            className: companion.className || undefined
           }))
         }
       };
@@ -1425,6 +1429,8 @@ export class CharacterService {
       : dbFile.subject_type === 'animal_companion' ? 'animal_companion' : 'familiar';
     const items = Array.isArray(json?.items) ? json.items : [];
     const ancestryName = items.find(item => item.type === 'ancestry' && typeof item.name === 'string')?.name;
+    const heritageName = items.find(item => item.type === 'heritage' && typeof item.name === 'string')?.name;
+    const className = items.find(item => item.type === 'class' && typeof item.name === 'string')?.name;
     const features = Array.from(new Set(items
       .filter(item => {
         if (companionType === 'familiar') return item.type === 'action' && item.system?.category === 'familiar';
@@ -1440,6 +1446,8 @@ export class CharacterService {
       creatureType: typeof json?.system?.details?.creature?.value === 'string' && json.system.details.creature.value.trim()
         ? json.system.details.creature.value
         : typeof ancestryName === 'string' ? ancestryName : undefined,
+      heritage: typeof heritageName === 'string' ? heritageName : undefined,
+      className: typeof className === 'string' ? className : undefined,
       level: numberOrNull(json?.system?.details?.level?.value),
       hpValue: numberOrNull(json?.system?.attributes?.hp?.value),
       hpMax: numberOrNull(json?.system?.attributes?.hp?.max),

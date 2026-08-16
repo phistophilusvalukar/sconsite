@@ -98,6 +98,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const activeCompanionLabel = activeCompanion?.companionType === 'familiar'
     ? 'Familiar'
     : activeCompanion?.companionType === 'eidolon' ? 'Eidolon' : 'Animal companion';
+  const activeCompanionIsFollower = activeCompanion?.creatureType?.trim().toLowerCase() === 'follower';
   const characterPortrait = activeCompanion?.imageUrl || character.profilePortraitImageUrl || parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
   const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
@@ -473,8 +474,8 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   <strong>{activeCompanion?.name || character.class}</strong>
                 </div>
                 {sectionVisibility.details && (activeCompanion ? <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
-                  <Detail label="Companion" value={activeCompanionLabel} />
-                  <Detail label="Creature" value={activeCompanion.creatureType || 'Unknown'} />
+                  <Detail label="Companion" value={activeCompanionIsFollower ? activeCompanion.heritage || 'Unknown' : activeCompanionLabel} />
+                  <Detail label="Creature" value={activeCompanionIsFollower ? activeCompanion.className || 'Unknown' : activeCompanion.creatureType || 'Unknown'} />
                   <Detail label="Level" value={character.level} />
                   <Detail label="Hit points" value={activeCompanion.hpMax ? `${activeCompanion.hpValue ?? 0} / ${activeCompanion.hpMax}` : activeCompanion.hpValue ?? '—'} />
                 </div> : <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
