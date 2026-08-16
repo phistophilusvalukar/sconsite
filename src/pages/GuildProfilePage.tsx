@@ -421,13 +421,15 @@ const GuildProfilePage: React.FC = () => {
             <div className="guild-succession-line" aria-hidden="true"><span /></div>
             <div className={`guild-succession-member is-next${displayGuild.autoLeaderAwaitingCheckin ? ' is-waiting' : ''}`}>
               {nextLeaderMembership?.character ? (
-                <DynamicCharacterPortrait
-                  character={nextLeaderMembership.character}
-                  fallbackSrc={characterPortrait(nextLeaderMembership.character)}
-                  alt={`${nextLeaderMembership.character.name} portrait`}
-                  className="guild-succession-next-portrait"
-                  motion="hover"
-                />
+                <div className="guild-succession-portrait is-successor">
+                  <DynamicCharacterPortrait
+                    character={nextLeaderMembership.character}
+                    fallbackSrc={characterPortrait(nextLeaderMembership.character)}
+                    alt={`${nextLeaderMembership.character.name} portrait`}
+                    className="guild-succession-next-portrait"
+                    motion="hover"
+                  />
+                </div>
               ) : <div className="guild-succession-placeholder"><Users aria-hidden="true" /></div>}
               <span>
                 <small>Next in line</small>

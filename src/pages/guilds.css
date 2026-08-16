@@ -370,10 +370,10 @@
 .guild-succession-member small { color: color-mix(in srgb, var(--guild-ink) 56%, transparent); font-size: .65rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .guild-succession-member strong { overflow: hidden; color: var(--guild-ink); font-family: var(--guild-subtitle-font); font-size: clamp(.95rem, 1.7vw, 1.25rem); text-overflow: ellipsis; white-space: nowrap; }
 .guild-succession-portrait,
-.guild-succession-next-portrait,
 .guild-succession-placeholder { position: relative; width: 58px; height: 58px; flex: 0 0 58px; border: 1px solid color-mix(in srgb, var(--guild-accent) 55%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--guild-base) 72%, black); }
+.guild-succession-portrait.is-successor { overflow: hidden; }
 .guild-succession-current-portrait,
-.guild-succession-next-portrait { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+.guild-succession-next-portrait { display: block; width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: inherit; object-fit: cover; }
 .guild-succession-portrait > svg { position: absolute; top: -13px; left: 50%; z-index: 4; width: 25px; height: 25px; color: var(--guild-accent); filter: drop-shadow(0 2px 3px rgb(0 0 0 / .72)); transform: translateX(-50%) rotate(-5deg); }
 .guild-succession-placeholder { display: grid; place-items: center; color: color-mix(in srgb, var(--guild-ink) 45%, transparent); }
 .guild-succession-line { display: flex; align-items: center; padding-inline: .75rem; }
