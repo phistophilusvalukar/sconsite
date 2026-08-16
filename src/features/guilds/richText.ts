@@ -17,14 +17,38 @@ const isSafeLink = (value: string) => {
   }
 };
 
-const getSafeTextColor = (element: Element) => {
+const SAFE_STYLE_PROPERTIES = new Set([
+  'color', 'background', 'background-color', 'background-image',
+  'font', 'font-family', 'font-size', 'font-style', 'font-variant', 'font-weight',
+  'line-height', 'letter-spacing', 'word-spacing',
+  'text-align', 'text-decoration', 'text-decoration-color', 'text-decoration-line',
+  'text-decoration-style', 'text-indent', 'text-shadow', 'text-transform', 'white-space',
+  'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+  'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+  'border', 'border-color', 'border-style', 'border-width', 'border-radius',
+  'border-top', 'border-right', 'border-bottom', 'border-left',
+  'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
+  'border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style',
+  'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width',
+  'border-top-left-radius', 'border-top-right-radius', 'border-bottom-right-radius', 'border-bottom-left-radius',
+  'box-shadow', 'opacity'
+]);
+
+const getSafeInlineStyle = (element: Element) => {
   const rawStyle = element.getAttribute('style') || '';
-  if (!rawStyle || rawStyle.length > 500) return '';
+  if (!rawStyle || rawStyle.length > 2000) return '';
   const probe = document.createElement('span');
   probe.setAttribute('style', rawStyle);
-  const color = probe.style.color.trim();
-  if (!color || color.length > 100 || /url\s*\(|expression\s*\(|var\s*\(/i.test(color)) return '';
-  return color;
+  const safeDeclarations: string[] = [];
+
+  for (const property of Array.from(probe.style)) {
+    if (!SAFE_STYLE_PROPERTIES.has(property)) continue;
+    const value = probe.style.getPropertyValue(property).trim();
+    if (!value || value.length > 500 || /url\s*\(|expression\s*\(|javascript\s*:|@import|-moz-binding|behavior\s*:/i.test(value)) continue;
+    safeDeclarations.push(`${property}: ${value}`);
+  }
+
+  return safeDeclarations.join('; ');
 };
 
 export const sanitizeRichHtml = (html: string, mode: 'block' | 'inline' = 'block') => {
@@ -40,12 +64,12 @@ export const sanitizeRichHtml = (html: string, mode: 'block' | 'inline' = 'block
     }
 
     const href = element.tagName === 'A' ? element.getAttribute('href') || '' : '';
-    const textColor = getSafeTextColor(element);
+    const safeStyle = getSafeInlineStyle(element);
     for (const attribute of Array.from(element.attributes)) {
       element.removeAttribute(attribute.name);
     }
 
-    if (textColor) element.setAttribute('style', `color: ${textColor}`);
+    if (safeStyle) element.setAttribute('style', safeStyle);
 
     if (element.tagName === 'A' && isSafeLink(href)) {
       element.setAttribute('href', href);

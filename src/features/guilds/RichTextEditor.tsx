@@ -88,7 +88,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ label, value, onChange,
           suppressContentEditableWarning
         />
       )}
-      <p className="guild-rich-help">Safe HTML only. Text colors are allowed; scripts, embeds, event handlers, and other inline styles are removed.</p>
+      <p className="guild-rich-help">Presentation styles are supported, including colors, backgrounds, fonts, sizing, spacing, borders, alignment, and text effects. Scripts and external style URLs are removed.</p>
     </div>
   );
 };
