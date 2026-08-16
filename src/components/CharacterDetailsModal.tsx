@@ -36,7 +36,7 @@ import {
 import SafeRichText from '../features/guilds/SafeRichText';
 import { DEFAULT_NPC_PLACEHOLDER, abilityLabels, getAbilityScoresFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
-type DetailsTab = 'foundry' | 'journal' | 'relationships';
+type DetailsTab = 'backstory' | 'journal' | 'relationships' | 'foundry';
 
 interface CharacterDetailsModalProps {
   character: Character;
@@ -69,7 +69,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
 }) => {
   const characterService = useMemo(() => CharacterService.getInstance(), []);
   const isReadOnly = Boolean(readOnlyData);
-  const [activeTab, setActiveTab] = useState<DetailsTab>(canEdit ? 'foundry' : 'journal');
+  const [activeTab, setActiveTab] = useState<DetailsTab>('backstory');
   const [foundryFiles, setFoundryFiles] = useState<FoundryJsonEntry[]>([]);
   const [journalEntries, setJournalEntries] = useState<CharacterJournalEntry[]>([]);
   const [relationships, setRelationships] = useState<CharacterRelationship[]>([]);
@@ -95,15 +95,12 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
   const sectionVisibility = character.profileSectionVisibility || defaultCharacterProfileSectionVisibility;
   const visibleTabs: DetailsTab[] = [
-    ...(canEdit ? ['foundry' as const] : []),
+    ...(sectionVisibility.backstory ? ['backstory' as const] : []),
     ...(sectionVisibility.journal ? ['journal' as const] : []),
-    ...(canEdit || sectionVisibility.relationships ? ['relationships' as const] : [])
+    ...(canEdit || sectionVisibility.relationships ? ['relationships' as const] : []),
+    ...(canEdit ? ['foundry' as const] : [])
   ];
-  const initialTab: DetailsTab = canEdit
-    ? 'foundry'
-    : sectionVisibility.journal
-      ? 'journal'
-      : 'relationships';
+  const initialTab: DetailsTab = visibleTabs[0] || 'backstory';
   const directRelationships = relationships.filter(link => (
     link.sourceCharacterId === character._id || link.targetCharacterId === character._id
   ));
@@ -130,7 +127,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     setActiveTab(initialTab);
     setRelationshipSearch('');
     setRelationshipMessage('');
-  }, [character._id, canEdit, initialTab, sectionVisibility.journal, sectionVisibility.relationships]);
+  }, [character._id, canEdit, initialTab, sectionVisibility.backstory, sectionVisibility.journal, sectionVisibility.relationships]);
 
   const loadModalData = useCallback(async (showLoading = false) => {
     if (!character._id) return;
@@ -446,12 +443,6 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   <Detail label="Weight" value={parsedData?.weight || character.stats?.weight || 'Unknown'} />
                   <Detail label="Deity" value={parsedData?.deity || 'Unknown'} />
                 </div>}
-                {sectionVisibility.backstory && character.backstory && (
-                  <div>
-                    <h4 className="mb-2 text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">Backstory</h4>
-                    <SafeRichText className="max-h-48 overflow-y-auto rounded-lg bg-fantasy-900/30 p-4 text-sm leading-relaxed text-gray-100" html={character.backstory} />
-                  </div>
-                )}
                 {sectionVisibility.notes && character.notes && (
                   <div>
                     <h4 className="mb-2 text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">Notes</h4>
@@ -463,10 +454,11 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
           </section>
 
           {visibleTabs.length > 0 && <section className={pageMode ? 'character-profile-records' : 'flex min-h-[620px] flex-col'}>
-            <div className={`grid border-b border-fantasy-700/30 ${visibleTabs.length === 3 ? 'grid-cols-3' : visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {canEdit && <TabButton active={activeTab === 'foundry'} label="Foundry" icon={<FileJson className="h-4 w-4" />} onClick={() => setActiveTab('foundry')} />}
-              {sectionVisibility.journal && <TabButton active={activeTab === 'journal'} label="Journal" icon={<BookOpen className="h-4 w-4" />} onClick={() => setActiveTab('journal')} />}
+            <div className={`grid border-b border-fantasy-700/30 ${visibleTabs.length === 4 ? 'grid-cols-4' : visibleTabs.length === 3 ? 'grid-cols-3' : visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {sectionVisibility.backstory && <TabButton active={activeTab === 'backstory'} label="Backstory" icon={<BookOpen className="h-4 w-4" />} onClick={() => setActiveTab('backstory')} />}
+              {sectionVisibility.journal && <TabButton active={activeTab === 'journal'} label="Journal" icon={<MessageCircle className="h-4 w-4" />} onClick={() => setActiveTab('journal')} />}
               {(canEdit || sectionVisibility.relationships) && <TabButton active={activeTab === 'relationships'} label="Relations" icon={<Network className="h-4 w-4" />} onClick={() => setActiveTab('relationships')} />}
+              {canEdit && <TabButton active={activeTab === 'foundry'} label="Foundry" icon={<FileJson className="h-4 w-4" />} onClick={() => setActiveTab('foundry')} />}
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-6">
@@ -476,6 +468,12 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                 </div>
               ) : (
                 <>
+                  {activeTab === 'backstory' && sectionVisibility.backstory && (
+                    character.backstory
+                      ? <SafeRichText className="character-profile-backstory rounded-lg bg-fantasy-900/30 p-5 text-sm leading-relaxed text-gray-100" html={character.backstory} />
+                      : <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No backstory has been added yet.</p>
+                  )}
+
                   {activeTab === 'foundry' && canEdit && (
                     <div className="space-y-5">
                       <label className="flex cursor-pointer items-center justify-center space-x-2 rounded-lg border-2 border-dashed border-fantasy-700/50 p-4 text-gray-300 transition-colors hover:border-yellow-400/60">
