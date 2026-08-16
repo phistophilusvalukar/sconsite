@@ -13,37 +13,6 @@ export const abilityLabels: Array<{ key: AbilityKey; label: string }> = [
 
 export const DEFAULT_NPC_PLACEHOLDER = '/npc-placeholder.png';
 
-export type MovementSpeedType = 'land' | 'swim' | 'climb' | 'fly' | 'burrow';
-export type CharacterMovementSpeeds = Record<MovementSpeedType, number | null>;
-
-export function getMovementSpeedsFromFoundryJson(jsonData: unknown): CharacterMovementSpeeds {
-  const empty: CharacterMovementSpeeds = { land: null, swim: null, climb: null, fly: null, burrow: null };
-  const data = jsonData as {
-    system?: { attributes?: { speed?: { value?: unknown; total?: unknown; otherSpeeds?: unknown } } };
-    items?: Array<{ type?: string; system?: { speed?: unknown } }>;
-  } | null;
-  if (!data || typeof data !== 'object') return empty;
-
-  const speed = data.system?.attributes?.speed;
-  const ancestrySpeed = data.items?.find(item => item.type === 'ancestry')?.system?.speed;
-  const land = positiveSpeed(speed?.total) ?? positiveSpeed(speed?.value) ?? positiveSpeed(ancestrySpeed);
-  const result: CharacterMovementSpeeds = { ...empty, land };
-  const otherSpeeds = Array.isArray(speed?.otherSpeeds) ? speed.otherSpeeds : [];
-
-  for (const entry of otherSpeeds) {
-    if (!entry || typeof entry !== 'object') continue;
-    const movement = entry as { type?: unknown; value?: unknown; total?: unknown };
-    if (movement.type !== 'swim' && movement.type !== 'climb' && movement.type !== 'fly' && movement.type !== 'burrow') continue;
-    result[movement.type] = positiveSpeed(movement.total) ?? positiveSpeed(movement.value);
-  }
-  return result;
-}
-
-function positiveSpeed(value: unknown): number | null {
-  const parsed = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
 const DEFAULT_FOUNDRY_CHARACTER_ICON = 'systems/pf2e/icons/default-icons/character.svg';
 
 export function getAvatarFromFoundryJson(jsonData: unknown) {

@@ -34,7 +34,7 @@ import {
   getRelationshipSentimentLabel
 } from '../features/characters/relationshipSentiment';
 import SafeRichText from '../features/guilds/SafeRichText';
-import { DEFAULT_NPC_PLACEHOLDER, abilityLabels, getAbilityScoresFromFoundryJson, getMovementSpeedsFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
+import { DEFAULT_NPC_PLACEHOLDER, abilityLabels, getAbilityScoresFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
 
 type DetailsTab = 'foundry' | 'journal' | 'relationships';
 
@@ -93,7 +93,6 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const characterPortrait = character.profilePortraitImageUrl || parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
   const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
-  const movementSpeeds = getMovementSpeedsFromFoundryJson(activeFoundryJson);
   const sectionVisibility = character.profileSectionVisibility || defaultCharacterProfileSectionVisibility;
   const visibleTabs: DetailsTab[] = [
     ...(canEdit ? ['foundry' as const] : []),
@@ -430,7 +429,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
               {hasPortraitColumn && <div className={pageMode ? 'character-profile-portrait-column' : 'space-y-4'}>
                 {sectionVisibility.portrait && <DynamicCharacterPortrait character={character} fallbackSrc={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} motion={pageMode ? 'parallax' : 'hover'} allowDynamic={pageMode} />}
                 {pageMode && sectionVisibility.portrait && onChangeShape && <button type="button" className="character-profile-shape-button" onClick={onChangeShape} aria-label={`Change Shape — currently Version ${shapeVersion}`} data-tooltip="Change Shape"><RefreshCw size={16} /></button>}
-                {sectionVisibility.abilityMatrix && <AbilityRadarChart scores={abilityScores} speeds={movementSpeeds} pageMode={pageMode} />}
+                {sectionVisibility.abilityMatrix && <AbilityRadarChart scores={abilityScores} pageMode={pageMode} />}
               </div>}
               <div className="space-y-5">
                 <div className={pageMode ? 'character-profile-rankline' : 'flex flex-wrap items-baseline gap-3'}>
@@ -782,7 +781,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   );
 };
 
-function AbilityRadarChart({ scores, speeds, pageMode = false }: { scores: ReturnType<typeof getAbilityScoresFromFoundryJson> | null; speeds: ReturnType<typeof getMovementSpeedsFromFoundryJson>; pageMode?: boolean }) {
+function AbilityRadarChart({ scores, pageMode = false }: { scores: ReturnType<typeof getAbilityScoresFromFoundryJson> | null; pageMode?: boolean }) {
   const size = 260;
   const center = size / 2;
   const radius = 82;
@@ -864,9 +863,6 @@ function AbilityRadarChart({ scores, speeds, pageMode = false }: { scores: Retur
       ) : (
         <p className="rounded-lg bg-midnight-900/60 p-4 text-sm text-gray-400">No STR, DEX, CON, INT, WIS, or CHA values were found in the active Foundry JSON.</p>
       )}
-      <div className="character-profile-speeds" aria-label="Movement speeds">
-        {(['land', 'swim', 'climb', 'fly', 'burrow'] as const).map(type => <div key={type}><span>{type}</span><strong>{speeds[type] ? `${speeds[type]} ft` : '—'}</strong></div>)}
-      </div>
     </div>
   );
 }

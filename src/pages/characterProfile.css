@@ -292,10 +292,6 @@
 }
 .character-profile-ability h4 { color: var(--character-ink) !important; }
 .character-profile-ability > div span { color: var(--character-ink); }
-.character-profile-speeds { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
-.character-profile-speeds > div { min-width: 0; padding: 8px 4px; border: 1px solid color-mix(in srgb, var(--character-accent) 28%, transparent); border-radius: 7px; text-align: center; background: color-mix(in srgb, var(--character-base) 74%, transparent); }
-.character-profile-speeds span { display: block; overflow: hidden; color: var(--character-ink) !important; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-overflow: ellipsis; text-transform: uppercase; }
-.character-profile-speeds strong { display: block; margin-top: 3px; color: var(--character-accent); font-size: 12px; }
 
 .character-profile-records { min-width: 0; background: color-mix(in srgb, var(--character-base) 83%, #070807); }
 .character-profile-identity p,
