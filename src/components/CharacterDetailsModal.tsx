@@ -3,9 +3,9 @@ import {
   ArrowDown,
   ArrowUp,
   BookOpen,
-  ChevronRight,
   Download,
   FileJson,
+  Ghost,
   Heart,
   Loader2,
   MessageCircle,
@@ -95,6 +95,9 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const activeFoundryJson = activeFoundryEntry?.json || character.foundryJson;
   const parsedData = activeFoundryJson ? getCharacterDataFromJson(activeFoundryJson) : null;
   const activeCompanion = activeSubjectIndex > 0 ? companions[activeSubjectIndex - 1] : null;
+  const activeCompanionLabel = activeCompanion?.companionType === 'familiar'
+    ? 'Familiar'
+    : activeCompanion?.companionType === 'eidolon' ? 'Eidolon' : 'Animal companion';
   const characterPortrait = activeCompanion?.imageUrl || character.profilePortraitImageUrl || parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
   const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
@@ -458,18 +461,21 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                 {sectionVisibility.portrait && (activeCompanion
                   ? <img src={characterPortrait} alt={`${activeCompanion.name} portrait`} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} />
                   : <DynamicCharacterPortrait character={character} fallbackSrc={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} motion={pageMode ? 'parallax' : 'hover'} allowDynamic={pageMode} />)}
-                {pageMode && sectionVisibility.portrait && onChangeShape && !activeCompanion && <button type="button" className="character-profile-shape-button" onClick={onChangeShape} aria-label={`Change Shape — currently Version ${shapeVersion}`} data-tooltip="Change Shape"><RefreshCw size={16} /></button>}
-                {sectionVisibility.abilityMatrix && <AbilityRadarChart scores={abilityScores} pageMode={pageMode} />}
+                {pageMode && sectionVisibility.portrait && (onChangeShape || companions.length > 0) && <div className="character-profile-portrait-actions">
+                  {onChangeShape && <button type="button" className="character-profile-shape-button" onClick={onChangeShape} aria-label={`Change Shape — currently Version ${shapeVersion}`} data-tooltip="Change Shape"><RefreshCw size={16} /></button>}
+                  {companions.length > 0 && <button type="button" className="character-profile-shape-button character-profile-companion-button" onClick={() => setActiveSubjectIndex(current => (current + 1) % (companions.length + 1))} aria-label={activeSubjectIndex === companions.length ? `Return to ${character.name}` : `Show ${companions[activeSubjectIndex]?.name || character.name}`} data-tooltip={activeSubjectIndex === companions.length ? character.name : companions[activeSubjectIndex]?.name || character.name}><Ghost size={17} /></button>}
+                </div>}
+                {sectionVisibility.abilityMatrix && !activeCompanion && <AbilityRadarChart scores={abilityScores} pageMode={pageMode} />}
               </div>}
               <div className="space-y-5">
                 <div className={pageMode ? 'character-profile-rankline' : 'flex flex-wrap items-baseline gap-3'}>
-                  <span>{activeCompanion ? (activeCompanion.companionType === 'familiar' ? 'Familiar' : 'Animal companion') : `Level ${character.level}`}</span>
+                  <span>{activeCompanion ? activeCompanionLabel : `Level ${character.level}`}</span>
                   <strong>{activeCompanion?.name || character.class}</strong>
                 </div>
                 {sectionVisibility.details && (activeCompanion ? <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
-                  <Detail label="Companion" value={activeCompanion.companionType === 'familiar' ? 'Familiar' : 'Animal companion'} />
+                  <Detail label="Companion" value={activeCompanionLabel} />
                   <Detail label="Creature" value={activeCompanion.creatureType || 'Unknown'} />
-                  <Detail label="Level" value={activeCompanion.level && activeCompanion.level > 0 ? activeCompanion.level : '—'} />
+                  <Detail label="Level" value={character.level} />
                   <Detail label="Hit points" value={activeCompanion.hpMax ? `${activeCompanion.hpValue ?? 0} / ${activeCompanion.hpMax}` : activeCompanion.hpValue ?? '—'} />
                 </div> : <div className={pageMode ? 'character-profile-facts' : 'grid grid-cols-2 gap-3 text-sm'}>
                   <Detail label="Ancestry" value={character.ancestry || character.race} />
@@ -481,6 +487,12 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   <Detail label="Weight" value={parsedData?.weight || character.stats?.weight || 'Unknown'} />
                   <Detail label="Deity" value={parsedData?.deity || 'Unknown'} />
                 </div>)}
+                {activeCompanion && <div className="character-profile-companion-features">
+                  <h4>{activeCompanion.companionType === 'familiar' ? 'Familiar abilities' : activeCompanion.companionType === 'eidolon' ? 'Eidolon feats' : 'Companion features'}</h4>
+                  {activeCompanion.features.length > 0
+                    ? <ul>{activeCompanion.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
+                    : <p>No features found in this Foundry export.</p>}
+                </div>}
                 {sectionVisibility.notes && character.notes && (
                   <div>
                     <h4 className="mb-2 text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">Notes</h4>
@@ -488,7 +500,6 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   </div>
                 )}
               </div>
-              {pageMode && companions.length > 0 && <button type="button" className="character-profile-companion-next" onClick={() => setActiveSubjectIndex(current => (current + 1) % (companions.length + 1))} aria-label={activeSubjectIndex === companions.length ? `Return to ${character.name}` : `Show ${companions[activeSubjectIndex]?.name || character.name}`} title={activeSubjectIndex === companions.length ? `Return to ${character.name}` : `Show ${companions[activeSubjectIndex]?.name || character.name}`}><ChevronRight /></button>}
             </div>
           </section>
 
@@ -548,15 +559,15 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                         {foundryFiles.length === 0 && <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No Foundry JSON files saved yet.</p>}
                       </div>
                       <div className="border-t border-fantasy-700/30 pt-5">
-                        <h3 className="mb-3 font-fantasy text-lg font-semibold text-white">Familiars and animal companions</h3>
+                        <h3 className="mb-3 font-fantasy text-lg font-semibold text-white">Familiars, animal companions, and Eidolons</h3>
                         <div className="space-y-2">
                           {companions.map(companion => <div key={companion.id} className="flex items-center gap-3 rounded-lg border border-fantasy-700/40 bg-fantasy-900/30 p-3">
                             {companion.imageUrl && <img src={companion.imageUrl} alt="" className="h-10 w-10 rounded-full object-cover" />}
-                            <div className="min-w-0 flex-1"><strong className="block truncate text-white">{companion.name}</strong><span className="text-xs text-gray-400">{companion.companionType === 'familiar' ? 'Familiar' : 'Animal companion'} · {companion.fileName}</span></div>
+                            <div className="min-w-0 flex-1"><strong className="block truncate text-white">{companion.name}</strong><span className="text-xs text-gray-400">{companion.companionType === 'familiar' ? 'Familiar' : companion.companionType === 'eidolon' ? 'Eidolon' : 'Animal companion'} · {companion.fileName}</span></div>
                             <IconButton title="Download" onClick={() => handleDownloadCompanion(companion)} icon={<Download className="h-4 w-4" />} />
                             <IconButton title="Delete" onClick={() => void handleDeleteCompanion(companion.id)} icon={<Trash2 className="h-4 w-4" />} danger />
                           </div>)}
-                          {companions.length === 0 && <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No familiar or animal companion JSON files saved yet. Add them from Edit character.</p>}
+                          {companions.length === 0 && <p className="rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No familiar, animal companion, or Eidolon JSON files saved yet. Add them from Edit character.</p>}
                         </div>
                       </div>
                     </div>

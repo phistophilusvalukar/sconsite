@@ -352,13 +352,14 @@ const publicCharacterProfileBundleSchema = z.object({
   relatedCharacterNames: z.unknown(),
   companions: z.array(z.object({
     id: z.string().uuid(),
-    companionType: z.enum(['familiar', 'animal_companion']),
+    companionType: z.enum(['familiar', 'animal_companion', 'eidolon']),
     name: z.string(),
     imageUrl: z.string().optional().nullable(),
     creatureType: z.string().optional().nullable(),
     level: z.coerce.number().optional().nullable(),
     hpValue: z.coerce.number().optional().nullable(),
-    hpMax: z.coerce.number().optional().nullable()
+    hpMax: z.coerce.number().optional().nullable(),
+    features: z.array(z.string()).default([])
   })).default([])
 });
 
@@ -834,7 +835,7 @@ export class CharacterService {
         .from(DATABASE_TABLES.CHARACTER_FOUNDRY_FILES)
         .select('*')
         .eq('character_id', characterId)
-        .in('subject_type', ['familiar', 'animal_companion'])
+        .in('subject_type', ['familiar', 'animal_companion', 'eidolon'])
         .order('sort_order', { ascending: true });
       if (error) return { success: false, error: error.message };
       return { success: true, data: (data || []).map(file => this.transformCompanionFromDb(file)) };
@@ -1416,17 +1417,33 @@ export class CharacterService {
       name?: unknown;
       img?: unknown;
       system?: { details?: { creature?: { value?: unknown }; level?: { value?: unknown } }; attributes?: { hp?: { value?: unknown; max?: unknown } } };
+      items?: Array<{ name?: unknown; type?: unknown; system?: { category?: unknown } }>;
     };
     const numberOrNull = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null;
+    const companionType = dbFile.subject_type === 'eidolon'
+      ? 'eidolon'
+      : dbFile.subject_type === 'animal_companion' ? 'animal_companion' : 'familiar';
+    const items = Array.isArray(json?.items) ? json.items : [];
+    const ancestryName = items.find(item => item.type === 'ancestry' && typeof item.name === 'string')?.name;
+    const features = Array.from(new Set(items
+      .filter(item => {
+        if (companionType === 'familiar') return item.type === 'action' && item.system?.category === 'familiar';
+        return item.type === 'feat' || item.type === 'action';
+      })
+      .map(item => typeof item.name === 'string' ? item.name.trim() : '')
+      .filter(Boolean))).slice(0, 24);
     return {
       id: dbFile.id,
-      companionType: dbFile.subject_type === 'animal_companion' ? 'animal_companion' : 'familiar',
+      companionType,
       name: typeof json?.name === 'string' && json.name.trim() ? json.name : dbFile.name,
       imageUrl: typeof json?.img === 'string' ? normalizeFoundryAvatar(json.img) : undefined,
-      creatureType: typeof json?.system?.details?.creature?.value === 'string' ? json.system.details.creature.value : undefined,
+      creatureType: typeof json?.system?.details?.creature?.value === 'string' && json.system.details.creature.value.trim()
+        ? json.system.details.creature.value
+        : typeof ancestryName === 'string' ? ancestryName : undefined,
       level: numberOrNull(json?.system?.details?.level?.value),
       hpValue: numberOrNull(json?.system?.attributes?.hp?.value),
       hpMax: numberOrNull(json?.system?.attributes?.hp?.max),
+      features,
       json: dbFile.json_data,
       fileName: dbFile.name
     };

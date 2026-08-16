@@ -14,7 +14,7 @@ interface CharacterFormProps {
 
 type CompanionDraft = {
   id?: string;
-  companionType: 'familiar' | 'animal_companion';
+  companionType: 'familiar' | 'animal_companion' | 'eidolon';
   name: string;
   fileName: string;
   json: unknown;
@@ -53,6 +53,10 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
   const [removedCompanionIds, setRemovedCompanionIds] = useState<string[]>([]);
 
   const characterService = CharacterService.getInstance();
+  const isSummoner = `${formData.classPrimary} ${formData.classSecondary}`.toLowerCase().includes('summoner');
+  const companionTypeLabel = (type: CompanionDraft['companionType']) => type === 'familiar'
+    ? 'Familiar'
+    : type === 'eidolon' ? 'Eidolon' : 'Animal companion';
 
   useEffect(() => {
     let cancelled = false;
@@ -450,13 +454,17 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
           </div>
 
           <div>
-            <h3 className="mb-2 text-lg font-semibold text-white">Familiars and animal companions</h3>
-            <p className="mb-3 text-sm text-gray-400">Attach separate Foundry actor exports. You can add multiple companions of either type.</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <h3 className="mb-2 text-lg font-semibold text-white">Familiars, animal companions, and Eidolons</h3>
+            <p className="mb-3 text-sm text-gray-400">Attach separate Foundry actor exports. You can add multiple familiars and animal companions; Summoners can also attach Eidolons.</p>
+            <div className={`grid gap-3 ${isSummoner ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-fantasy-700/50 p-3 text-gray-300 transition-colors hover:border-yellow-400/50">
                 <Upload className="h-5 w-5" /><span>Add familiar JSON</span>
                 <input type="file" accept=".json,application/json" multiple onChange={event => void handleCompanionImport(event, 'familiar')} className="hidden" />
               </label>
+              {isSummoner && <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-fantasy-700/50 p-3 text-gray-300 transition-colors hover:border-yellow-400/50">
+                <Upload className="h-5 w-5" /><span>Add Eidolon JSON</span>
+                <input type="file" accept=".json,application/json" multiple onChange={event => void handleCompanionImport(event, 'eidolon')} className="hidden" />
+              </label>}
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-fantasy-700/50 p-3 text-gray-300 transition-colors hover:border-yellow-400/50">
                 <Upload className="h-5 w-5" /><span>Add animal companion JSON</span>
                 <input type="file" accept=".json,application/json" multiple onChange={event => void handleCompanionImport(event, 'animal_companion')} className="hidden" />
@@ -464,7 +472,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
             </div>
             {companionDrafts.length > 0 && <div className="mt-3 space-y-2">{companionDrafts.map((companion, index) => (
               <div key={companion.id || `${companion.fileName}-${index}`} className="flex items-center gap-3 rounded-lg border border-fantasy-700/30 bg-fantasy-800/30 p-3">
-                <div className="min-w-0 flex-1"><strong className="block truncate text-white">{companion.name}</strong><span className="text-xs text-gray-400">{companion.companionType === 'familiar' ? 'Familiar' : 'Animal companion'} · {companion.fileName}</span></div>
+                <div className="min-w-0 flex-1"><strong className="block truncate text-white">{companion.name}</strong><span className="text-xs text-gray-400">{companionTypeLabel(companion.companionType)} · {companion.fileName}</span></div>
                 <button type="button" onClick={() => removeCompanion(index)} className="rounded-md p-2 text-gray-400 hover:bg-red-500/20 hover:text-red-200" aria-label={`Remove ${companion.name}`}><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}</div>}
