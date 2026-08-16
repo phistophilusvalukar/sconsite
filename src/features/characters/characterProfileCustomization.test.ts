@@ -20,6 +20,7 @@ const validProfile = {
   fontColor: '#f4efe6',
   baseColor: '#18201f',
   accentColor: '#c9954a',
+  buttonTextColor: '#111615',
   backgroundMode: 'solid' as const,
   gradientColor: '#27302d',
   gradientOrientation: 'diagonal' as const,
@@ -53,6 +54,7 @@ describe('character profile customization', () => {
 
   it('rejects unsafe colors and incomplete visibility settings', () => {
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, baseColor: 'red' }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, buttonTextColor: 'white' }).success).toBe(false);
     expect(characterProfileCustomizationSchema.safeParse({
       ...validProfile,
       sectionVisibility: { portrait: true }

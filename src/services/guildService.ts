@@ -1256,6 +1256,7 @@ export class GuildService {
       profileFontColor: '#f4efe6',
       profileBaseColor: '#18201f',
       profileAccentColor: '#c9954a',
+      profileButtonTextColor: '#111615',
       profileBackgroundMode: 'solid',
       profileGradientColor: '#27302d',
       profileGradientOrientation: 'diagonal',

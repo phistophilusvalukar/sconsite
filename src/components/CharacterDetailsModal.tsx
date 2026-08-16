@@ -828,7 +828,8 @@ function AbilityRadarChart({ scores, pageMode = false }: { scores: ReturnType<ty
                 return `${point.x},${point.y}`;
               }).join(' ')}
               fill="none"
-              stroke="rgba(250, 204, 21, 0.18)"
+              stroke={pageMode ? 'var(--character-accent)' : 'rgb(250, 204, 21)'}
+              strokeOpacity="0.22"
               strokeWidth="1"
             />
           ))}
@@ -837,20 +838,20 @@ function AbilityRadarChart({ scores, pageMode = false }: { scores: ReturnType<ty
             const labelPoint = pointFor(index, 1.25);
             return (
               <g key={ability.key}>
-                <line x1={center} y1={center} x2={axisEnd.x} y2={axisEnd.y} stroke="rgba(148, 163, 184, 0.28)" strokeWidth="1" />
-                <text x={labelPoint.x} y={labelPoint.y} textAnchor="middle" dominantBaseline="middle" className="fill-gray-200 text-[11px] font-bold">
+                <line x1={center} y1={center} x2={axisEnd.x} y2={axisEnd.y} stroke={pageMode ? 'var(--character-accent)' : 'rgb(148, 163, 184)'} strokeOpacity="0.28" strokeWidth="1" />
+                <text x={labelPoint.x} y={labelPoint.y} textAnchor="middle" dominantBaseline="middle" fill={pageMode ? 'var(--character-ink)' : 'rgb(229, 231, 235)'} className="text-[11px] font-bold">
                   {ability.label}
                 </text>
-                <text x={labelPoint.x} y={labelPoint.y + 13} textAnchor="middle" dominantBaseline="middle" className="fill-yellow-200 text-[10px] font-semibold">
+                <text x={labelPoint.x} y={labelPoint.y + 13} textAnchor="middle" dominantBaseline="middle" fill={pageMode ? 'var(--character-ink)' : 'rgb(254, 240, 138)'} className="text-[10px] font-semibold">
                   {scores?.[ability.key] ?? '-'}
                 </text>
               </g>
             );
           })}
-          <polygon points={polygonPoints} fill="rgba(250, 204, 21, 0.24)" stroke="rgb(250, 204, 21)" strokeWidth="2" />
+          <polygon points={polygonPoints} fill={pageMode ? 'var(--character-accent)' : 'rgb(250, 204, 21)'} fillOpacity="0.24" stroke={pageMode ? 'var(--character-accent)' : 'rgb(250, 204, 21)'} strokeWidth="2" />
           {values.map((value, index) => {
             const point = pointFor(index, scoreToRatio(value));
-            return <circle key={abilityLabels[index].key} cx={point.x} cy={point.y} r="3.5" fill="rgb(253, 224, 71)" />;
+            return <circle key={abilityLabels[index].key} cx={point.x} cy={point.y} r="3.5" fill={pageMode ? 'var(--character-accent)' : 'rgb(253, 224, 71)'} />;
           })}
         </svg>
       ) : (

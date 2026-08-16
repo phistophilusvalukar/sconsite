@@ -105,6 +105,7 @@ type CharacterCreateInput = Omit<
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
+  | 'profileButtonTextColor'
   | 'profileBackgroundMode'
   | 'profileGradientColor'
   | 'profileGradientOrientation'
@@ -140,6 +141,7 @@ type CharacterCreateInput = Omit<
   | 'profileFontColor'
   | 'profileBaseColor'
   | 'profileAccentColor'
+  | 'profileButtonTextColor'
   | 'profileBackgroundMode'
   | 'profileGradientColor'
   | 'profileGradientOrientation'
@@ -197,6 +199,7 @@ interface CharacterRow {
   profile_font_color?: string | null;
   profile_base_color?: string | null;
   profile_accent_color?: string | null;
+  profile_button_text_color?: string | null;
   profile_background_mode?: Character['profileBackgroundMode'] | null;
   profile_gradient_color?: string | null;
   profile_gradient_orientation?: Character['profileGradientOrientation'] | null;
@@ -407,6 +410,7 @@ export class CharacterService {
         profile_font_color: characterData.profileFontColor || defaultCharacterProfilePalette.fontColor,
         profile_base_color: characterData.profileBaseColor || defaultCharacterProfilePalette.baseColor,
         profile_accent_color: characterData.profileAccentColor || defaultCharacterProfilePalette.accentColor,
+        profile_button_text_color: characterData.profileButtonTextColor || defaultCharacterProfilePalette.buttonTextColor,
         profile_background_mode: characterData.profileBackgroundMode || defaultCharacterProfilePalette.backgroundMode,
         profile_gradient_color: characterData.profileGradientColor || defaultCharacterProfilePalette.gradientColor,
         profile_gradient_orientation: characterData.profileGradientOrientation || defaultCharacterProfilePalette.gradientOrientation,
@@ -652,7 +656,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v4_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v5_command', {
         p_character_id: characterId,
         p_profile: parsed.data
       });
@@ -1302,6 +1306,7 @@ export class CharacterService {
       profileFontColor: dbCharacter.profile_font_color || defaultCharacterProfilePalette.fontColor,
       profileBaseColor: dbCharacter.profile_base_color || defaultCharacterProfilePalette.baseColor,
       profileAccentColor: dbCharacter.profile_accent_color || defaultCharacterProfilePalette.accentColor,
+      profileButtonTextColor: dbCharacter.profile_button_text_color || defaultCharacterProfilePalette.buttonTextColor,
       profileBackgroundMode: dbCharacter.profile_background_mode || defaultCharacterProfilePalette.backgroundMode,
       profileGradientColor: dbCharacter.profile_gradient_color || defaultCharacterProfilePalette.gradientColor,
       profileGradientOrientation: dbCharacter.profile_gradient_orientation || defaultCharacterProfilePalette.gradientOrientation,

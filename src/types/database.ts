@@ -107,6 +107,7 @@ export interface Character {
   profileFontColor: string;
   profileBaseColor: string;
   profileAccentColor: string;
+  profileButtonTextColor: string;
   profileBackgroundMode: 'solid' | 'gradient';
   profileGradientColor: string;
   profileGradientOrientation: 'horizontal' | 'diagonal' | 'vertical';

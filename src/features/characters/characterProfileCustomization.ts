@@ -50,6 +50,7 @@ export const defaultCharacterProfilePalette = {
   baseColor: '#111615',
   fontColor: '#f0ede7',
   accentColor: '#a09482',
+  buttonTextColor: '#111615',
   ...defaultProfileBackground
 } as const;
 
@@ -98,6 +99,7 @@ export const characterProfileCustomizationSchema = z.object({
   fontColor: hexColor,
   baseColor: hexColor,
   accentColor: hexColor,
+  buttonTextColor: hexColor,
   backgroundMode: z.enum(profileBackgroundModeValues),
   gradientColor: hexColor,
   gradientOrientation: z.enum(profileGradientOrientationValues),
@@ -155,6 +157,7 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   fontColor: character.profileFontColor,
   baseColor: character.profileBaseColor,
   accentColor: character.profileAccentColor,
+  buttonTextColor: character.profileButtonTextColor || defaultCharacterProfilePalette.buttonTextColor,
   backgroundMode: character.profileBackgroundMode,
   gradientColor: character.profileGradientColor,
   gradientOrientation: character.profileGradientOrientation,

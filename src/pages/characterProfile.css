@@ -151,8 +151,8 @@
   border: 1px solid color-mix(in srgb, var(--character-accent) 52%, transparent);
   border-radius: 999px;
   padding: 11px 18px;
-  color: var(--character-ink);
-  background: color-mix(in srgb, var(--character-accent) 18%, var(--character-base));
+  color: var(--character-button-ink);
+  background: var(--character-accent);
 }
 
 .character-profile-content {
@@ -204,7 +204,7 @@
 }
 .character-profile-rankline span {
   flex: none;
-  color: var(--character-base);
+  color: var(--character-button-ink);
   border-radius: 999px;
   padding: 7px 12px;
   background: var(--character-accent);
@@ -237,8 +237,8 @@
   border-radius: 2px 2px 18px 2px;
   background: color-mix(in srgb, var(--character-ink) 3%, transparent);
 }
-.character-profile-ability h4 { color: color-mix(in srgb, var(--character-ink) 56%, transparent) !important; }
-.character-profile-ability > div span { color: var(--character-accent); }
+.character-profile-ability h4 { color: var(--character-ink) !important; }
+.character-profile-ability > div span { color: var(--character-ink); }
 
 .character-profile-records { min-width: 0; background: color-mix(in srgb, var(--character-base) 83%, #070807); }
 .character-profile-identity p,
@@ -253,7 +253,7 @@
 .character-profile-records h4 { font-family: var(--character-subtitle-font); }
 .character-profile-records > div:first-child { border-color: color-mix(in srgb, var(--character-accent) 20%, transparent); }
 .character-profile-records > div:first-child button { color: color-mix(in srgb, var(--character-ink) 58%, transparent); background: transparent; }
-.character-profile-records > div:first-child button.bg-fantasy-800\/60 { color: var(--character-accent); background: color-mix(in srgb, var(--character-accent) 12%, transparent); }
+.character-profile-records > div:first-child button.bg-fantasy-800\/60 { color: var(--character-button-ink); background: var(--character-accent); }
 .character-profile-records > div:last-child { padding: clamp(22px, 3vw, 42px); }
 .character-profile-records .text-white,
 .character-profile-records .text-gray-100,
@@ -271,7 +271,7 @@
 .character-profile-records .border-fantasy-700\/30,
 .character-profile-records .border-fantasy-700\/40,
 .character-profile-records .border-fantasy-700\/50 { border-color: color-mix(in srgb, var(--character-accent) 22%, transparent); }
-.character-profile-records .bg-yellow-500 { color: var(--character-base); background: var(--character-accent); }
+.character-profile-records .bg-yellow-500 { color: var(--character-button-ink); background: var(--character-accent); }
 
 .character-profile-document[data-layout='dossier'] {
   position: relative;
