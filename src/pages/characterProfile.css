@@ -420,12 +420,12 @@
   background-size: cover;
 }
 .character-profile-document[data-layout='spotlight'] .character-profile-heading::before {
-  content: '✦  NOW PLAYING  ✦';
+  content: '✦';
   position: absolute;
   top: clamp(30px, 5vw, 62px);
   left: 50%;
   transform: translateX(-50%);
-  min-width: min(75%, 620px);
+  min-width: 150px;
   border: 2px solid color-mix(in srgb, var(--character-accent) 72%, #ffd98a);
   padding: 11px 28px;
   color: color-mix(in srgb, var(--character-accent) 75%, #fff4cf);
@@ -450,7 +450,6 @@
   font-size: 10px;
   letter-spacing: .48em;
 }
-.character-profile-document[data-layout='spotlight'] .character-profile-kicker::before { content: 'THE SHATTERED CONVERGENCE PRESENTS · '; }
 .character-profile-document[data-layout='spotlight'] .character-profile-heading h2 {
   font-size: clamp(3.8rem, 12vw, var(--character-title-size));
   line-height: .78;
@@ -472,16 +471,6 @@
 
 .character-profile-document[data-layout='spotlight'] .character-profile-content { display: block; min-height: 0; }
 .character-profile-document[data-layout='spotlight'] .character-profile-core { position: relative; border: 0; }
-.character-profile-document[data-layout='spotlight'] .character-profile-core::before {
-  content: 'STARRING';
-  position: absolute;
-  z-index: 3;
-  top: 34px;
-  right: clamp(68px, 9vw, 132px);
-  color: var(--character-accent);
-  font: 900 10px/1 Inter, sans-serif;
-  letter-spacing: .42em;
-}
 .character-profile-document[data-layout='spotlight'] .character-profile-identity {
   position: relative;
   grid-template-columns: minmax(340px, .92fr) minmax(0, 1.08fr);
@@ -517,17 +506,6 @@
   background: color-mix(in srgb, var(--character-base) 82%, #130808);
   box-shadow: 14px 14px 0 color-mix(in srgb, var(--character-accent) 9%, transparent), inset 0 0 42px rgb(0 0 0 / .22);
 }
-.character-profile-document[data-layout='spotlight'] .character-profile-identity > div:last-child::before {
-  content: 'THE PLAYBILL';
-  position: absolute;
-  top: -13px;
-  left: 28px;
-  padding: 6px 14px;
-  color: var(--character-base);
-  background: var(--character-accent);
-  font: 900 9px/1 Inter, sans-serif;
-  letter-spacing: .25em;
-}
 .character-profile-document[data-layout='spotlight'] .character-profile-rankline { display: block; border-bottom: 3px double color-mix(in srgb, var(--character-accent) 44%, transparent); text-align: center; }
 .character-profile-document[data-layout='spotlight'] .character-profile-rankline span { display: inline-block; border-radius: 0; margin-bottom: 15px; padding: 6px 18px; letter-spacing: .22em; }
 .character-profile-document[data-layout='spotlight'] .character-profile-rankline strong { display: block; font-size: clamp(1.8rem, 4vw, var(--character-section-title-size)); text-transform: uppercase; }
@@ -550,15 +528,6 @@
   position: relative;
   border-bottom: 3px double color-mix(in srgb, var(--character-accent) 48%, transparent);
   background: rgb(0 0 0 / .25);
-}
-.character-profile-document[data-layout='spotlight'] .character-profile-records > div:first-child::before {
-  content: 'PROGRAMME · ACT II';
-  position: absolute;
-  top: -26px;
-  left: 0;
-  color: var(--character-accent);
-  font: 800 9px/1 Inter, sans-serif;
-  letter-spacing: .28em;
 }
 .character-profile-document[data-layout='spotlight'] .character-profile-records > div:first-child button { font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
 .character-profile-document[data-layout='spotlight'] .character-profile-records > div:first-child button.bg-fantasy-800\/60 { box-shadow: inset 0 -3px var(--character-accent); }
@@ -856,7 +825,6 @@
   .character-profile-document[data-layout='spotlight'] .character-profile-heading::before { top: 42px; min-width: 76%; padding: 9px 12px; font-size: 8px; letter-spacing: .22em; }
   .character-profile-document[data-layout='spotlight'] .character-profile-heading h2 { font-size: clamp(3rem, 18vw, var(--character-title-size)); }
   .character-profile-document[data-layout='spotlight'] .character-profile-subtitle { padding: 10px 12px; letter-spacing: .06em; }
-  .character-profile-document[data-layout='spotlight'] .character-profile-core::before { top: 36px; right: 42px; }
   .character-profile-document[data-layout='spotlight'] .character-profile-identity { gap: 58px; padding: 78px 34px 60px; }
   .character-profile-document[data-layout='spotlight'] .character-profile-identity > div:last-child { padding: 38px 22px 28px; }
   .character-profile-document[data-layout='spotlight'] .character-profile-facts { grid-template-columns: 1fr; }

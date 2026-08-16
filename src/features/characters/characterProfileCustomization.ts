@@ -32,7 +32,7 @@ export const characterFontCategories = ['Classic', 'Savage', 'Fancy', 'Whimsical
 export const characterLayoutOptions = [
   { value: 'chronicle', label: 'Chronicle', description: 'A balanced, story-forward character page.' },
   { value: 'dossier', label: 'Dossier', description: 'A detective-noir case file with evidence photography and confidential records.' },
-  { value: 'spotlight', label: 'Spotlight', description: 'A theatrical playbill with marquee billing, stage curtains, and the character in the starring role.' },
+  { value: 'spotlight', label: 'Spotlight', description: 'A dramatic, portrait-led composition with ornamental framing and bold typography.' },
   { value: 'saga', label: 'Saga', description: 'An epic full-width hero with an arched portrait and sweeping records.' }
 ] as const;
 
