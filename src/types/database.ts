@@ -125,7 +125,7 @@ export interface Character {
   profilePortraitCutoutPositionY: number;
   profilePortraitFocusX?: number;
   profilePortraitFocusY?: number;
-  profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight' | 'saga';
+  profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight' | 'saga' | 'cyberpunk' | 'frontier';
   profileSectionVisibility: CharacterProfileSectionVisibility;
   profileChangeShapeEnabled?: boolean;
   profileAlternateShape?: JsonValue;
@@ -185,7 +185,7 @@ export interface Guild {
   gradientColor: string;
   gradientOrientation: 'horizontal' | 'diagonal' | 'vertical';
   gradientTransitionRate: number;
-  layoutStyle: 'chronicle' | 'stronghold' | 'banner' | 'saga';
+  layoutStyle: 'chronicle' | 'stronghold' | 'banner' | 'saga' | 'cyberpunk' | 'frontier';
   rosterDisplay: 'ledger' | 'dossiers' | 'cards' | 'lineup';
   rosterLineup?: GuildRosterLineupPlacement[];
   sectionVisibility: GuildSectionVisibility;

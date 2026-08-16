@@ -33,7 +33,9 @@ export const characterLayoutOptions = [
   { value: 'chronicle', label: 'Chronicle', description: 'A balanced, story-forward character page.' },
   { value: 'dossier', label: 'Dossier', description: 'A detective-noir case file with evidence photography and confidential records.' },
   { value: 'spotlight', label: 'Spotlight', description: 'A dramatic, portrait-led composition with ornamental framing and bold typography.' },
-  { value: 'saga', label: 'Saga', description: 'An epic full-width hero with an arched portrait and sweeping records.' }
+  { value: 'saga', label: 'Saga', description: 'An epic full-width hero with an arched portrait and sweeping records.' },
+  { value: 'cyberpunk', label: 'Cyberpunk', description: 'Neon circuitry, angular panels, scanlines, and a futuristic dossier display.' },
+  { value: 'frontier', label: 'Frontier', description: 'Weathered western print, brass machinery, and steampunk-era ornament.' }
 ] as const;
 
 export const defaultCharacterProfileSectionVisibility = {
@@ -117,7 +119,7 @@ export const characterProfileCustomizationSchema = z.object({
   portraitCutoutPositionY: z.number().int().min(-50).max(50),
   portraitFocusX: z.number().min(0).max(100),
   portraitFocusY: z.number().min(0).max(100),
-  layoutStyle: z.enum(['chronicle', 'dossier', 'spotlight', 'saga']),
+  layoutStyle: z.enum(['chronicle', 'dossier', 'spotlight', 'saga', 'cyberpunk', 'frontier']),
   sectionVisibility: z.object({
     portrait: z.boolean(),
     details: z.boolean(),

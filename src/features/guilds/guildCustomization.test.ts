@@ -159,6 +159,8 @@ describe('guild customization', () => {
   });
 
   it('only accepts HTTPS image links', () => {
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, layoutStyle: 'cyberpunk' }).success).toBe(true);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, layoutStyle: 'frontier' }).success).toBe(true);
     expect(isSafeExternalImageUrl('https://images.example.com/emblem.webp')).toBe(true);
     expect(isSafeExternalImageUrl('javascript:alert(1)')).toBe(false);
     expect(isSafeExternalImageUrl('http://images.example.com/emblem.webp')).toBe(false);

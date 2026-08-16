@@ -45,6 +45,8 @@ const validProfile = {
 describe('character profile customization', () => {
   it('accepts a complete profile presentation', () => {
     expect(characterProfileCustomizationSchema.safeParse(validProfile).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, layoutStyle: 'cyberpunk' }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, layoutStyle: 'frontier' }).success).toBe(true);
   });
 
   it('accepts an independently configured alternate shape', () => {

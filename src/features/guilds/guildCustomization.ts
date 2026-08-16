@@ -34,7 +34,9 @@ export const guildLayoutOptions = [
   { value: 'chronicle', label: 'Chronicle', description: 'A balanced editorial page.' },
   { value: 'stronghold', label: 'Stronghold', description: 'Headquarters takes center stage.' },
   { value: 'banner', label: 'Banner', description: 'A bold, ceremonial presentation.' },
-  { value: 'saga', label: 'Saga', description: 'A monumental hero and asymmetric twelve-column hall.' }
+  { value: 'saga', label: 'Saga', description: 'A monumental hero and asymmetric twelve-column hall.' },
+  { value: 'cyberpunk', label: 'Cyberpunk', description: 'A neon network of angular panels and luminous guild telemetry.' },
+  { value: 'frontier', label: 'Frontier', description: 'A weathered western broadsheet with brass-and-steam detailing.' }
 ] as const;
 
 export const defaultGuildRoleLabels = {
@@ -147,7 +149,7 @@ export const guildCustomizationSchema = z.object({
   gradientColor: hexColor,
   gradientOrientation: z.enum(profileGradientOrientationValues),
   gradientTransitionRate: z.number().int().min(0).max(100),
-  layoutStyle: z.enum(['chronicle', 'stronghold', 'banner', 'saga']),
+  layoutStyle: z.enum(['chronicle', 'stronghold', 'banner', 'saga', 'cyberpunk', 'frontier']),
   rosterDisplay: z.enum(['ledger', 'dossiers', 'cards', 'lineup']),
   rosterLineup: z.array(guildRosterLineupPlacementSchema).max(30).refine(
     placements => new Set(placements.map(placement => placement.characterId)).size === placements.length,
