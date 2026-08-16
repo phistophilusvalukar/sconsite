@@ -111,6 +111,7 @@ type CharacterCreateInput = Omit<
   | 'profileGradientOrientation'
   | 'profileGradientTransitionRate'
   | 'profileBannerImageUrl'
+  | 'profilePortraitImageUrl'
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
   | 'profilePortraitCutoutImageUrl'
@@ -147,6 +148,7 @@ type CharacterCreateInput = Omit<
   | 'profileGradientOrientation'
   | 'profileGradientTransitionRate'
   | 'profileBannerImageUrl'
+  | 'profilePortraitImageUrl'
   | 'profileDynamicPortraitEnabled'
   | 'profilePortraitBackgroundImageUrl'
   | 'profilePortraitCutoutImageUrl'
@@ -207,6 +209,7 @@ interface CharacterRow {
   profile_gradient_orientation?: Character['profileGradientOrientation'] | null;
   profile_gradient_transition_rate?: number | null;
   profile_banner_image_url?: string | null;
+  profile_portrait_image_url?: string | null;
   profile_dynamic_portrait_enabled?: boolean | null;
   profile_portrait_background_url?: string | null;
   profile_portrait_cutout_url?: string | null;
@@ -418,6 +421,7 @@ export class CharacterService {
         profile_gradient_orientation: characterData.profileGradientOrientation || defaultCharacterProfilePalette.gradientOrientation,
         profile_gradient_transition_rate: characterData.profileGradientTransitionRate ?? defaultCharacterProfilePalette.gradientTransitionRate,
         profile_banner_image_url: characterData.profileBannerImageUrl || null,
+        profile_portrait_image_url: characterData.profilePortraitImageUrl || null,
         profile_dynamic_portrait_enabled: characterData.profileDynamicPortraitEnabled ?? false,
         profile_portrait_background_url: characterData.profilePortraitBackgroundImageUrl || null,
         profile_portrait_cutout_url: characterData.profilePortraitCutoutImageUrl || null,
@@ -665,7 +669,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v6_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v7_command', {
         p_character_id: characterId,
         p_profile: parsed.data,
         p_change_shape_enabled: shape?.enabled ?? false,
@@ -1326,6 +1330,9 @@ export class CharacterService {
       profileGradientTransitionRate: dbCharacter.profile_gradient_transition_rate ?? defaultCharacterProfilePalette.gradientTransitionRate,
       profileBannerImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_banner_image_url || '')
         ? dbCharacter.profile_banner_image_url || undefined
+        : undefined,
+      profilePortraitImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_portrait_image_url || '')
+        ? dbCharacter.profile_portrait_image_url || undefined
         : undefined,
       profileDynamicPortraitEnabled: Boolean(dbCharacter.profile_dynamic_portrait_enabled),
       profilePortraitBackgroundImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_portrait_background_url || '')

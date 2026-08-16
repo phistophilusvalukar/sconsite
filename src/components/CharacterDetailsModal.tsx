@@ -90,7 +90,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   const activeFoundryEntry = foundryFiles.find(file => file.isActive) || foundryFiles[0];
   const activeFoundryJson = activeFoundryEntry?.json || character.foundryJson;
   const parsedData = activeFoundryJson ? getCharacterDataFromJson(activeFoundryJson) : null;
-  const characterPortrait = parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
+  const characterPortrait = character.profilePortraitImageUrl || parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
   const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
   const sectionVisibility = character.profileSectionVisibility || defaultCharacterProfileSectionVisibility;
@@ -428,7 +428,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
             <div className={pageMode ? `character-profile-identity${hasPortraitColumn ? '' : ' has-no-portrait'}` : 'grid gap-6 p-6 md:grid-cols-[minmax(220px,0.85fr)_1fr] lg:grid-cols-1 xl:grid-cols-[minmax(260px,0.85fr)_1fr]'}>
               {hasPortraitColumn && <div className={pageMode ? 'character-profile-portrait-column' : 'space-y-4'}>
                 {sectionVisibility.portrait && <DynamicCharacterPortrait character={character} fallbackSrc={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} motion={pageMode ? 'parallax' : 'hover'} allowDynamic={pageMode} />}
-                {pageMode && sectionVisibility.portrait && onChangeShape && <button type="button" className="character-profile-shape-button" onClick={onChangeShape}><RefreshCw size={17} /> Change Shape <span>Version {shapeVersion}</span></button>}
+                {pageMode && sectionVisibility.portrait && onChangeShape && <button type="button" className="character-profile-shape-button" onClick={onChangeShape} aria-label={`Change Shape — currently Version ${shapeVersion}`} data-tooltip="Change Shape"><RefreshCw size={16} /></button>}
                 {sectionVisibility.abilityMatrix && <AbilityRadarChart scores={abilityScores} pageMode={pageMode} />}
               </div>}
               <div className="space-y-5">

@@ -26,6 +26,7 @@ const validProfile = {
   gradientOrientation: 'diagonal' as const,
   gradientTransitionRate: 100,
   bannerImageUrl: '',
+  portraitImageUrl: '',
   dynamicPortraitEnabled: false,
   portraitBackgroundImageUrl: '',
   portraitCutoutImageUrl: '',
@@ -109,6 +110,15 @@ describe('character profile customization', () => {
       ...validProfile,
       bannerImageUrl: 'javascript:alert(1)'
     }).success).toBe(false);
+  });
+
+  it('accepts a standard HTTPS portrait without Dynamic Portrait mode', () => {
+    expect(characterProfileCustomizationSchema.safeParse({
+      ...validProfile,
+      portraitImageUrl: 'https://images.example.com/alternate-form.webp',
+      dynamicPortraitEnabled: false
+    }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, portraitImageUrl: 'data:image/png;base64,nope' }).success).toBe(false);
   });
 
   it('supports the themed font collections and validates complete Dynamic Portraits', () => {

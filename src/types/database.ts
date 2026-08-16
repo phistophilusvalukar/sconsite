@@ -113,6 +113,7 @@ export interface Character {
   profileGradientOrientation: 'horizontal' | 'diagonal' | 'vertical';
   profileGradientTransitionRate: number;
   profileBannerImageUrl?: string;
+  profilePortraitImageUrl?: string;
   profileDynamicPortraitEnabled?: boolean;
   profilePortraitBackgroundImageUrl?: string;
   profilePortraitCutoutImageUrl?: string;

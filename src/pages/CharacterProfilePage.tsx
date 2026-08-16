@@ -66,6 +66,7 @@ const applyProfileCustomization = (character: Character, profile: CharacterProfi
   profileGradientOrientation: profile.gradientOrientation,
   profileGradientTransitionRate: profile.gradientTransitionRate,
   profileBannerImageUrl: profile.bannerImageUrl || undefined,
+  profilePortraitImageUrl: profile.portraitImageUrl || undefined,
   profileDynamicPortraitEnabled: profile.dynamicPortraitEnabled,
   profilePortraitBackgroundImageUrl: profile.portraitBackgroundImageUrl || undefined,
   profilePortraitCutoutImageUrl: profile.portraitCutoutImageUrl || undefined,
@@ -433,6 +434,13 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
               <p>Use a direct HTTPS image link as the banner behind the character name.</p>
               <label className="character-field"><span>Banner image URL</span><input type="url" value={draft.bannerImageUrl} onChange={event => updateDraft('bannerImageUrl', event.target.value)} placeholder="https://example.com/character-banner.webp" /><small>Wide images work best. A dark veil is added automatically for readable text.</small></label>
               {draft.bannerImageUrl && <div className="character-banner-preview"><img src={draft.bannerImageUrl} alt="Character banner preview" /><span>Banner preview</span></div>}
+            </div>
+
+            <div className="character-editor-section">
+              <h3>Portrait</h3>
+              <p>Override the Foundry portrait for this profile version without enabling Dynamic Portrait.</p>
+              <label className="character-field"><span>Portrait image URL</span><input type="url" value={draft.portraitImageUrl} onChange={event => updateDraft('portraitImageUrl', event.target.value)} placeholder="https://example.com/alternate-form.webp" /><small>Use a direct HTTPS image link. Dynamic Portrait takes precedence when enabled.</small></label>
+              {draft.portraitImageUrl && <div className="character-standard-portrait-preview"><img src={draft.portraitImageUrl} alt="Portrait preview" /></div>}
             </div>
 
             <div className="character-editor-section">

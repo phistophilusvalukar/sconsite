@@ -173,22 +173,43 @@
 .character-profile-identity.has-no-portrait { grid-template-columns: 1fr; }
 .character-profile-portrait-column { display: flex; flex-direction: column; gap: 18px; }
 .character-profile-shape-button {
+  position: relative;
   align-self: center;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 9px;
   margin-top: -5px;
-  padding: 10px 16px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   border: 1px solid color-mix(in srgb, var(--character-accent) 65%, transparent);
   border-radius: 999px;
   background: var(--character-accent);
   color: var(--character-button-ink);
   font-family: var(--character-title-font);
   font-weight: 800;
-  letter-spacing: .05em;
   box-shadow: 0 8px 26px color-mix(in srgb, var(--character-accent) 24%, transparent);
 }
-.character-profile-shape-button span { font: 700 10px/1 var(--character-text-font); opacity: .7; text-transform: uppercase; }
+.character-profile-shape-button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 10;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: #090b0a;
+  color: #f4efe6;
+  font: 700 11px/1 var(--character-text-font);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.character-profile-shape-button:hover::after,
+.character-profile-shape-button:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
 .character-profile-shape-button:hover svg { transform: rotate(135deg); }
 .character-profile-shape-button svg { transition: transform .35s ease; }
 .character-profile-page .character-profile-document { transition: opacity .25s ease, filter .3s ease, transform .3s ease; }
@@ -202,6 +223,8 @@
 .character-shape-versions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
 .character-shape-versions button { padding: 11px; border: 1px solid rgba(201,149,74,.28); border-radius: 9px; color: #d8d4cd; }
 .character-shape-versions button.is-selected { border-color: #c9954a; background: rgba(201,149,74,.18); color: #fff3cf; }
+.character-standard-portrait-preview { margin-top: 12px; overflow: hidden; border: 1px solid rgba(201,149,74,.28); border-radius: 12px; background: #080a09; }
+.character-standard-portrait-preview img { display: block; width: 100%; max-height: 320px; object-fit: contain; }
 .character-profile-portrait {
   overflow: hidden;
   width: 100%;
