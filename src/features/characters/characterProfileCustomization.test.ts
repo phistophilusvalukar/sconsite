@@ -46,6 +46,20 @@ describe('character profile customization', () => {
     expect(characterProfileCustomizationSchema.safeParse(validProfile).success).toBe(true);
   });
 
+  it('accepts an independently configured alternate shape', () => {
+    const alternate = {
+      ...validProfile,
+      subtitle: 'The beast beneath the skin',
+      layoutStyle: 'spotlight',
+      accentColor: '#8b1e2d',
+      dynamicPortraitEnabled: true,
+      portraitBackgroundImageUrl: 'https://images.example.com/moon.webp',
+      portraitCutoutImageUrl: 'https://images.example.com/beast.webp'
+    } as const;
+    expect(characterProfileCustomizationSchema.safeParse(alternate).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...alternate, accentColor: 'blood-red' }).success).toBe(false);
+  });
+
   it('requires an explicit public visibility setting', () => {
     const { isPublic: _isPublic, ...missingVisibility } = validProfile;
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, isPublic: true }).success).toBe(true);

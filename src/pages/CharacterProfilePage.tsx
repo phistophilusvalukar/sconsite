@@ -26,6 +26,7 @@ import {
   characterFontCategories,
   characterFontOptions,
   characterLayoutOptions,
+  characterProfileCustomizationSchema,
   customizationFromCharacter,
   defaultCharacterProfilePalette,
   defaultDynamicPortraitPlacement,
@@ -41,6 +42,44 @@ import './characterProfile.css';
 
 const CharacterDetails = lazy(() => import('../components/CharacterDetailsModal'));
 const CharacterForm = lazy(() => import('../components/CharacterForm'));
+
+const applyProfileCustomization = (character: Character, profile: CharacterProfileCustomizationInput): Character => ({
+  ...character,
+  profileIsPublic: profile.isPublic,
+  profileSubtitle: profile.subtitle,
+  profileTitleFontFamily: profile.titleFontFamily,
+  profileSubtitleFontFamily: profile.subtitleFontFamily,
+  profileFontFamily: profile.fontFamily,
+  profileTitleFontSize: profile.titleFontSize,
+  profileSubtitleFontSize: profile.subtitleFontSize,
+  profileTextFontSize: profile.textFontSize,
+  profileBorderTheme: profile.borderTheme,
+  profileBackgroundTheme: profile.backgroundTheme,
+  profileBorderColorSource: profile.borderColorSource,
+  profileBackgroundColorSource: profile.backgroundColorSource,
+  profileFontColor: profile.fontColor,
+  profileBaseColor: profile.baseColor,
+  profileAccentColor: profile.accentColor,
+  profileButtonTextColor: profile.buttonTextColor,
+  profileBackgroundMode: profile.backgroundMode,
+  profileGradientColor: profile.gradientColor,
+  profileGradientOrientation: profile.gradientOrientation,
+  profileGradientTransitionRate: profile.gradientTransitionRate,
+  profileBannerImageUrl: profile.bannerImageUrl || undefined,
+  profileDynamicPortraitEnabled: profile.dynamicPortraitEnabled,
+  profilePortraitBackgroundImageUrl: profile.portraitBackgroundImageUrl || undefined,
+  profilePortraitCutoutImageUrl: profile.portraitCutoutImageUrl || undefined,
+  profilePortraitBackgroundScale: profile.portraitBackgroundScale,
+  profilePortraitBackgroundPositionX: profile.portraitBackgroundPositionX,
+  profilePortraitBackgroundPositionY: profile.portraitBackgroundPositionY,
+  profilePortraitCutoutScale: profile.portraitCutoutScale,
+  profilePortraitCutoutPositionX: profile.portraitCutoutPositionX,
+  profilePortraitCutoutPositionY: profile.portraitCutoutPositionY,
+  profilePortraitFocusX: profile.portraitFocusX,
+  profilePortraitFocusY: profile.portraitFocusY,
+  profileLayoutStyle: profile.layoutStyle,
+  profileSectionVisibility: { ...profile.sectionVisibility }
+});
 
 const DYNAMIC_PORTRAIT_TUTORIAL_IMAGES = {
   top: 'https://assets.forge-vtt.com/63bf21c87e2f5e785340cb33/tokenizer/pc-images/placeholderImage/placeholder.top.webp',
@@ -77,6 +116,11 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingCharacter, setIsEditingCharacter] = useState(false);
   const [draft, setDraft] = useState<CharacterProfileCustomizationInput | null>(null);
+  const [otherShapeDraft, setOtherShapeDraft] = useState<CharacterProfileCustomizationInput | null>(null);
+  const [draftVersion, setDraftVersion] = useState<1 | 2>(1);
+  const [changeShapeEnabled, setChangeShapeEnabled] = useState(false);
+  const [activeShape, setActiveShape] = useState<1 | 2>(1);
+  const [isShapeChanging, setIsShapeChanging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editorMessage, setEditorMessage] = useState('');
   const [linkMessage, setLinkMessage] = useState('');
@@ -145,45 +189,23 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
 
   const isOwner = !publicView && Boolean(character && user?.id === character.userId);
   const displayCharacter = useMemo(() => {
-    if (!character || !draft || !isEditingProfile) return character;
-    return {
-      ...character,
-      profileIsPublic: draft.isPublic,
-      profileSubtitle: draft.subtitle,
-      profileTitleFontFamily: draft.titleFontFamily,
-      profileSubtitleFontFamily: draft.subtitleFontFamily,
-      profileFontFamily: draft.fontFamily,
-      profileTitleFontSize: draft.titleFontSize,
-      profileSubtitleFontSize: draft.subtitleFontSize,
-      profileTextFontSize: draft.textFontSize,
-      profileFontColor: draft.fontColor,
-      profileBaseColor: draft.baseColor,
-      profileAccentColor: draft.accentColor,
-      profileButtonTextColor: draft.buttonTextColor,
-      profileBackgroundMode: draft.backgroundMode,
-      profileGradientColor: draft.gradientColor,
-      profileGradientOrientation: draft.gradientOrientation,
-      profileGradientTransitionRate: draft.gradientTransitionRate,
-      profileBannerImageUrl: draft.bannerImageUrl || undefined,
-      profileDynamicPortraitEnabled: draft.dynamicPortraitEnabled,
-      profilePortraitBackgroundImageUrl: draft.portraitBackgroundImageUrl || undefined,
-      profilePortraitCutoutImageUrl: draft.portraitCutoutImageUrl || undefined,
-      profilePortraitBackgroundScale: draft.portraitBackgroundScale,
-      profilePortraitBackgroundPositionX: draft.portraitBackgroundPositionX,
-      profilePortraitBackgroundPositionY: draft.portraitBackgroundPositionY,
-      profilePortraitCutoutScale: draft.portraitCutoutScale,
-      profilePortraitCutoutPositionX: draft.portraitCutoutPositionX,
-      profilePortraitCutoutPositionY: draft.portraitCutoutPositionY,
-      profilePortraitFocusX: draft.portraitFocusX,
-      profilePortraitFocusY: draft.portraitFocusY,
-      profileLayoutStyle: draft.layoutStyle,
-      profileSectionVisibility: { ...draft.sectionVisibility }
-    };
-  }, [character, draft, isEditingProfile]);
+    if (!character) return null;
+    if (isEditingProfile && draft) return applyProfileCustomization(character, draft);
+    if (activeShape === 2 && character.profileChangeShapeEnabled) {
+      const alternate = characterProfileCustomizationSchema.safeParse(character.profileAlternateShape);
+      if (alternate.success) return applyProfileCustomization(character, { ...alternate.data, isPublic: character.profileIsPublic ?? false });
+    }
+    return character;
+  }, [activeShape, character, draft, isEditingProfile]);
 
   const openEditor = () => {
     if (!character) return;
-    setDraft(customizationFromCharacter(character));
+    const primary = customizationFromCharacter(character);
+    const alternate = characterProfileCustomizationSchema.safeParse(character.profileAlternateShape);
+    setDraft(primary);
+    setOtherShapeDraft(alternate.success ? { ...alternate.data, isPublic: primary.isPublic } : { ...primary, sectionVisibility: { ...primary.sectionVisibility } });
+    setDraftVersion(1);
+    setChangeShapeEnabled(Boolean(character.profileChangeShapeEnabled));
     setEditorMessage('');
     setShowDynamicPortraitTutorial(false);
     setIsEditingProfile(true);
@@ -191,9 +213,24 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
 
   const closeEditor = () => {
     setDraft(null);
+    setOtherShapeDraft(null);
     setEditorMessage('');
     setShowDynamicPortraitTutorial(false);
     setIsEditingProfile(false);
+  };
+
+  const switchDraftVersion = (version: 1 | 2) => {
+    if (!draft || !otherShapeDraft || version === draftVersion) return;
+    setOtherShapeDraft(draft);
+    setDraft({ ...otherShapeDraft, isPublic: draft.isPublic });
+    setDraftVersion(version);
+  };
+
+  const handleChangeShape = () => {
+    if (!character?.profileChangeShapeEnabled || isShapeChanging) return;
+    setIsShapeChanging(true);
+    window.setTimeout(() => setActiveShape(current => current === 1 ? 2 : 1), 260);
+    window.setTimeout(() => setIsShapeChanging(false), 700);
   };
 
   const updateDraft = <Key extends keyof CharacterProfileCustomizationInput>(
@@ -201,6 +238,9 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     value: CharacterProfileCustomizationInput[Key]
   ) => {
     setDraft(current => current ? { ...current, [key]: value } : current);
+    if (key === 'isPublic') {
+      setOtherShapeDraft(current => current ? { ...current, isPublic: value as boolean } : current);
+    }
   };
 
   const setPortraitFocusFromPointer = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -214,7 +254,13 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     if (!character?._id || !user?.id || !draft) return;
     setIsSaving(true);
     setEditorMessage('');
-    const response = await characterService.updateCharacterProfile(character._id, user.id, draft);
+    const primary = draftVersion === 1 ? draft : otherShapeDraft;
+    const alternate = draftVersion === 2 ? draft : otherShapeDraft;
+    if (!primary || !alternate) return;
+    const response = await characterService.updateCharacterProfile(character._id, user.id, primary, {
+      enabled: changeShapeEnabled,
+      alternate: { ...alternate, isPublic: primary.isPublic }
+    });
     setIsSaving(false);
     if (!response.success) {
       setEditorMessage(response.error || 'Could not save the character page.');
@@ -282,7 +328,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   } as CSSProperties;
 
   return (
-    <main className="character-profile-page" style={profileStyle}>
+    <main className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}`} style={profileStyle}>
       <div className="character-profile-atmosphere" aria-hidden="true" />
       <div className="character-profile-shell">
         <nav className="character-profile-nav" aria-label="Character profile controls">
@@ -306,6 +352,8 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
             onEdit={() => setIsEditingCharacter(true)}
             onRelationshipsChanged={loadProfile}
             readOnlyData={publicView && publicData ? publicData : undefined}
+            onChangeShape={displayCharacter.profileChangeShapeEnabled ? handleChangeShape : undefined}
+            shapeVersion={activeShape}
           />
         </Suspense>
       </div>
@@ -318,6 +366,16 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
               <button type="button" onClick={closeEditor} aria-label="Close editor"><X /></button>
             </div>
             {editorMessage && <div className="character-editor-error">{editorMessage}</div>}
+
+            <div className="character-editor-section character-shape-editor">
+              <h3>Change Shape</h3>
+              <p>Create a second visual version of this profile. Character details, records, and permissions remain shared.</p>
+              <label className="character-dynamic-toggle"><input type="checkbox" checked={changeShapeEnabled} onChange={event => setChangeShapeEnabled(event.target.checked)} /><span><strong>Enable Change Shape</strong><small>Adds a transformation button beside the profile picture.</small></span></label>
+              {changeShapeEnabled && <div className="character-shape-versions" role="group" aria-label="Shape version to customize">
+                <button type="button" className={draftVersion === 1 ? 'is-selected' : ''} onClick={() => switchDraftVersion(1)}>Version 1</button>
+                <button type="button" className={draftVersion === 2 ? 'is-selected' : ''} onClick={() => switchDraftVersion(2)}>Version 2</button>
+              </div>}
+            </div>
 
             <div className="character-editor-section">
               <h3>Identity</h3>

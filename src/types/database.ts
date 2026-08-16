@@ -126,6 +126,8 @@ export interface Character {
   profilePortraitFocusY?: number;
   profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight' | 'saga';
   profileSectionVisibility: CharacterProfileSectionVisibility;
+  profileChangeShapeEnabled?: boolean;
+  profileAlternateShape?: JsonValue;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Network,
   Plus,
+  RefreshCw,
   Search,
   Trash2,
   Upload,
@@ -47,6 +48,8 @@ interface CharacterDetailsModalProps {
   onRelationshipsChanged?: () => void | Promise<void>;
   pageMode?: boolean;
   readOnlyData?: Pick<PublicCharacterProfileBundle, 'journalEntries' | 'relationships' | 'relatedCharacterNames'>;
+  onChangeShape?: () => void;
+  shapeVersion?: 1 | 2;
 }
 
 const defaultPortrait = DEFAULT_NPC_PLACEHOLDER;
@@ -60,7 +63,9 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   onEdit,
   onRelationshipsChanged,
   pageMode = false,
-  readOnlyData
+  readOnlyData,
+  onChangeShape,
+  shapeVersion = 1
 }) => {
   const characterService = useMemo(() => CharacterService.getInstance(), []);
   const isReadOnly = Boolean(readOnlyData);
@@ -423,6 +428,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
             <div className={pageMode ? `character-profile-identity${hasPortraitColumn ? '' : ' has-no-portrait'}` : 'grid gap-6 p-6 md:grid-cols-[minmax(220px,0.85fr)_1fr] lg:grid-cols-1 xl:grid-cols-[minmax(260px,0.85fr)_1fr]'}>
               {hasPortraitColumn && <div className={pageMode ? 'character-profile-portrait-column' : 'space-y-4'}>
                 {sectionVisibility.portrait && <DynamicCharacterPortrait character={character} fallbackSrc={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} motion={pageMode ? 'parallax' : 'hover'} allowDynamic={pageMode} />}
+                {pageMode && sectionVisibility.portrait && onChangeShape && <button type="button" className="character-profile-shape-button" onClick={onChangeShape}><RefreshCw size={17} /> Change Shape <span>Version {shapeVersion}</span></button>}
                 {sectionVisibility.abilityMatrix && <AbilityRadarChart scores={abilityScores} pageMode={pageMode} />}
               </div>}
               <div className="space-y-5">

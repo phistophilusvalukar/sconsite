@@ -200,6 +200,8 @@ interface CharacterRow {
   profile_base_color?: string | null;
   profile_accent_color?: string | null;
   profile_button_text_color?: string | null;
+  profile_change_shape_enabled?: boolean | null;
+  profile_alternate_shape?: unknown;
   profile_background_mode?: Character['profileBackgroundMode'] | null;
   profile_gradient_color?: string | null;
   profile_gradient_orientation?: Character['profileGradientOrientation'] | null;
@@ -643,12 +645,19 @@ export class CharacterService {
   async updateCharacterProfile(
     characterId: string,
     ownerId: string,
-    input: CharacterProfileCustomizationInput
+    input: CharacterProfileCustomizationInput,
+    shape?: { enabled: boolean; alternate: CharacterProfileCustomizationInput }
   ): Promise<ApiResponse<boolean>> {
     try {
       const parsed = characterProfileCustomizationSchema.safeParse(input);
       if (!parsed.success) {
         return { success: false, error: parsed.error.issues[0]?.message || 'Invalid character profile.' };
+      }
+      const parsedAlternate = shape?.enabled
+        ? characterProfileCustomizationSchema.safeParse(shape.alternate)
+        : null;
+      if (parsedAlternate && !parsedAlternate.success) {
+        return { success: false, error: parsedAlternate.error.issues[0]?.message || 'Invalid alternate shape profile.' };
       }
 
       const characterResponse = await this.getCharacterById(characterId);
@@ -656,9 +665,11 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v5_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v6_command', {
         p_character_id: characterId,
-        p_profile: parsed.data
+        p_profile: parsed.data,
+        p_change_shape_enabled: shape?.enabled ?? false,
+        p_alternate_shape: parsedAlternate?.success ? parsedAlternate.data : null
       });
 
       if (error) return { success: false, error: error.message };
@@ -1307,6 +1318,8 @@ export class CharacterService {
       profileBaseColor: dbCharacter.profile_base_color || defaultCharacterProfilePalette.baseColor,
       profileAccentColor: dbCharacter.profile_accent_color || defaultCharacterProfilePalette.accentColor,
       profileButtonTextColor: dbCharacter.profile_button_text_color || defaultCharacterProfilePalette.buttonTextColor,
+      profileChangeShapeEnabled: Boolean(dbCharacter.profile_change_shape_enabled),
+      profileAlternateShape: dbCharacter.profile_alternate_shape as Character['profileAlternateShape'],
       profileBackgroundMode: dbCharacter.profile_background_mode || defaultCharacterProfilePalette.backgroundMode,
       profileGradientColor: dbCharacter.profile_gradient_color || defaultCharacterProfilePalette.gradientColor,
       profileGradientOrientation: dbCharacter.profile_gradient_orientation || defaultCharacterProfilePalette.gradientOrientation,
