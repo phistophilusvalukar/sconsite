@@ -444,7 +444,6 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   <Detail label="Age" value={parsedData?.age || character.stats?.age || 'Unknown'} />
                   <Detail label="Height" value={parsedData?.height || character.stats?.height || 'Unknown'} />
                   <Detail label="Weight" value={parsedData?.weight || character.stats?.weight || 'Unknown'} />
-                  <Detail label="Wealth" value={parsedData?.wealth !== undefined ? `${parsedData.wealth} gp` : 'Unknown'} />
                 </div>}
                 {sectionVisibility.backstory && character.backstory && (
                   <div>
@@ -919,17 +918,14 @@ function getCharacterDataFromJson(jsonData: unknown) {
           height?: { value?: string };
           weight?: { value?: string };
         };
-        attributes?: { wealth?: { value?: number } };
       };
     };
     const details = data.system?.details || {};
-    const attributes = data.system?.attributes || {};
 
     return {
       age: details.age?.value || null,
       height: details.height?.value || '',
       weight: details.weight?.value || '',
-      wealth: attributes.wealth?.value || 0,
       avatar: normalizeFoundryAvatar(data.img || details.biography?.appearance)
     };
   } catch (error) {
