@@ -101,6 +101,7 @@ type CharacterCreateInput = Omit<
   | 'profileSubtitleFontSize'
   | 'profileTextFontSize'
   | 'profileAccentFontSize'
+  | 'profileThemeMode'
   | 'profileBorderTheme'
   | 'profileBackgroundTheme'
   | 'profileBorderColorSource'
@@ -140,6 +141,7 @@ type CharacterCreateInput = Omit<
   | 'profileSubtitleFontSize'
   | 'profileTextFontSize'
   | 'profileAccentFontSize'
+  | 'profileThemeMode'
   | 'profileBorderTheme'
   | 'profileBackgroundTheme'
   | 'profileBorderColorSource'
@@ -201,6 +203,7 @@ interface CharacterRow {
   profile_subtitle_font_size?: number | null;
   profile_text_font_size?: number | null;
   profile_accent_font_size?: number | null;
+  profile_theme_mode?: Character['profileThemeMode'] | null;
   profile_border_theme?: Character['profileBorderTheme'] | null;
   profile_background_theme?: Character['profileBackgroundTheme'] | null;
   profile_border_color_source?: Character['profileBorderColorSource'] | null;
@@ -432,6 +435,7 @@ export class CharacterService {
         profile_subtitle_font_size: characterData.profileSubtitleFontSize || 22,
         profile_text_font_size: characterData.profileTextFontSize || 16,
         profile_accent_font_size: characterData.profileAccentFontSize || 13,
+        profile_theme_mode: characterData.profileThemeMode || 'dark',
         profile_border_theme: characterData.profileBorderTheme || 'none',
         profile_background_theme: characterData.profileBackgroundTheme || 'none',
         profile_border_color_source: characterData.profileBorderColorSource || 'accent',
@@ -693,7 +697,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v8_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v9_command', {
         p_character_id: characterId,
         p_profile: parsed.data,
         p_change_shape_enabled: shape?.enabled ?? false,
@@ -1366,6 +1370,7 @@ export class CharacterService {
       profileSubtitleFontSize: dbCharacter.profile_subtitle_font_size || 22,
       profileTextFontSize: dbCharacter.profile_text_font_size || 16,
       profileAccentFontSize: dbCharacter.profile_accent_font_size || 13,
+      profileThemeMode: dbCharacter.profile_theme_mode || 'dark',
       profileBorderTheme: dbCharacter.profile_border_theme || 'none',
       profileBackgroundTheme: dbCharacter.profile_background_theme || 'none',
       profileBorderColorSource: dbCharacter.profile_border_color_source || 'accent',

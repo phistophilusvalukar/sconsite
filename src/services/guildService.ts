@@ -173,6 +173,7 @@ interface GuildRow {
   subtitle_font_size?: number;
   text_font_size?: number;
   accent_font_size?: number;
+  theme_mode?: Guild['themeMode'];
   border_theme?: Guild['borderTheme'];
   background_theme?: Guild['backgroundTheme'];
   border_color_source?: Guild['borderColorSource'];
@@ -452,7 +453,7 @@ export class GuildService {
       safeProfile.headquartersTitle = richTextToPlainText(safeProfile.headquartersTitleHtml).slice(0, 140);
       safeProfile.headquartersDescription = richTextToPlainText(safeProfile.headquartersDescriptionHtml).slice(0, 3000);
 
-      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v6_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v7_command', {
         p_guild_id: guildId,
         p_profile: safeProfile
       });
@@ -1114,6 +1115,7 @@ export class GuildService {
       subtitleFontSize: dbGuild.subtitle_font_size || 21,
       textFontSize: dbGuild.text_font_size || 16,
       accentFontSize: dbGuild.accent_font_size || 13,
+      themeMode: dbGuild.theme_mode || 'dark',
       borderTheme: dbGuild.border_theme || 'none',
       backgroundTheme: dbGuild.background_theme || 'none',
       borderColorSource: dbGuild.border_color_source || 'accent',
@@ -1255,6 +1257,7 @@ export class GuildService {
       profileSubtitleFontSize: 22,
       profileTextFontSize: 16,
       profileAccentFontSize: 13,
+      profileThemeMode: 'dark',
       profileBorderTheme: 'none',
       profileBackgroundTheme: 'none',
       profileBorderColorSource: 'accent',

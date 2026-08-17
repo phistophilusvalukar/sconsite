@@ -102,6 +102,7 @@ export interface Character {
   profileSubtitleFontSize: number;
   profileTextFontSize: number;
   profileAccentFontSize: number;
+  profileThemeMode: 'dark' | 'light';
   profileBorderTheme: ProfileDecorationTheme;
   profileBackgroundTheme: ProfileDecorationTheme;
   profileBorderColorSource: ProfileDecorationColorSource;
@@ -178,6 +179,7 @@ export interface Guild {
   subtitleFontSize: number;
   textFontSize: number;
   accentFontSize: number;
+  themeMode: 'dark' | 'light';
   borderTheme: ProfileDecorationTheme;
   backgroundTheme: ProfileDecorationTheme;
   borderColorSource: ProfileDecorationColorSource;

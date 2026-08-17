@@ -907,10 +907,10 @@ function AbilityRadarChart({ scores, pageMode = false }: { scores: ReturnType<ty
             return (
               <g key={ability.key}>
                 <line x1={center} y1={center} x2={axisEnd.x} y2={axisEnd.y} stroke={pageMode ? 'var(--character-accent)' : 'rgb(148, 163, 184)'} strokeOpacity="0.28" strokeWidth="1" />
-                <text x={labelPoint.x} y={labelPoint.y} textAnchor="middle" dominantBaseline="middle" fill={pageMode ? 'var(--character-ink)' : 'rgb(229, 231, 235)'} className="text-[11px] font-bold">
+                <text x={labelPoint.x} y={labelPoint.y} textAnchor="middle" dominantBaseline="middle" fill={pageMode ? 'var(--character-ink)' : 'rgb(229, 231, 235)'} style={pageMode ? { fontFamily: 'var(--character-accent-font)', fontSize: 'var(--character-accent-size)' } : undefined} className="text-[11px] font-bold">
                   {ability.label}
                 </text>
-                <text x={labelPoint.x} y={labelPoint.y + 13} textAnchor="middle" dominantBaseline="middle" fill={pageMode ? 'var(--character-ink)' : 'rgb(254, 240, 138)'} className="text-[10px] font-semibold">
+                <text x={labelPoint.x} y={labelPoint.y + 13} textAnchor="middle" dominantBaseline="middle" fill={pageMode ? 'var(--character-ink)' : 'rgb(254, 240, 138)'} style={pageMode ? { fontFamily: 'var(--character-accent-font)', fontSize: 'calc(var(--character-accent-size) * .9)' } : undefined} className="text-[10px] font-semibold">
                   {scores?.[ability.key] ?? '-'}
                 </text>
               </g>

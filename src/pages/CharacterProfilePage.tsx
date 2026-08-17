@@ -55,6 +55,7 @@ const applyProfileCustomization = (character: Character, profile: CharacterProfi
   profileSubtitleFontSize: profile.subtitleFontSize,
   profileTextFontSize: profile.textFontSize,
   profileAccentFontSize: profile.accentFontSize,
+  profileThemeMode: profile.themeMode,
   profileBorderTheme: profile.borderTheme,
   profileBackgroundTheme: profile.backgroundTheme,
   profileBorderColorSource: profile.borderColorSource,
@@ -333,7 +334,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   } as CSSProperties;
 
   return (
-    <main className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}`} style={profileStyle}>
+    <main className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}`} data-theme={displayCharacter.profileThemeMode} style={profileStyle}>
       <div className="character-profile-atmosphere" aria-hidden="true" />
       <div className={`character-profile-shell character-profile-shell-${displayCharacter.profileLayoutStyle}`}>
         <nav className="character-profile-nav" aria-label="Character profile controls">
@@ -410,6 +411,10 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
               <div className="character-background-mode" role="group" aria-label="Page background style">
                 <button type="button" className={draft.backgroundMode === 'solid' ? 'is-selected' : ''} aria-pressed={draft.backgroundMode === 'solid'} onClick={() => updateDraft('backgroundMode', 'solid')}>Solid color</button>
                 <button type="button" className={draft.backgroundMode === 'gradient' ? 'is-selected' : ''} aria-pressed={draft.backgroundMode === 'gradient'} onClick={() => updateDraft('backgroundMode', 'gradient')}>Dual-color gradient</button>
+              </div>
+              <div className="character-background-mode" role="group" aria-label="Page contrast theme">
+                <button type="button" className={draft.themeMode === 'dark' ? 'is-selected' : ''} aria-pressed={draft.themeMode === 'dark'} onClick={() => updateDraft('themeMode', 'dark')}>Dark theme</button>
+                <button type="button" className={draft.themeMode === 'light' ? 'is-selected' : ''} aria-pressed={draft.themeMode === 'light'} onClick={() => updateDraft('themeMode', 'light')}>Light theme</button>
               </div>
               <div className="character-color-grid">
                 {([['baseColor', draft.backgroundMode === 'gradient' ? 'Background one' : 'Page'], ...(draft.backgroundMode === 'gradient' ? [['gradientColor', 'Background two']] as const : []), ['fontColor', 'Text'], ['accentColor', 'Buttons'], ['buttonTextColor', 'Button text']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}

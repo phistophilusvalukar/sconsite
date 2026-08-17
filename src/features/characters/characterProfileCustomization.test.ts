@@ -15,6 +15,7 @@ const validProfile = {
   subtitleFontSize: 22,
   textFontSize: 16,
   accentFontSize: 13,
+  themeMode: 'dark' as const,
   borderTheme: 'runes' as const,
   backgroundTheme: 'arcane' as const,
   borderColorSource: 'accent' as const,
@@ -47,6 +48,8 @@ const validProfile = {
 describe('character profile customization', () => {
   it('accepts a complete profile presentation', () => {
     expect(characterProfileCustomizationSchema.safeParse(validProfile).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, themeMode: 'light' }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, themeMode: 'sepia' }).success).toBe(false);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, layoutStyle: 'cyberpunk' }).success).toBe(true);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, layoutStyle: 'nostalgia' }).success).toBe(true);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, fontFamily: 'press-start-2p' }).success).toBe(true);

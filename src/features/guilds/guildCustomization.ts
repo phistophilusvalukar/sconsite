@@ -106,7 +106,8 @@ export const defaultGuildTypography = {
   titleFontSize: 96,
   subtitleFontSize: 21,
   textFontSize: 16,
-  accentFontSize: 13
+  accentFontSize: 13,
+  themeMode: 'dark'
 } as const;
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Choose a valid six-digit color.');
@@ -143,6 +144,7 @@ export const guildCustomizationSchema = z.object({
   subtitleFontSize: z.number().int().min(14).max(56),
   textFontSize: z.number().int().min(12).max(26),
   accentFontSize: z.number().int().min(10).max(28),
+  themeMode: z.enum(['dark', 'light']),
   borderTheme: z.enum(profileDecorationThemeValues),
   backgroundTheme: z.enum(profileDecorationThemeValues),
   borderColorSource: z.enum(['base', 'accent']),
@@ -234,6 +236,7 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   subtitleFontSize: guild.subtitleFontSize || defaultGuildTypography.subtitleFontSize,
   textFontSize: guild.textFontSize || defaultGuildTypography.textFontSize,
   accentFontSize: guild.accentFontSize || defaultGuildTypography.accentFontSize,
+  themeMode: guild.themeMode || 'dark',
   borderTheme: guild.borderTheme || defaultProfileDecorations.borderTheme,
   backgroundTheme: guild.backgroundTheme || defaultProfileDecorations.backgroundTheme,
   borderColorSource: guild.borderColorSource || defaultProfileDecorations.borderColorSource,

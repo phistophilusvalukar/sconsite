@@ -575,6 +575,7 @@ class GameService {
       profileSubtitleFontSize: Number(dbCharacter.profile_subtitle_font_size || 22),
       profileTextFontSize: Number(dbCharacter.profile_text_font_size || 16),
       profileAccentFontSize: Number(dbCharacter.profile_accent_font_size || 13),
+      profileThemeMode: (dbCharacter.profile_theme_mode || 'dark') as Character['profileThemeMode'],
       profileBorderTheme: (dbCharacter.profile_border_theme || 'none') as Character['profileBorderTheme'],
       profileBackgroundTheme: (dbCharacter.profile_background_theme || 'none') as Character['profileBackgroundTheme'],
       profileBorderColorSource: (dbCharacter.profile_border_color_source || 'accent') as Character['profileBorderColorSource'],

@@ -65,7 +65,8 @@ export const defaultCharacterProfileTypography = {
   titleFontSize: 124,
   subtitleFontSize: 22,
   textFontSize: 16,
-  accentFontSize: 13
+  accentFontSize: 13,
+  themeMode: 'dark'
 } as const;
 
 export const defaultDynamicPortraitPlacement = {
@@ -99,6 +100,7 @@ export const characterProfileCustomizationSchema = z.object({
   subtitleFontSize: z.number().int().min(14).max(56),
   textFontSize: z.number().int().min(12).max(26),
   accentFontSize: z.number().int().min(10).max(28),
+  themeMode: z.enum(['dark', 'light']),
   borderTheme: z.enum(profileDecorationThemeValues),
   backgroundTheme: z.enum(profileDecorationThemeValues),
   borderColorSource: z.enum(['base', 'accent']),
@@ -160,6 +162,7 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   subtitleFontSize: character.profileSubtitleFontSize || defaultCharacterProfileTypography.subtitleFontSize,
   textFontSize: character.profileTextFontSize || defaultCharacterProfileTypography.textFontSize,
   accentFontSize: character.profileAccentFontSize || defaultCharacterProfileTypography.accentFontSize,
+  themeMode: character.profileThemeMode || 'dark',
   borderTheme: character.profileBorderTheme || defaultProfileDecorations.borderTheme,
   backgroundTheme: character.profileBackgroundTheme || defaultProfileDecorations.backgroundTheme,
   borderColorSource: character.profileBorderColorSource || defaultProfileDecorations.borderColorSource,

@@ -14,6 +14,9 @@
   --character-saga-subtitle-size: 34px;
   --character-text-size: 16px;
   --character-accent-size: 13px;
+  --character-depth: #000;
+  --character-drop-shadow: rgb(0 0 0 / .42);
+  --character-title-shadow: rgb(0 0 0 / .78);
   --character-page-background: var(--character-base);
   position: relative;
   min-height: 100vh;
@@ -88,8 +91,8 @@
   border-radius: 4px 4px 24px 4px;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--character-ink) 4%, transparent), transparent 28%),
-    color-mix(in srgb, var(--character-base) 92%, #050605);
-  box-shadow: 0 36px 100px rgb(0 0 0 / .42), inset 0 1px color-mix(in srgb, var(--character-ink) 7%, transparent);
+    color-mix(in srgb, var(--character-base) 92%, var(--character-depth));
+  box-shadow: 0 36px 100px var(--character-drop-shadow), inset 0 1px color-mix(in srgb, var(--character-ink) 7%, transparent);
 }
 
 .character-profile-heading {
@@ -110,7 +113,7 @@
 
 .character-profile-heading.has-banner-image {
   min-height: clamp(300px, 42vw, 560px);
-  text-shadow: 0 3px 20px rgb(0 0 0 / .72);
+  text-shadow: 0 3px 20px var(--character-title-shadow);
 }
 
 .character-profile-heading::after {
@@ -188,7 +191,13 @@
   margin-top: -5px;
 }
 
-.character-profile-shell :is(button, .character-profile-nav a, .character-profile-public-label, .character-profile-kicker, .character-profile-overline, .character-profile-rankline span, .character-profile-facts p:first-child, .character-profile-companion-features li) {
+.character-profile-page[data-theme='light'] {
+  --character-depth: #fff;
+  --character-drop-shadow: color-mix(in srgb, var(--character-ink) 20%, transparent);
+  --character-title-shadow: color-mix(in srgb, var(--character-base) 42%, white 58%);
+}
+
+.character-profile-shell :is(button, .character-profile-nav a, .character-profile-public-label, .character-profile-kicker, .character-profile-overline, .character-profile-rankline span, .character-profile-facts p:first-child, .character-profile-companion-features li, .character-profile-ability h4, .character-profile-ability > div span) {
   font-family: var(--character-accent-font) !important;
   font-size: var(--character-accent-size) !important;
 }
@@ -354,7 +363,7 @@
 .character-profile-ability h4 { color: var(--character-ink) !important; }
 .character-profile-ability > div span { color: var(--character-ink); }
 
-.character-profile-records { min-width: 0; background: color-mix(in srgb, var(--character-base) 83%, #070807); }
+.character-profile-records { min-width: 0; background: color-mix(in srgb, var(--character-base) 83%, var(--character-depth)); }
 .character-profile-identity p,
 .character-profile-identity li,
 .character-profile-records p,
@@ -790,6 +799,17 @@
 .character-profile-state a { color: #d6b579; }
 .character-spin { animation: character-spin 1s linear infinite; }
 @keyframes character-spin { to { transform: rotate(360deg); } }
+
+.character-profile-page[data-theme='light'] .character-profile-document {
+  box-shadow: 0 30px 80px var(--character-drop-shadow), inset 0 1px color-mix(in srgb, var(--character-ink) 10%, transparent);
+}
+.character-profile-page[data-theme='light'] :is(.character-profile-heading h2, .character-profile-nameplate) {
+  text-shadow: 0 3px 18px var(--character-title-shadow) !important;
+}
+.character-profile-page[data-theme='light'] :is(.character-profile-ability, .character-profile-main-backstory, .character-profile-main-backstory-empty) {
+  background: color-mix(in srgb, var(--character-base) 91%, var(--character-depth));
+  box-shadow: 0 12px 28px var(--character-drop-shadow);
+}
 
 .character-editor-backdrop {
   position: fixed;

@@ -368,7 +368,7 @@ const GuildProfilePage: React.FC = () => {
     : formatTimestamp(displayGuild.messageBoardUpdatedAt);
 
   return (
-    <main className="guild-profile" data-layout={displayGuild.layoutStyle} style={guildStyle}>
+    <main className="guild-profile" data-layout={displayGuild.layoutStyle} data-theme={displayGuild.themeMode} style={guildStyle}>
       <div className="guild-profile-atmosphere" aria-hidden="true" />
       <div className="guild-profile-shell">
         <nav className="guild-profile-nav">
@@ -656,6 +656,10 @@ const GuildProfilePage: React.FC = () => {
               <div className="guild-background-mode" role="group" aria-label="Page background style">
                 <button type="button" className={draft.backgroundMode === 'solid' ? 'is-selected' : ''} aria-pressed={draft.backgroundMode === 'solid'} onClick={() => updateDraft('backgroundMode', 'solid')}>Solid color</button>
                 <button type="button" className={draft.backgroundMode === 'gradient' ? 'is-selected' : ''} aria-pressed={draft.backgroundMode === 'gradient'} onClick={() => updateDraft('backgroundMode', 'gradient')}>Dual-color gradient</button>
+              </div>
+              <div className="guild-background-mode" role="group" aria-label="Page contrast theme">
+                <button type="button" className={draft.themeMode === 'dark' ? 'is-selected' : ''} aria-pressed={draft.themeMode === 'dark'} onClick={() => updateDraft('themeMode', 'dark')}>Dark theme</button>
+                <button type="button" className={draft.themeMode === 'light' ? 'is-selected' : ''} aria-pressed={draft.themeMode === 'light'} onClick={() => updateDraft('themeMode', 'light')}>Light theme</button>
               </div>
               <div className="guild-color-grid">
                 {([['baseColor', draft.backgroundMode === 'gradient' ? 'Background one' : 'Page'], ...(draft.backgroundMode === 'gradient' ? [['gradientColor', 'Background two']] as const : []), ['fontColor', 'Text'], ['accentColor', 'Buttons']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}

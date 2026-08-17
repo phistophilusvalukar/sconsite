@@ -17,6 +17,7 @@ const validCustomization = {
   subtitleFontSize: 21,
   textFontSize: 16,
   accentFontSize: 13,
+  themeMode: 'dark' as const,
   borderTheme: 'knights' as const,
   backgroundTheme: 'metal' as const,
   borderColorSource: 'accent' as const,
@@ -59,6 +60,8 @@ const validCustomization = {
 describe('guild customization', () => {
   it('accepts a complete guild page configuration', () => {
     expect(guildCustomizationSchema.safeParse(validCustomization).success).toBe(true);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, themeMode: 'light' }).success).toBe(true);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, themeMode: 'sepia' }).success).toBe(false);
   });
 
   it('rejects malformed colors and missing roster labels', () => {

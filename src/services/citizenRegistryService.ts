@@ -231,6 +231,7 @@ export class CitizenRegistryService {
       profileSubtitleFontSize: 22,
       profileTextFontSize: 16,
       profileAccentFontSize: 13,
+      profileThemeMode: 'dark',
       profileBorderTheme: 'none',
       profileBackgroundTheme: 'none',
       profileBorderColorSource: 'accent',

@@ -319,6 +319,9 @@
   --guild-saga-section-title-size: 77px;
   --guild-text-size: 16px;
   --guild-accent-size: 13px;
+  --guild-depth: #000;
+  --guild-drop-shadow: rgb(0 0 0 / .28);
+  --guild-title-shadow: rgb(0 0 0 / .78);
   --guild-page-background: var(--guild-base);
   position: relative;
   isolation: isolate;
@@ -326,6 +329,12 @@
   background: var(--guild-page-background);
   color: var(--guild-ink);
   font-family: var(--guild-text-font);
+}
+
+.guild-profile[data-theme='light'] {
+  --guild-depth: #fff;
+  --guild-drop-shadow: color-mix(in srgb, var(--guild-ink) 18%, transparent);
+  --guild-title-shadow: color-mix(in srgb, var(--guild-base) 42%, white 58%);
 }
 
 .guild-profile-shell :is(button, .guild-profile-nav a, .guild-section-label, .guild-profile-kicker, .guild-profile-seal span, .guild-charter-facts span, .guild-roster-group h3, .guild-member-copy span) {
@@ -357,8 +366,8 @@
 .guild-profile-nav button:hover { color: var(--guild-accent); }
 .guild-profile-nav-actions { display: flex; align-items: center; gap: 1rem; }
 .guild-profile-hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: clamp(1.25rem, 4vw, 3rem); min-height: 330px; padding: clamp(3rem, 7vw, 6rem) clamp(0rem, 3vw, 2rem); background-position: center; background-size: cover; }
-.guild-profile-hero.has-banner-image { min-height: clamp(390px, 48vw, 610px); border: 1px solid color-mix(in srgb, var(--guild-accent) 26%, transparent); border-radius: 6px; padding-inline: clamp(1.5rem, 5vw, 5rem); box-shadow: inset 0 0 90px rgb(0 0 0 / .28), 0 32px 80px rgb(0 0 0 / .25); text-shadow: 0 3px 20px rgb(0 0 0 / .76); }
-.guild-profile-emblem { display: grid; width: clamp(108px, 16vw, 176px); height: clamp(108px, 16vw, 176px); place-items: center; overflow: hidden; border: 1px solid color-mix(in srgb, var(--guild-accent) 55%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--guild-base) 75%, black 25%); color: var(--guild-accent); box-shadow: 0 0 0 10px color-mix(in srgb, var(--guild-accent) 5%, transparent), 0 28px 70px rgba(0,0,0,.3); }
+.guild-profile-hero.has-banner-image { min-height: clamp(390px, 48vw, 610px); border: 1px solid color-mix(in srgb, var(--guild-accent) 26%, transparent); border-radius: 6px; padding-inline: clamp(1.5rem, 5vw, 5rem); box-shadow: inset 0 0 90px var(--guild-drop-shadow), 0 32px 80px var(--guild-drop-shadow); text-shadow: 0 3px 20px var(--guild-title-shadow); }
+.guild-profile-emblem { display: grid; width: clamp(108px, 16vw, 176px); height: clamp(108px, 16vw, 176px); place-items: center; overflow: hidden; border: 1px solid color-mix(in srgb, var(--guild-accent) 55%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--guild-base) 75%, var(--guild-depth) 25%); color: var(--guild-accent); box-shadow: 0 0 0 10px color-mix(in srgb, var(--guild-accent) 5%, transparent), 0 28px 70px var(--guild-drop-shadow); }
 .guild-profile-emblem img { width: 100%; height: 100%; object-fit: cover; }
 .guild-profile-emblem svg { width: 43%; height: 43%; }
 .guild-profile-kicker { margin: 0 0 .65rem; color: var(--guild-accent); font-size: .69rem; font-weight: 800; letter-spacing: .17em; }
@@ -401,7 +410,7 @@
 .guild-requirements-panel,
 .guild-message-board,
 .guild-checkin-panel,
-.guild-guestbook-panel { border: 1px solid color-mix(in srgb, var(--guild-accent) 17%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--guild-base) 86%, var(--guild-ink) 3%); box-shadow: 0 18px 50px rgba(0,0,0,.13); }
+.guild-guestbook-panel { border: 1px solid color-mix(in srgb, var(--guild-accent) 17%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--guild-base) 86%, var(--guild-ink) 3%); box-shadow: 0 18px 50px var(--guild-drop-shadow); }
 .guild-story-panel { padding: clamp(1.35rem, 4vw, 2.5rem); }
 .guild-story-panel h2,
 .guild-headquarters-copy h2,
@@ -848,6 +857,17 @@
 .guild-profile[data-layout='saga'] .guild-headquarters-image { min-height: 520px; }
 
 /* Guild editor */
+.guild-profile[data-theme='light'] :is(.guild-story-panel, .guild-headquarters-panel, .guild-roster-panel, .guild-action-card, .guild-leader-card, .guild-requirements-panel, .guild-message-board, .guild-checkin-panel, .guild-guestbook-panel) {
+  background: color-mix(in srgb, var(--guild-base) 91%, var(--guild-depth));
+  box-shadow: 0 18px 44px var(--guild-drop-shadow);
+}
+.guild-profile[data-theme='light'] .guild-profile-title h1 {
+  text-shadow: 0 3px 18px var(--guild-title-shadow) !important;
+}
+.guild-profile[data-theme='light'] :is(.guild-member-card, .guild-action-card input, .guild-action-card textarea, .guild-action-card select) {
+  background: color-mix(in srgb, var(--guild-base) 88%, var(--guild-depth));
+}
+
 .guild-editor-backdrop { justify-content: flex-end; padding: 0; background: rgba(4,3,7,.08); backdrop-filter: none; }
 .guild-editor { width: min(100%, 480px); min-height: 100%; overflow: auto; padding: 1.4rem; background: #141119; color: #f6f3f7; box-shadow: -25px 0 70px rgba(0,0,0,.45); font-family: Inter, sans-serif; }
 .guild-editor-heading { position: sticky; z-index: 3; top: -1.4rem; margin: -1.4rem -1.4rem 1rem; padding: 1.4rem; border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(20,17,25,.96); backdrop-filter: blur(10px); }
