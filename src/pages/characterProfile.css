@@ -122,9 +122,11 @@
 .character-profile-overline {
   margin: 0 0 10px;
   color: var(--character-accent);
-  font: 800 11px/1.2 Inter, sans-serif;
+  font-family: var(--character-text-font);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
   letter-spacing: .2em;
-  text-transform: uppercase;
 }
 
 .character-profile-heading h2 {
@@ -307,9 +309,11 @@
   border-radius: 999px;
   padding: 7px 12px;
   background: var(--character-accent);
-  font: 900 11px/1 Inter, sans-serif;
+  font-family: var(--character-text-font);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
   letter-spacing: .12em;
-  text-transform: uppercase;
 }
 .character-profile-rankline strong {
   color: var(--character-ink);
@@ -388,12 +392,14 @@
   border: 2px solid color-mix(in srgb, var(--character-accent) 62%, transparent);
   padding: 7px 10px 5px;
   color: color-mix(in srgb, var(--character-accent) 76%, var(--character-ink));
-  content: 'CONFIDENTIAL // CASE FILE';
-  font: 900 9px/1 Inter, sans-serif;
+  content: 'Confidential // Case File';
+  font-family: var(--character-text-font);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
   letter-spacing: .18em;
   opacity: .72;
   pointer-events: none;
-  text-transform: uppercase;
   transform: rotate(1.5deg);
 }
 .character-profile-document[data-layout='dossier'] .character-profile-heading {
@@ -420,11 +426,10 @@
   font-weight: 750;
   letter-spacing: .025em;
   line-height: .92;
-  text-transform: uppercase;
   text-shadow: 5px 6px 0 rgb(0 0 0 / .72);
 }
-.character-profile-document[data-layout='dossier'] .character-profile-kicker { color: color-mix(in srgb, var(--character-accent) 75%, var(--character-ink)); font-family: 'Courier New', monospace; }
-.character-profile-document[data-layout='dossier'] .character-profile-subtitle { max-width: 620px; font-family: 'Courier New', var(--character-subtitle-font); font-style: normal; letter-spacing: .04em; }
+.character-profile-document[data-layout='dossier'] .character-profile-kicker { color: color-mix(in srgb, var(--character-accent) 75%, var(--character-ink)); }
+.character-profile-document[data-layout='dossier'] .character-profile-subtitle { max-width: 620px; font-style: normal; letter-spacing: .04em; }
 .character-profile-document[data-layout='dossier'] .character-profile-content { grid-template-columns: minmax(0, .92fr) minmax(440px, 1.08fr); }
 .character-profile-document[data-layout='dossier'] .character-profile-core {
   background: linear-gradient(145deg, color-mix(in srgb, var(--character-ink) 7%, transparent), transparent 38%), color-mix(in srgb, var(--character-base) 89%, black);
@@ -440,8 +445,11 @@
   padding: 5px 8px;
   background: color-mix(in srgb, var(--character-base) 82%, black);
   color: var(--character-accent);
-  content: 'EVIDENCE 01';
-  font: 850 8px/1 Inter, sans-serif;
+  content: 'Evidence 01';
+  font-family: var(--character-text-font);
+  font-size: 8px;
+  font-weight: 850;
+  line-height: 1;
   letter-spacing: .16em;
   transform: rotate(-4deg);
 }
@@ -453,15 +461,15 @@
   transform: rotate(-1deg);
 }
 .character-profile-document[data-layout='dossier'] .character-profile-rankline { border-bottom: 2px solid color-mix(in srgb, var(--character-accent) 42%, transparent); }
-.character-profile-document[data-layout='dossier'] .character-profile-rankline span { border-radius: 0; background: color-mix(in srgb, var(--character-accent) 82%, black); font-family: 'Courier New', monospace; }
-.character-profile-document[data-layout='dossier'] .character-profile-rankline strong { font-family: 'Courier New', var(--character-subtitle-font); letter-spacing: -.025em; text-transform: uppercase; }
+.character-profile-document[data-layout='dossier'] .character-profile-rankline span { border-radius: 0; background: color-mix(in srgb, var(--character-accent) 82%, black); }
+.character-profile-document[data-layout='dossier'] .character-profile-rankline strong { letter-spacing: -.025em; }
 .character-profile-document[data-layout='dossier'] .character-profile-facts > div {
   position: relative;
   border-radius: 0;
   background: color-mix(in srgb, var(--character-ink) 6%, var(--character-base));
   box-shadow: inset 3px 0 color-mix(in srgb, var(--character-accent) 42%, transparent);
 }
-.character-profile-document[data-layout='dossier'] .character-profile-facts p:first-child { font-family: 'Courier New', monospace; letter-spacing: .1em; }
+.character-profile-document[data-layout='dossier'] .character-profile-facts p:first-child { letter-spacing: .1em; }
 .character-profile-document[data-layout='dossier'] .character-profile-records {
   background:
     repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in srgb, var(--character-accent) 8%, transparent) 32px 33px),
@@ -469,7 +477,7 @@
   box-shadow: inset 18px 0 28px rgb(0 0 0 / .28);
 }
 .character-profile-document[data-layout='dossier'] .character-profile-records > div:first-child { background: rgb(0 0 0 / .34); }
-.character-profile-document[data-layout='dossier'] .character-profile-records > div:first-child button { font-family: 'Courier New', monospace; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.character-profile-document[data-layout='dossier'] .character-profile-records > div:first-child button { font-weight: 850; letter-spacing: .08em; }
 
 .character-profile-document[data-layout='spotlight'] {
   isolation: isolate;
@@ -553,7 +561,6 @@
   font-size: clamp(3.8rem, 12vw, var(--character-title-size));
   line-height: .78;
   letter-spacing: -.035em;
-  text-transform: uppercase;
   text-shadow: 0 4px 0 rgb(0 0 0 / .8), 0 12px 42px rgb(0 0 0 / .9), 0 0 24px color-mix(in srgb, var(--character-accent) 20%, transparent);
 }
 .character-profile-document[data-layout='spotlight'] .character-profile-subtitle {
@@ -607,11 +614,11 @@
 }
 .character-profile-document[data-layout='spotlight'] .character-profile-rankline { display: block; border-bottom: 3px double color-mix(in srgb, var(--character-accent) 44%, transparent); text-align: center; }
 .character-profile-document[data-layout='spotlight'] .character-profile-rankline span { display: inline-block; border-radius: 0; margin-bottom: 15px; padding: 6px 18px; letter-spacing: .22em; }
-.character-profile-document[data-layout='spotlight'] .character-profile-rankline strong { display: block; font-size: clamp(1.8rem, 4vw, var(--character-section-title-size)); text-transform: uppercase; }
+.character-profile-document[data-layout='spotlight'] .character-profile-rankline strong { display: block; font-size: clamp(1.8rem, 4vw, var(--character-section-title-size)); }
 .character-profile-document[data-layout='spotlight'] .character-profile-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border: 1px solid color-mix(in srgb, var(--character-accent) 22%, transparent); }
 .character-profile-document[data-layout='spotlight'] .character-profile-facts > div { border: 0; border-bottom: 1px dotted color-mix(in srgb, var(--character-accent) 28%, transparent); border-radius: 0; background: transparent; }
 .character-profile-document[data-layout='spotlight'] .character-profile-facts > div:nth-child(odd) { border-right: 1px dotted color-mix(in srgb, var(--character-accent) 28%, transparent); }
-.character-profile-document[data-layout='spotlight'] .character-profile-facts p:first-child { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; }
+.character-profile-document[data-layout='spotlight'] .character-profile-facts p:first-child { font-size: 9px; letter-spacing: .2em; }
 .character-profile-document[data-layout='spotlight'] .character-profile-ability { border-radius: 0; border-style: double; background: rgb(0 0 0 / .22); }
 
 .character-profile-document[data-layout='spotlight'] .character-profile-records {
@@ -628,7 +635,7 @@
   border-bottom: 3px double color-mix(in srgb, var(--character-accent) 48%, transparent);
   background: rgb(0 0 0 / .25);
 }
-.character-profile-document[data-layout='spotlight'] .character-profile-records > div:first-child button { font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+.character-profile-document[data-layout='spotlight'] .character-profile-records > div:first-child button { font-weight: 850; letter-spacing: .13em; }
 .character-profile-document[data-layout='spotlight'] .character-profile-records > div:first-child button.bg-fantasy-800\/60 { box-shadow: inset 0 -3px var(--character-accent); }
 
 .character-profile-document[data-layout='saga'] {
@@ -709,13 +716,11 @@
 }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-heading h2,
 .character-profile-document[data-layout='cyberpunk'] .character-profile-rankline strong {
-  font-family: 'Courier New', var(--character-title-font);
   letter-spacing: -.04em;
-  text-transform: uppercase;
   text-shadow: 3px 0 color-mix(in srgb, var(--character-accent) 48%, transparent), -2px 0 color-mix(in srgb, #ff2ca8 42%, transparent);
 }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-kicker,
-.character-profile-document[data-layout='cyberpunk'] .character-profile-records > div:first-child button { font-family: 'Courier New', monospace; letter-spacing: .14em; text-transform: uppercase; }
+.character-profile-document[data-layout='cyberpunk'] .character-profile-records > div:first-child button { letter-spacing: .14em; }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-portrait { border-radius: 0 28px 0 28px; border-width: 2px; box-shadow: 10px 10px 0 color-mix(in srgb, var(--character-accent) 18%, transparent); }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-rankline span,
 .character-profile-document[data-layout='cyberpunk'] .character-profile-facts > div,
@@ -740,7 +745,7 @@
   text-align: center;
 }
 .character-profile-document[data-layout='frontier'] .character-profile-heading > div:first-child { margin-inline: auto; }
-.character-profile-document[data-layout='frontier'] .character-profile-heading h2 { letter-spacing: .035em; text-transform: uppercase; text-shadow: 0 3px #29160d; }
+.character-profile-document[data-layout='frontier'] .character-profile-heading h2 { letter-spacing: .035em; text-shadow: 0 3px #29160d; }
 .character-profile-document[data-layout='frontier'] .character-profile-kicker::before,
 .character-profile-document[data-layout='frontier'] .character-profile-kicker::after { content: '— ✦ —'; margin-inline: .65rem; }
 .character-profile-document[data-layout='frontier'] .character-profile-portrait { border: 6px double color-mix(in srgb, var(--character-accent) 68%, #8a552d); border-radius: 50% 50% 8px 8px; filter: sepia(.18) contrast(1.05); }
@@ -750,7 +755,7 @@
 .character-profile-document[data-layout='frontier'] .character-profile-main-backstory,
 .character-profile-document[data-layout='frontier'] .character-profile-records { border-radius: 2px; border-style: double; }
 .character-profile-document[data-layout='frontier'] .character-profile-records > div:first-child { border-bottom: 3px double color-mix(in srgb, var(--character-accent) 45%, transparent); }
-.character-profile-document[data-layout='frontier'] .character-profile-records > div:first-child button { letter-spacing: .1em; text-transform: uppercase; }
+.character-profile-document[data-layout='frontier'] .character-profile-records > div:first-child button { letter-spacing: .1em; }
 
 .character-profile-state,
 .character-profile-loading {
