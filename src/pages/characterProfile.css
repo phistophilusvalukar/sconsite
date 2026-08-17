@@ -182,6 +182,7 @@
   gap: 9px;
   margin-top: -5px;
 }
+.character-profile-shell-spotlight { width: min(1600px, calc(100% - 20px)); }
 .character-profile-shape-button {
   position: relative;
   align-self: center;
@@ -523,7 +524,7 @@
     repeating-linear-gradient(90deg, transparent 0 70px, color-mix(in srgb, var(--character-accent) 5%, transparent) 70px 71px);
 }
 .character-profile-document[data-layout='spotlight'] .character-profile-heading.has-banner-image {
-  background-position: center 24%;
+  background-position: center top;
   background-size: cover;
 }
 .character-profile-document[data-layout='spotlight'] .character-profile-heading::before {
@@ -580,24 +581,27 @@
 .character-profile-document[data-layout='spotlight'] .character-profile-identity {
   position: relative;
   grid-template-columns: minmax(340px, .92fr) minmax(0, 1.08fr);
-  align-items: center;
+  align-items: start;
   gap: clamp(40px, 7vw, 100px);
   padding: clamp(74px, 8vw, 118px) clamp(70px, 10vw, 150px);
   background:
     radial-gradient(ellipse at 28% 24%, color-mix(in srgb, var(--character-accent) 22%, transparent), transparent 38%),
     linear-gradient(90deg, rgb(0 0 0 / .3), transparent 48%, rgb(0 0 0 / .18));
 }
-.character-profile-document[data-layout='spotlight'] .character-profile-portrait-column { position: relative; z-index: 2; }
+.character-profile-document[data-layout='spotlight'] .character-profile-portrait-column { z-index: 2; align-self: start; }
 .character-profile-document[data-layout='spotlight'] .character-profile-portrait-column::before {
   content: '';
   position: absolute;
-  z-index: -1;
-  inset: -28px -22px 42%;
-  clip-path: polygon(36% 0, 64% 0, 100% 100%, 0 100%);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--character-accent) 32%, transparent), transparent);
-  filter: blur(12px);
+  z-index: 0;
+  inset: 0;
+  clip-path: polygon(47% 0, 54% 0, 36% 76%, 3% 76%);
+  background: linear-gradient(165deg, color-mix(in srgb, var(--character-accent) 38%, transparent), color-mix(in srgb, var(--character-accent) 13%, transparent) 52%, transparent 78%);
+  filter: blur(9px);
+  pointer-events: none;
 }
 .character-profile-document[data-layout='spotlight'] .character-profile-portrait {
+  position: relative;
+  z-index: 2;
   max-height: 760px;
   aspect-ratio: 3 / 4;
   border: 8px solid color-mix(in srgb, var(--character-accent) 48%, #211006);

@@ -331,7 +331,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   return (
     <main className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}`} style={profileStyle}>
       <div className="character-profile-atmosphere" aria-hidden="true" />
-      <div className="character-profile-shell">
+      <div className={`character-profile-shell character-profile-shell-${displayCharacter.profileLayoutStyle}`}>
         <nav className="character-profile-nav" aria-label="Character profile controls">
           {publicView
             ? <span className="character-profile-public-label"><Globe2 size={17} /> Public character folio</span>
