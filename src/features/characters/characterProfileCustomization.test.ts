@@ -46,7 +46,8 @@ describe('character profile customization', () => {
   it('accepts a complete profile presentation', () => {
     expect(characterProfileCustomizationSchema.safeParse(validProfile).success).toBe(true);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, layoutStyle: 'cyberpunk' }).success).toBe(true);
-    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, layoutStyle: 'frontier' }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, layoutStyle: 'nostalgia' }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, fontFamily: 'press-start-2p' }).success).toBe(true);
   });
 
   it('accepts an independently configured alternate shape', () => {

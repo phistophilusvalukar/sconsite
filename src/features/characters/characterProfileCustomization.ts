@@ -24,7 +24,8 @@ export const characterFontOptions = [
   { value: 'almendra-display', label: 'Almendra Display', stack: '"Almendra Display", Georgia, serif', category: 'Whimsical' },
   { value: 'henny-penny', label: 'Henny Penny', stack: '"Henny Penny", Georgia, serif', category: 'Whimsical' },
   { value: 'macondo', label: 'Macondo', stack: 'Macondo, Georgia, serif', category: 'Whimsical' },
-  { value: 'mystery-quest', label: 'Mystery Quest', stack: '"Mystery Quest", Georgia, serif', category: 'Whimsical' }
+  { value: 'mystery-quest', label: 'Mystery Quest', stack: '"Mystery Quest", Georgia, serif', category: 'Whimsical' },
+  { value: 'press-start-2p', label: 'Press Start 2P', stack: '"Press Start 2P", monospace', category: 'Whimsical' }
 ] as const;
 
 export const characterFontCategories = ['Classic', 'Savage', 'Fancy', 'Whimsical'] as const;
@@ -35,7 +36,7 @@ export const characterLayoutOptions = [
   { value: 'spotlight', label: 'Spotlight', description: 'A dramatic, portrait-led composition with ornamental framing and bold typography.' },
   { value: 'saga', label: 'Saga', description: 'An epic full-width hero with an arched portrait and sweeping records.' },
   { value: 'cyberpunk', label: 'Cyberpunk', description: 'Neon circuitry, angular panels, scanlines, and a futuristic dossier display.' },
-  { value: 'frontier', label: 'Frontier', description: 'Weathered western print, brass machinery, and steampunk-era ornament.' }
+  { value: 'nostalgia', label: 'Nostalgia', description: 'Game Boy greens, NES-era pixel borders, and hard-edged retro interface panels.' }
 ] as const;
 
 export const defaultCharacterProfileSectionVisibility = {
@@ -88,9 +89,9 @@ const externalImageUrl = z.string().trim().max(2000).refine(isSafeCharacterBanne
 export const characterProfileCustomizationSchema = z.object({
   isPublic: z.boolean(),
   subtitle: z.string().trim().max(140),
-  titleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
-  subtitleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
-  fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
+  titleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
+  subtitleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
+  fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
   titleFontSize: z.number().int().min(40).max(180),
   subtitleFontSize: z.number().int().min(14).max(56),
   textFontSize: z.number().int().min(12).max(26),
@@ -119,7 +120,7 @@ export const characterProfileCustomizationSchema = z.object({
   portraitCutoutPositionY: z.number().int().min(-50).max(50),
   portraitFocusX: z.number().min(0).max(100),
   portraitFocusY: z.number().min(0).max(100),
-  layoutStyle: z.enum(['chronicle', 'dossier', 'spotlight', 'saga', 'cyberpunk', 'frontier']),
+  layoutStyle: z.enum(['chronicle', 'dossier', 'spotlight', 'saga', 'cyberpunk', 'nostalgia']),
   sectionVisibility: z.object({
     portrait: z.boolean(),
     details: z.boolean(),

@@ -125,7 +125,7 @@ export interface Character {
   profilePortraitCutoutPositionY: number;
   profilePortraitFocusX?: number;
   profilePortraitFocusY?: number;
-  profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight' | 'saga' | 'cyberpunk' | 'frontier';
+  profileLayoutStyle: 'chronicle' | 'dossier' | 'spotlight' | 'saga' | 'cyberpunk' | 'nostalgia';
   profileSectionVisibility: CharacterProfileSectionVisibility;
   profileChangeShapeEnabled?: boolean;
   profileAlternateShape?: JsonValue;
@@ -185,7 +185,7 @@ export interface Guild {
   gradientColor: string;
   gradientOrientation: 'horizontal' | 'diagonal' | 'vertical';
   gradientTransitionRate: number;
-  layoutStyle: 'chronicle' | 'stronghold' | 'banner' | 'saga' | 'cyberpunk' | 'frontier';
+  layoutStyle: 'chronicle' | 'stronghold' | 'banner' | 'saga' | 'cyberpunk' | 'nostalgia';
   rosterDisplay: 'ledger' | 'dossiers' | 'cards' | 'lineup';
   rosterLineup?: GuildRosterLineupPlacement[];
   sectionVisibility: GuildSectionVisibility;
@@ -243,7 +243,8 @@ export type ProfileFontFamily =
   | 'almendra-display'
   | 'henny-penny'
   | 'macondo'
-  | 'mystery-quest';
+  | 'mystery-quest'
+  | 'press-start-2p';
 
 export interface GuildSectionVisibility {
   charter: boolean;

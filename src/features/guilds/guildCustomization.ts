@@ -25,7 +25,8 @@ export const guildFontOptions = [
   { value: 'almendra-display', label: 'Almendra Display', stack: '"Almendra Display", Georgia, serif', category: 'Whimsical' },
   { value: 'henny-penny', label: 'Henny Penny', stack: '"Henny Penny", Georgia, serif', category: 'Whimsical' },
   { value: 'macondo', label: 'Macondo', stack: 'Macondo, Georgia, serif', category: 'Whimsical' },
-  { value: 'mystery-quest', label: 'Mystery Quest', stack: '"Mystery Quest", Georgia, serif', category: 'Whimsical' }
+  { value: 'mystery-quest', label: 'Mystery Quest', stack: '"Mystery Quest", Georgia, serif', category: 'Whimsical' },
+  { value: 'press-start-2p', label: 'Press Start 2P', stack: '"Press Start 2P", monospace', category: 'Whimsical' }
 ] as const;
 
 export const guildFontCategories = ['Classic', 'Savage', 'Fancy', 'Whimsical'] as const;
@@ -36,7 +37,7 @@ export const guildLayoutOptions = [
   { value: 'banner', label: 'Banner', description: 'A bold, ceremonial presentation.' },
   { value: 'saga', label: 'Saga', description: 'A monumental hero and asymmetric twelve-column hall.' },
   { value: 'cyberpunk', label: 'Cyberpunk', description: 'A neon network of angular panels and luminous guild telemetry.' },
-  { value: 'frontier', label: 'Frontier', description: 'A weathered western broadsheet with brass-and-steam detailing.' }
+  { value: 'nostalgia', label: 'Nostalgia', description: 'Game Boy greens, NES-era pixel borders, and hard-edged retro interface panels.' }
 ] as const;
 
 export const defaultGuildRoleLabels = {
@@ -132,9 +133,9 @@ export const guildCustomizationSchema = z.object({
   subtitle: z.string().trim().max(140),
   description: z.string().trim().max(4000),
   descriptionHtml: z.string().trim().max(12000),
-  titleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
-  subtitleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
-  fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest']),
+  titleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
+  subtitleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
+  fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
   titleFontSize: z.number().int().min(40).max(180),
   subtitleFontSize: z.number().int().min(14).max(56),
   textFontSize: z.number().int().min(12).max(26),
@@ -149,7 +150,7 @@ export const guildCustomizationSchema = z.object({
   gradientColor: hexColor,
   gradientOrientation: z.enum(profileGradientOrientationValues),
   gradientTransitionRate: z.number().int().min(0).max(100),
-  layoutStyle: z.enum(['chronicle', 'stronghold', 'banner', 'saga', 'cyberpunk', 'frontier']),
+  layoutStyle: z.enum(['chronicle', 'stronghold', 'banner', 'saga', 'cyberpunk', 'nostalgia']),
   rosterDisplay: z.enum(['ledger', 'dossiers', 'cards', 'lineup']),
   rosterLineup: z.array(guildRosterLineupPlacementSchema).max(30).refine(
     placements => new Set(placements.map(placement => placement.characterId)).size === placements.length,

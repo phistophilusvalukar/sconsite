@@ -788,36 +788,35 @@
   box-shadow: inset 4px 0 var(--guild-accent), 0 15px 38px rgb(0 0 0 / .2);
 }
 
-/* Western broadsheet and steamworks */
-.guild-profile[data-layout='frontier'] .guild-profile-atmosphere {
+/* Handheld and 8-bit console nostalgia */
+.guild-profile[data-layout='nostalgia'] .guild-profile-atmosphere {
   background:
-    radial-gradient(circle at 15% 8%, rgb(255 231 174 / .1), transparent 30rem),
-    repeating-linear-gradient(90deg, transparent 0 89px, color-mix(in srgb, var(--guild-accent) 4%, transparent) 90px),
-    color-mix(in srgb, var(--guild-page-background) 88%, #26160c);
+    linear-gradient(90deg, color-mix(in srgb, var(--guild-ink) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--guild-ink) 4%, transparent) 1px, transparent 1px),
+    var(--guild-page-background);
+  background-size: 8px 8px;
 }
-.guild-profile[data-layout='frontier'] .guild-profile-shell { width: min(1320px, calc(100% - 2.5rem)); }
-.guild-profile[data-layout='frontier'] .guild-profile-hero {
-  grid-template-columns: 1fr;
-  justify-items: center;
-  min-height: 470px;
-  border: 8px double color-mix(in srgb, var(--guild-accent) 68%, #7a4826);
-  border-radius: 2px;
-  padding: clamp(4rem, 8vw, 7rem) clamp(2rem, 7vw, 7rem);
-  background-color: color-mix(in srgb, var(--guild-base) 88%, #2b190d);
-  text-align: center;
-  box-shadow: inset 0 0 100px rgb(38 20 8 / .65), 0 28px 70px rgb(0 0 0 / .3);
+.guild-profile[data-layout='nostalgia'] .guild-profile-shell { width: min(1360px, calc(100% - 2.5rem)); }
+.guild-profile[data-layout='nostalgia'] .guild-profile-hero {
+  min-height: 420px;
+  border: 6px solid color-mix(in srgb, var(--guild-accent) 62%, #8bac0f);
+  border-radius: 0;
+  padding-inline: clamp(2rem, 6vw, 6rem);
+  background-color: color-mix(in srgb, var(--guild-base) 78%, #0f380f);
+  background-position: center top;
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--guild-accent) 52%, #306230), 16px 16px 0 rgb(0 0 0 / .4);
+  image-rendering: pixelated;
 }
-.guild-profile[data-layout='frontier'] .guild-profile-emblem { border: 6px double color-mix(in srgb, var(--guild-accent) 72%, #89552e); border-radius: 50% 50% 8px 8px; filter: sepia(.18); }
-.guild-profile[data-layout='frontier'] .guild-profile-title h1 { letter-spacing: .025em; text-shadow: 0 3px #28160c; }
-.guild-profile[data-layout='frontier'] .guild-profile-seal { display: flex; align-items: center; gap: .7rem; border: 0; border-block: 3px double color-mix(in srgb, var(--guild-accent) 48%, transparent); padding: .8rem 1.4rem; }
-.guild-profile[data-layout='frontier'] .guild-profile-seal svg { margin: 0; }
-.guild-profile[data-layout='frontier'] .guild-profile-layout { grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); }
-.guild-profile[data-layout='frontier'] :is(.guild-story-panel, .guild-headquarters-panel, .guild-roster-panel, .guild-action-card, .guild-leader-card, .guild-requirements-panel, .guild-message-board, .guild-checkin-panel, .guild-guestbook-panel) {
-  border: 4px double color-mix(in srgb, var(--guild-accent) 38%, #7a4826);
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--guild-base) 90%, #402515);
-  box-shadow: inset 0 0 30px rgb(47 26 10 / .22), 0 15px 35px rgb(0 0 0 / .16);
+.guild-profile[data-layout='nostalgia'] .guild-profile-emblem { border: 6px solid color-mix(in srgb, var(--guild-accent) 65%, #8bac0f); border-radius: 0; box-shadow: 7px 7px 0 color-mix(in srgb, var(--guild-accent) 38%, #306230); image-rendering: pixelated; }
+.guild-profile[data-layout='nostalgia'] .guild-profile-seal { border: 3px solid color-mix(in srgb, var(--guild-accent) 48%, #306230); border-radius: 0; padding: .8rem 1rem; box-shadow: 4px 4px 0 color-mix(in srgb, var(--guild-accent) 28%, #306230); }
+.guild-profile[data-layout='nostalgia'] .guild-profile-layout { grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); }
+.guild-profile[data-layout='nostalgia'] :is(.guild-story-panel, .guild-headquarters-panel, .guild-roster-panel, .guild-action-card, .guild-leader-card, .guild-requirements-panel, .guild-message-board, .guild-checkin-panel, .guild-guestbook-panel) {
+  border: 4px solid color-mix(in srgb, var(--guild-accent) 48%, #8bac0f);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--guild-base) 82%, #0f380f);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--guild-accent) 25%, #306230);
 }
+.guild-profile[data-layout='nostalgia'] :is(.guild-profile-primary, .guild-checkin-actions button) { border-radius: 0; box-shadow: 4px 4px 0 color-mix(in srgb, var(--guild-accent) 42%, #306230); }
 
 .guild-profile:is([data-layout='stronghold'], [data-layout='banner'], [data-layout='saga']) .guild-headquarters-image {
   position: relative;
@@ -912,7 +911,7 @@
 .guild-layout-sketch-saga { grid-template-columns: 2fr 1fr; grid-template-rows: 1.6fr .7fr; }
 .guild-layout-sketch-saga i:first-child { grid-column: 1 / 3; }
 .guild-layout-sketch-cyberpunk { grid-template-columns: 1fr 1.4fr; transform: skewX(-5deg); }
-.guild-layout-sketch-frontier { grid-template-columns: 1fr 1fr; border: 3px double #886946; }
+.guild-layout-sketch-nostalgia { grid-template-columns: 1fr 1fr; border: 3px solid #8bac0f; box-shadow: 3px 3px 0 #306230; }
 .guild-url-preview { position: relative; height: 145px; overflow: hidden; border: 1px solid rgba(223,184,95,.2); border-radius: 4px; background: rgba(0,0,0,.25); }
 .guild-url-preview img { width: 100%; height: 100%; object-fit: cover; }
 .guild-url-preview > span { position: absolute; right: .45rem; bottom: .45rem; border-radius: 999px; padding: .25rem .5rem; background: rgba(10,8,13,.8); color: #ddd6e0; font-size: .56rem; }
@@ -934,7 +933,7 @@
   .guild-profile[data-layout='saga'] .guild-action-panel { display: contents; }
   .guild-profile[data-layout='saga'] .guild-profile-layout { grid-template-columns: 1fr; }
   .guild-profile[data-layout='cyberpunk'] .guild-profile-layout,
-  .guild-profile[data-layout='frontier'] .guild-profile-layout { grid-template-columns: 1fr; }
+  .guild-profile[data-layout='nostalgia'] .guild-profile-layout { grid-template-columns: 1fr; }
   .guild-profile[data-layout='cyberpunk'] .guild-story-panel,
   .guild-profile[data-layout='cyberpunk'] .guild-requirements-panel,
   .guild-profile[data-layout='cyberpunk'] .guild-action-panel { grid-column: 1; grid-row: auto; }
