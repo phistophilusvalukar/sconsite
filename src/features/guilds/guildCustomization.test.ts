@@ -12,9 +12,11 @@ const validCustomization = {
   titleFontFamily: 'cinzel-decorative' as const,
   subtitleFontFamily: 'marcellus' as const,
   fontFamily: 'cinzel' as const,
+  accentFontFamily: 'press-start-2p' as const,
   titleFontSize: 96,
   subtitleFontSize: 21,
   textFontSize: 16,
+  accentFontSize: 13,
   borderTheme: 'knights' as const,
   backgroundTheme: 'metal' as const,
   borderColorSource: 'accent' as const,
@@ -84,6 +86,7 @@ describe('guild customization', () => {
     expect(guildCustomizationSchema.safeParse({ ...validCustomization, textFontSize: 20 }).success).toBe(true);
     expect(guildCustomizationSchema.safeParse({ ...validCustomization, textFontSize: 27 }).success).toBe(false);
     expect(guildCustomizationSchema.safeParse({ ...validCustomization, titleFontSize: 39 }).success).toBe(false);
+    expect(guildCustomizationSchema.safeParse({ ...validCustomization, accentFontSize: 29 }).success).toBe(false);
   });
 
   it('validates independent guild border and background motifs', () => {

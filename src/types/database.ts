@@ -97,9 +97,11 @@ export interface Character {
   profileTitleFontFamily: ProfileFontFamily;
   profileSubtitleFontFamily: ProfileFontFamily;
   profileFontFamily: ProfileFontFamily;
+  profileAccentFontFamily: ProfileFontFamily;
   profileTitleFontSize: number;
   profileSubtitleFontSize: number;
   profileTextFontSize: number;
+  profileAccentFontSize: number;
   profileBorderTheme: ProfileDecorationTheme;
   profileBackgroundTheme: ProfileDecorationTheme;
   profileBorderColorSource: ProfileDecorationColorSource;
@@ -171,9 +173,11 @@ export interface Guild {
   titleFontFamily: ProfileFontFamily;
   subtitleFontFamily: ProfileFontFamily;
   fontFamily: ProfileFontFamily;
+  accentFontFamily: ProfileFontFamily;
   titleFontSize: number;
   subtitleFontSize: number;
   textFontSize: number;
+  accentFontSize: number;
   borderTheme: ProfileDecorationTheme;
   backgroundTheme: ProfileDecorationTheme;
   borderColorSource: ProfileDecorationColorSource;

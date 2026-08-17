@@ -6,9 +6,11 @@ export interface ProfileTypographySelection {
   titleFontFamily: ProfileFontFamily;
   subtitleFontFamily: ProfileFontFamily;
   fontFamily: ProfileFontFamily;
+  accentFontFamily: ProfileFontFamily;
   titleFontSize: number;
   subtitleFontSize: number;
   textFontSize: number;
+  accentFontSize: number;
 }
 
 interface FontOption {
@@ -28,7 +30,8 @@ interface ProfileTypographyControlsProps {
 const roles = [
   { fontKey: 'titleFontFamily', sizeKey: 'titleFontSize', label: 'Main title', preview: 'A Legendary Name', min: 40, max: 180 },
   { fontKey: 'subtitleFontFamily', sizeKey: 'subtitleFontSize', label: 'Subtitles & headings', preview: 'Chronicles and company', min: 14, max: 56 },
-  { fontKey: 'fontFamily', sizeKey: 'textFontSize', label: 'Normal text', preview: 'Readable stories, details, and records.', min: 12, max: 26 }
+  { fontKey: 'fontFamily', sizeKey: 'textFontSize', label: 'Normal text', preview: 'Readable stories, details, and records.', min: 12, max: 26 },
+  { fontKey: 'accentFontFamily', sizeKey: 'accentFontSize', label: 'Buttons & accents', preview: 'Actions, tabs, labels, and badges', min: 10, max: 28 }
 ] as const;
 
 const ProfileTypographyControls: React.FC<ProfileTypographyControlsProps> = ({ value, fontOptions, categories, onChange }) => (

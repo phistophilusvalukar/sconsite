@@ -5,6 +5,7 @@
   --character-title-font: Cinzel, Georgia, serif;
   --character-subtitle-font: Cinzel, Georgia, serif;
   --character-text-font: Inter, ui-sans-serif, system-ui, sans-serif;
+  --character-accent-font: Inter, ui-sans-serif, system-ui, sans-serif;
   --character-title-size: 124px;
   --character-dossier-title-size: 97px;
   --character-saga-title-size: 161px;
@@ -12,6 +13,7 @@
   --character-section-title-size: 41px;
   --character-saga-subtitle-size: 34px;
   --character-text-size: 16px;
+  --character-accent-size: 13px;
   --character-page-background: var(--character-base);
   position: relative;
   min-height: 100vh;
@@ -61,7 +63,10 @@
   border-radius: 999px;
   color: var(--character-ink);
   background: color-mix(in srgb, var(--character-base) 78%, transparent);
-  font: 700 12px/1 Inter, sans-serif;
+  font-family: var(--character-accent-font);
+  font-size: var(--character-accent-size);
+  font-weight: 700;
+  line-height: 1;
   letter-spacing: .06em;
   text-decoration: none;
   transition: border-color .2s ease, background .2s ease, transform .2s ease;
@@ -181,6 +186,11 @@
   display: flex;
   gap: 9px;
   margin-top: -5px;
+}
+
+.character-profile-shell :is(button, .character-profile-nav a, .character-profile-public-label, .character-profile-kicker, .character-profile-overline, .character-profile-rankline span, .character-profile-facts p:first-child, .character-profile-companion-features li) {
+  font-family: var(--character-accent-font) !important;
+  font-size: var(--character-accent-size) !important;
 }
 .character-profile-shell-spotlight { width: min(1600px, calc(100% - 20px)); }
 .character-profile-shape-button {
@@ -310,8 +320,8 @@
   border-radius: 999px;
   padding: 7px 12px;
   background: var(--character-accent);
-  font-family: var(--character-text-font);
-  font-size: 11px;
+  font-family: var(--character-accent-font);
+  font-size: var(--character-accent-size);
   font-weight: 900;
   line-height: 1;
   letter-spacing: .12em;

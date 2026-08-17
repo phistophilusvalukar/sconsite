@@ -10,9 +10,11 @@ const validProfile = {
   titleFontFamily: 'metal-mania' as const,
   subtitleFontFamily: 'cinzel' as const,
   fontFamily: 'cormorant' as const,
+  accentFontFamily: 'press-start-2p' as const,
   titleFontSize: 124,
   subtitleFontSize: 22,
   textFontSize: 16,
+  accentFontSize: 13,
   borderTheme: 'runes' as const,
   backgroundTheme: 'arcane' as const,
   borderColorSource: 'accent' as const,
@@ -90,10 +92,11 @@ describe('character profile customization', () => {
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, gradientOrientation: 'radial' }).success).toBe(false);
   });
 
-  it('validates independent title, subtitle, and text sizes', () => {
+  it('validates independent title, subtitle, text, and accent sizes', () => {
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, textFontSize: 26 }).success).toBe(true);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, titleFontSize: 181 }).success).toBe(false);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, subtitleFontSize: 13 }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, accentFontSize: 29 }).success).toBe(false);
   });
 
   it('validates fantasy decoration themes and their palette sources', () => {

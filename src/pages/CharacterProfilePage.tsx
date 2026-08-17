@@ -50,9 +50,11 @@ const applyProfileCustomization = (character: Character, profile: CharacterProfi
   profileTitleFontFamily: profile.titleFontFamily,
   profileSubtitleFontFamily: profile.subtitleFontFamily,
   profileFontFamily: profile.fontFamily,
+  profileAccentFontFamily: profile.accentFontFamily,
   profileTitleFontSize: profile.titleFontSize,
   profileSubtitleFontSize: profile.subtitleFontSize,
   profileTextFontSize: profile.textFontSize,
+  profileAccentFontSize: profile.accentFontSize,
   profileBorderTheme: profile.borderTheme,
   profileBackgroundTheme: profile.backgroundTheme,
   profileBorderColorSource: profile.borderColorSource,
@@ -318,6 +320,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     '--character-title-font': getCharacterFontStack(displayCharacter.profileTitleFontFamily),
     '--character-subtitle-font': getCharacterFontStack(displayCharacter.profileSubtitleFontFamily),
     '--character-text-font': getCharacterFontStack(displayCharacter.profileFontFamily),
+    '--character-accent-font': getCharacterFontStack(displayCharacter.profileAccentFontFamily),
     '--character-title-size': `${displayCharacter.profileTitleFontSize}px`,
     '--character-dossier-title-size': `${Math.round(displayCharacter.profileTitleFontSize * .78)}px`,
     '--character-saga-title-size': `${Math.round(displayCharacter.profileTitleFontSize * 1.3)}px`,
@@ -325,6 +328,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     '--character-section-title-size': `${Math.round(displayCharacter.profileSubtitleFontSize * 1.85)}px`,
     '--character-saga-subtitle-size': `${Math.round(displayCharacter.profileSubtitleFontSize * 1.55)}px`,
     '--character-text-size': `${displayCharacter.profileTextFontSize}px`,
+    '--character-accent-size': `${displayCharacter.profileAccentFontSize}px`,
     fontFamily: getCharacterFontStack(displayCharacter.profileFontFamily)
   } as CSSProperties;
 

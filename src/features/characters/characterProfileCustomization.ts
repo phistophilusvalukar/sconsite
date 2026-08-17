@@ -61,9 +61,11 @@ export const defaultCharacterProfileTypography = {
   titleFontFamily: 'cinzel',
   subtitleFontFamily: 'cinzel',
   fontFamily: 'inter',
+  accentFontFamily: 'inter',
   titleFontSize: 124,
   subtitleFontSize: 22,
-  textFontSize: 16
+  textFontSize: 16,
+  accentFontSize: 13
 } as const;
 
 export const defaultDynamicPortraitPlacement = {
@@ -92,9 +94,11 @@ export const characterProfileCustomizationSchema = z.object({
   titleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
   subtitleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
   fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
+  accentFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
   titleFontSize: z.number().int().min(40).max(180),
   subtitleFontSize: z.number().int().min(14).max(56),
   textFontSize: z.number().int().min(12).max(26),
+  accentFontSize: z.number().int().min(10).max(28),
   borderTheme: z.enum(profileDecorationThemeValues),
   backgroundTheme: z.enum(profileDecorationThemeValues),
   borderColorSource: z.enum(['base', 'accent']),
@@ -151,9 +155,11 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   titleFontFamily: character.profileTitleFontFamily || character.profileFontFamily,
   subtitleFontFamily: character.profileSubtitleFontFamily || character.profileFontFamily,
   fontFamily: character.profileFontFamily,
+  accentFontFamily: character.profileAccentFontFamily || character.profileFontFamily,
   titleFontSize: character.profileTitleFontSize || defaultCharacterProfileTypography.titleFontSize,
   subtitleFontSize: character.profileSubtitleFontSize || defaultCharacterProfileTypography.subtitleFontSize,
   textFontSize: character.profileTextFontSize || defaultCharacterProfileTypography.textFontSize,
+  accentFontSize: character.profileAccentFontSize || defaultCharacterProfileTypography.accentFontSize,
   borderTheme: character.profileBorderTheme || defaultProfileDecorations.borderTheme,
   backgroundTheme: character.profileBackgroundTheme || defaultProfileDecorations.backgroundTheme,
   borderColorSource: character.profileBorderColorSource || defaultProfileDecorations.borderColorSource,

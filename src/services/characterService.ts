@@ -96,9 +96,11 @@ type CharacterCreateInput = Omit<
   | 'profileTitleFontFamily'
   | 'profileSubtitleFontFamily'
   | 'profileFontFamily'
+  | 'profileAccentFontFamily'
   | 'profileTitleFontSize'
   | 'profileSubtitleFontSize'
   | 'profileTextFontSize'
+  | 'profileAccentFontSize'
   | 'profileBorderTheme'
   | 'profileBackgroundTheme'
   | 'profileBorderColorSource'
@@ -133,9 +135,11 @@ type CharacterCreateInput = Omit<
   | 'profileTitleFontFamily'
   | 'profileSubtitleFontFamily'
   | 'profileFontFamily'
+  | 'profileAccentFontFamily'
   | 'profileTitleFontSize'
   | 'profileSubtitleFontSize'
   | 'profileTextFontSize'
+  | 'profileAccentFontSize'
   | 'profileBorderTheme'
   | 'profileBackgroundTheme'
   | 'profileBorderColorSource'
@@ -192,9 +196,11 @@ interface CharacterRow {
   profile_title_font_family?: Character['profileTitleFontFamily'] | null;
   profile_subtitle_font_family?: Character['profileSubtitleFontFamily'] | null;
   profile_font_family?: Character['profileFontFamily'] | null;
+  profile_accent_font_family?: Character['profileAccentFontFamily'] | null;
   profile_title_font_size?: number | null;
   profile_subtitle_font_size?: number | null;
   profile_text_font_size?: number | null;
+  profile_accent_font_size?: number | null;
   profile_border_theme?: Character['profileBorderTheme'] | null;
   profile_background_theme?: Character['profileBackgroundTheme'] | null;
   profile_border_color_source?: Character['profileBorderColorSource'] | null;
@@ -421,9 +427,11 @@ export class CharacterService {
         profile_title_font_family: characterData.profileTitleFontFamily || 'cinzel',
         profile_subtitle_font_family: characterData.profileSubtitleFontFamily || 'cinzel',
         profile_font_family: characterData.profileFontFamily || 'inter',
+        profile_accent_font_family: characterData.profileAccentFontFamily || characterData.profileFontFamily || 'inter',
         profile_title_font_size: characterData.profileTitleFontSize || 124,
         profile_subtitle_font_size: characterData.profileSubtitleFontSize || 22,
         profile_text_font_size: characterData.profileTextFontSize || 16,
+        profile_accent_font_size: characterData.profileAccentFontSize || 13,
         profile_border_theme: characterData.profileBorderTheme || 'none',
         profile_background_theme: characterData.profileBackgroundTheme || 'none',
         profile_border_color_source: characterData.profileBorderColorSource || 'accent',
@@ -685,7 +693,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v7_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v8_command', {
         p_character_id: characterId,
         p_profile: parsed.data,
         p_change_shape_enabled: shape?.enabled ?? false,
@@ -1353,9 +1361,11 @@ export class CharacterService {
       profileTitleFontFamily: dbCharacter.profile_title_font_family || dbCharacter.profile_font_family || 'cinzel',
       profileSubtitleFontFamily: dbCharacter.profile_subtitle_font_family || dbCharacter.profile_font_family || 'cinzel',
       profileFontFamily: dbCharacter.profile_font_family || 'inter',
+      profileAccentFontFamily: dbCharacter.profile_accent_font_family || dbCharacter.profile_font_family || 'inter',
       profileTitleFontSize: dbCharacter.profile_title_font_size || 124,
       profileSubtitleFontSize: dbCharacter.profile_subtitle_font_size || 22,
       profileTextFontSize: dbCharacter.profile_text_font_size || 16,
+      profileAccentFontSize: dbCharacter.profile_accent_font_size || 13,
       profileBorderTheme: dbCharacter.profile_border_theme || 'none',
       profileBackgroundTheme: dbCharacter.profile_background_theme || 'none',
       profileBorderColorSource: dbCharacter.profile_border_color_source || 'accent',

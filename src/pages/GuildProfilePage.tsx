@@ -351,12 +351,14 @@ const GuildProfilePage: React.FC = () => {
     '--guild-title-font': getGuildFontStack(displayGuild.titleFontFamily),
     '--guild-subtitle-font': getGuildFontStack(displayGuild.subtitleFontFamily),
     '--guild-text-font': getGuildFontStack(displayGuild.fontFamily),
+    '--guild-accent-font': getGuildFontStack(displayGuild.accentFontFamily),
     '--guild-title-size': `${displayGuild.titleFontSize}px`,
     '--guild-saga-title-size': `${Math.round(displayGuild.titleFontSize * 1.75)}px`,
     '--guild-subtitle-size': `${displayGuild.subtitleFontSize}px`,
     '--guild-section-title-size': `${Math.round(displayGuild.subtitleFontSize * 1.62)}px`,
     '--guild-saga-section-title-size': `${Math.round(displayGuild.subtitleFontSize * 3.65)}px`,
     '--guild-text-size': `${displayGuild.textFontSize}px`,
+    '--guild-accent-size': `${displayGuild.accentFontSize}px`,
     fontFamily: getGuildFontStack(displayGuild.fontFamily)
   } as CSSProperties;
 

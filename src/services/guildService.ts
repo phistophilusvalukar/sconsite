@@ -168,9 +168,11 @@ interface GuildRow {
   title_font_family?: Guild['titleFontFamily'];
   subtitle_font_family?: Guild['subtitleFontFamily'];
   font_family?: Guild['fontFamily'];
+  accent_font_family?: Guild['accentFontFamily'];
   title_font_size?: number;
   subtitle_font_size?: number;
   text_font_size?: number;
+  accent_font_size?: number;
   border_theme?: Guild['borderTheme'];
   background_theme?: Guild['backgroundTheme'];
   border_color_source?: Guild['borderColorSource'];
@@ -450,7 +452,7 @@ export class GuildService {
       safeProfile.headquartersTitle = richTextToPlainText(safeProfile.headquartersTitleHtml).slice(0, 140);
       safeProfile.headquartersDescription = richTextToPlainText(safeProfile.headquartersDescriptionHtml).slice(0, 3000);
 
-      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v5_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_guild_profile_v6_command', {
         p_guild_id: guildId,
         p_profile: safeProfile
       });
@@ -1107,9 +1109,11 @@ export class GuildService {
       titleFontFamily: dbGuild.title_font_family || dbGuild.font_family || 'cinzel',
       subtitleFontFamily: dbGuild.subtitle_font_family || dbGuild.font_family || 'cinzel',
       fontFamily: dbGuild.font_family || 'inter',
+      accentFontFamily: dbGuild.accent_font_family || dbGuild.font_family || 'inter',
       titleFontSize: dbGuild.title_font_size || 96,
       subtitleFontSize: dbGuild.subtitle_font_size || 21,
       textFontSize: dbGuild.text_font_size || 16,
+      accentFontSize: dbGuild.accent_font_size || 13,
       borderTheme: dbGuild.border_theme || 'none',
       backgroundTheme: dbGuild.background_theme || 'none',
       borderColorSource: dbGuild.border_color_source || 'accent',
@@ -1246,9 +1250,11 @@ export class GuildService {
       profileTitleFontFamily: 'cinzel',
       profileSubtitleFontFamily: 'cinzel',
       profileFontFamily: 'cinzel',
+      profileAccentFontFamily: 'cinzel',
       profileTitleFontSize: 124,
       profileSubtitleFontSize: 22,
       profileTextFontSize: 16,
+      profileAccentFontSize: 13,
       profileBorderTheme: 'none',
       profileBackgroundTheme: 'none',
       profileBorderColorSource: 'accent',

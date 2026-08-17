@@ -102,9 +102,11 @@ export const defaultGuildTypography = {
   titleFontFamily: 'cinzel',
   subtitleFontFamily: 'cinzel',
   fontFamily: 'inter',
+  accentFontFamily: 'inter',
   titleFontSize: 96,
   subtitleFontSize: 21,
-  textFontSize: 16
+  textFontSize: 16,
+  accentFontSize: 13
 } as const;
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Choose a valid six-digit color.');
@@ -136,9 +138,11 @@ export const guildCustomizationSchema = z.object({
   titleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
   subtitleFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
   fontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
+  accentFontFamily: z.enum(['cinzel', 'cormorant', 'merriweather', 'inter', 'alegreya', 'im-fell', 'uncial', 'pirata', 'grenze', 'caesar', 'metal-mania', 'new-rocker', 'trade-winds', 'great-vibes', 'marcellus', 'cinzel-decorative', 'tangerine', 'almendra-display', 'henny-penny', 'macondo', 'mystery-quest', 'press-start-2p']),
   titleFontSize: z.number().int().min(40).max(180),
   subtitleFontSize: z.number().int().min(14).max(56),
   textFontSize: z.number().int().min(12).max(26),
+  accentFontSize: z.number().int().min(10).max(28),
   borderTheme: z.enum(profileDecorationThemeValues),
   backgroundTheme: z.enum(profileDecorationThemeValues),
   borderColorSource: z.enum(['base', 'accent']),
@@ -225,9 +229,11 @@ export const customizationFromGuild = (guild: Guild): GuildCustomizationInput =>
   titleFontFamily: guild.titleFontFamily || guild.fontFamily,
   subtitleFontFamily: guild.subtitleFontFamily || guild.fontFamily,
   fontFamily: guild.fontFamily,
+  accentFontFamily: guild.accentFontFamily || guild.fontFamily,
   titleFontSize: guild.titleFontSize || defaultGuildTypography.titleFontSize,
   subtitleFontSize: guild.subtitleFontSize || defaultGuildTypography.subtitleFontSize,
   textFontSize: guild.textFontSize || defaultGuildTypography.textFontSize,
+  accentFontSize: guild.accentFontSize || defaultGuildTypography.accentFontSize,
   borderTheme: guild.borderTheme || defaultProfileDecorations.borderTheme,
   backgroundTheme: guild.backgroundTheme || defaultProfileDecorations.backgroundTheme,
   borderColorSource: guild.borderColorSource || defaultProfileDecorations.borderColorSource,

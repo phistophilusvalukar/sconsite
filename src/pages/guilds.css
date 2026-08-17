@@ -311,12 +311,14 @@
   --guild-title-font: Cinzel, Georgia, serif;
   --guild-subtitle-font: Cinzel, Georgia, serif;
   --guild-text-font: Inter, ui-sans-serif, system-ui, sans-serif;
+  --guild-accent-font: Inter, ui-sans-serif, system-ui, sans-serif;
   --guild-title-size: 96px;
   --guild-saga-title-size: 168px;
   --guild-subtitle-size: 21px;
   --guild-section-title-size: 34px;
   --guild-saga-section-title-size: 77px;
   --guild-text-size: 16px;
+  --guild-accent-size: 13px;
   --guild-page-background: var(--guild-base);
   position: relative;
   isolation: isolate;
@@ -324,6 +326,11 @@
   background: var(--guild-page-background);
   color: var(--guild-ink);
   font-family: var(--guild-text-font);
+}
+
+.guild-profile-shell :is(button, .guild-profile-nav a, .guild-section-label, .guild-profile-kicker, .guild-profile-seal span, .guild-charter-facts span, .guild-roster-group h3, .guild-member-copy span) {
+  font-family: var(--guild-accent-font) !important;
+  font-size: var(--guild-accent-size) !important;
 }
 
 .guild-ledger-name a,
