@@ -799,24 +799,24 @@
 .guild-profile[data-layout='nostalgia'] .guild-profile-shell { width: min(1360px, calc(100% - 2.5rem)); }
 .guild-profile[data-layout='nostalgia'] .guild-profile-hero {
   min-height: 420px;
-  border: 6px solid color-mix(in srgb, var(--guild-accent) 62%, #8bac0f);
+  border: 6px solid var(--guild-accent);
   border-radius: 0;
   padding-inline: clamp(2rem, 6vw, 6rem);
-  background-color: color-mix(in srgb, var(--guild-base) 78%, #0f380f);
+  background-color: var(--guild-base);
   background-position: center top;
-  box-shadow: 8px 8px 0 color-mix(in srgb, var(--guild-accent) 52%, #306230), 16px 16px 0 rgb(0 0 0 / .4);
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--guild-accent) 55%, var(--guild-base)), 16px 16px 0 color-mix(in srgb, var(--guild-base) 62%, transparent);
   image-rendering: pixelated;
 }
-.guild-profile[data-layout='nostalgia'] .guild-profile-emblem { border: 6px solid color-mix(in srgb, var(--guild-accent) 65%, #8bac0f); border-radius: 0; box-shadow: 7px 7px 0 color-mix(in srgb, var(--guild-accent) 38%, #306230); image-rendering: pixelated; }
-.guild-profile[data-layout='nostalgia'] .guild-profile-seal { border: 3px solid color-mix(in srgb, var(--guild-accent) 48%, #306230); border-radius: 0; padding: .8rem 1rem; box-shadow: 4px 4px 0 color-mix(in srgb, var(--guild-accent) 28%, #306230); }
+.guild-profile[data-layout='nostalgia'] .guild-profile-emblem { border: 6px solid var(--guild-accent); border-radius: 0; box-shadow: 7px 7px 0 color-mix(in srgb, var(--guild-accent) 42%, var(--guild-base)); image-rendering: pixelated; }
+.guild-profile[data-layout='nostalgia'] .guild-profile-seal { border: 3px solid color-mix(in srgb, var(--guild-accent) 68%, var(--guild-base)); border-radius: 0; padding: .8rem 1rem; box-shadow: 4px 4px 0 color-mix(in srgb, var(--guild-accent) 30%, var(--guild-base)); }
 .guild-profile[data-layout='nostalgia'] .guild-profile-layout { grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); }
 .guild-profile[data-layout='nostalgia'] :is(.guild-story-panel, .guild-headquarters-panel, .guild-roster-panel, .guild-action-card, .guild-leader-card, .guild-requirements-panel, .guild-message-board, .guild-checkin-panel, .guild-guestbook-panel) {
-  border: 4px solid color-mix(in srgb, var(--guild-accent) 48%, #8bac0f);
+  border: 4px solid color-mix(in srgb, var(--guild-accent) 68%, var(--guild-base));
   border-radius: 0;
-  background: color-mix(in srgb, var(--guild-base) 82%, #0f380f);
-  box-shadow: 6px 6px 0 color-mix(in srgb, var(--guild-accent) 25%, #306230);
+  background: var(--guild-base);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--guild-accent) 28%, var(--guild-base));
 }
-.guild-profile[data-layout='nostalgia'] :is(.guild-profile-primary, .guild-checkin-actions button) { border-radius: 0; box-shadow: 4px 4px 0 color-mix(in srgb, var(--guild-accent) 42%, #306230); }
+.guild-profile[data-layout='nostalgia'] :is(.guild-profile-primary, .guild-checkin-actions button) { border-radius: 0; box-shadow: 4px 4px 0 color-mix(in srgb, var(--guild-accent) 42%, var(--guild-base)); }
 
 .guild-profile:is([data-layout='stronghold'], [data-layout='banner'], [data-layout='saga']) .guild-headquarters-image {
   position: relative;
@@ -911,7 +911,7 @@
 .guild-layout-sketch-saga { grid-template-columns: 2fr 1fr; grid-template-rows: 1.6fr .7fr; }
 .guild-layout-sketch-saga i:first-child { grid-column: 1 / 3; }
 .guild-layout-sketch-cyberpunk { grid-template-columns: 1fr 1.4fr; transform: skewX(-5deg); }
-.guild-layout-sketch-nostalgia { grid-template-columns: 1fr 1fr; border: 3px solid #8bac0f; box-shadow: 3px 3px 0 #306230; }
+.guild-layout-sketch-nostalgia { grid-template-columns: 1fr 1fr; border: 3px solid currentColor; box-shadow: 3px 3px 0 color-mix(in srgb, currentColor 38%, transparent); }
 .guild-url-preview { position: relative; height: 145px; overflow: hidden; border: 1px solid rgba(223,184,95,.2); border-radius: 4px; background: rgba(0,0,0,.25); }
 .guild-url-preview img { width: 100%; height: 100%; object-fit: cover; }
 .guild-url-preview > span { position: absolute; right: .45rem; bottom: .45rem; border-radius: 999px; padding: .25rem .5rem; background: rgba(10,8,13,.8); color: #ddd6e0; font-size: .56rem; }
