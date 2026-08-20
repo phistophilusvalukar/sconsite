@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   characterProfileCustomizationSchema,
-  defaultCharacterProfileSectionVisibility
+  defaultCharacterProfileSectionVisibility,
+  resolveStoredCharacterProfile
 } from './characterProfileCustomization';
 
 const validProfile = {
@@ -67,6 +68,29 @@ describe('character profile customization', () => {
     } as const;
     expect(characterProfileCustomizationSchema.safeParse(alternate).success).toBe(true);
     expect(characterProfileCustomizationSchema.safeParse({ ...alternate, accentColor: 'blood-red' }).success).toBe(false);
+  });
+
+  it('fills newer presentation fields when reading a legacy alternate shape', () => {
+    const legacyAlternate = {
+      subtitle: 'The beast beneath the skin',
+      portraitImageUrl: 'https://images.example.com/beast.webp',
+      sectionVisibility: { portrait: true, details: false }
+    };
+    const resolved = resolveStoredCharacterProfile({ ...validProfile, isPublic: true }, legacyAlternate);
+
+    expect(resolved).toMatchObject({
+      isPublic: true,
+      subtitle: legacyAlternate.subtitle,
+      portraitImageUrl: legacyAlternate.portraitImageUrl,
+      accentFontFamily: validProfile.accentFontFamily,
+      themeMode: validProfile.themeMode,
+      sectionVisibility: {
+        portrait: true,
+        details: false,
+        journal: true,
+        relationships: true
+      }
+    });
   });
 
   it('requires an explicit public visibility setting', () => {

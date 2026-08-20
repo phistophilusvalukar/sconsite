@@ -359,24 +359,32 @@ const publicCharacterRowSchema = z.object({
   updated_at: z.string()
 }).passthrough();
 
+const characterCompanionPresentationSchema = z.object({
+  id: z.string().uuid(),
+  companionType: z.enum(['familiar', 'animal_companion', 'eidolon']),
+  name: z.string(),
+  imageUrl: z.string().optional().nullable(),
+  creatureType: z.string().optional().nullable(),
+  heritage: z.string().optional().nullable(),
+  className: z.string().optional().nullable(),
+  level: z.coerce.number().optional().nullable(),
+  hpValue: z.coerce.number().optional().nullable(),
+  hpMax: z.coerce.number().optional().nullable(),
+  features: z.array(z.string()).default([])
+});
+
 const publicCharacterProfileBundleSchema = z.object({
   character: publicCharacterRowSchema,
   journalEntries: z.array(z.unknown()),
   relationships: z.array(z.unknown()),
   relatedCharacterNames: z.unknown(),
-  companions: z.array(z.object({
-    id: z.string().uuid(),
-    companionType: z.enum(['familiar', 'animal_companion', 'eidolon']),
-    name: z.string(),
-    imageUrl: z.string().optional().nullable(),
-    creatureType: z.string().optional().nullable(),
-    heritage: z.string().optional().nullable(),
-    className: z.string().optional().nullable(),
-    level: z.coerce.number().optional().nullable(),
-    hpValue: z.coerce.number().optional().nullable(),
-    hpMax: z.coerce.number().optional().nullable(),
-    features: z.array(z.string()).default([])
-  })).default([])
+  companions: z.array(characterCompanionPresentationSchema).default([])
+});
+
+const characterProfilePresentationSchema = z.object({
+  profileChangeShapeEnabled: z.boolean(),
+  profileAlternateShape: z.unknown().nullable(),
+  companions: z.array(characterCompanionPresentationSchema).default([])
 });
 
 export interface PublicCharacterProfileBundle {
@@ -384,6 +392,12 @@ export interface PublicCharacterProfileBundle {
   journalEntries: CharacterJournalEntry[];
   relationships: CharacterRelationship[];
   relatedCharacterNames: Record<string, string>;
+  companions: CharacterCompanion[];
+}
+
+export interface CharacterProfilePresentation {
+  profileChangeShapeEnabled: boolean;
+  profileAlternateShape: Character['profileAlternateShape'];
   companions: CharacterCompanion[];
 }
 
@@ -786,6 +800,40 @@ export class CharacterService {
     } catch (error) {
       console.error('Error loading public character profile:', error);
       return { success: false, error: 'Failed to load the public character page.' };
+    }
+  }
+
+  async getCharacterProfilePresentation(characterId: string): Promise<ApiResponse<CharacterProfilePresentation>> {
+    try {
+      const { data, error } = await this.dbService.getClient().rpc('get_character_profile_presentation', {
+        p_character_id: characterId
+      });
+      if (error) return { success: false, error: error.message };
+      if (!data) return { success: false, error: 'This character presentation is unavailable.' };
+
+      const parsed = characterProfilePresentationSchema.safeParse(data);
+      if (!parsed.success) {
+        console.error('Invalid character presentation returned by Supabase:', parsed.error);
+        return { success: false, error: 'The character presentation could not be read.' };
+      }
+
+      return {
+        success: true,
+        data: {
+          profileChangeShapeEnabled: parsed.data.profileChangeShapeEnabled,
+          profileAlternateShape: parsed.data.profileAlternateShape as Character['profileAlternateShape'],
+          companions: parsed.data.companions.map(companion => ({
+            ...companion,
+            imageUrl: isSafeCharacterBannerImageUrl(companion.imageUrl || '') ? companion.imageUrl || undefined : undefined,
+            creatureType: companion.creatureType || undefined,
+            heritage: companion.heritage || undefined,
+            className: companion.className || undefined
+          }))
+        }
+      };
+    } catch (error) {
+      console.error('Error loading character presentation:', error);
+      return { success: false, error: 'Failed to load the character presentation.' };
     }
   }
 

@@ -26,11 +26,11 @@ import {
   characterFontCategories,
   characterFontOptions,
   characterLayoutOptions,
-  characterProfileCustomizationSchema,
   customizationFromCharacter,
   defaultCharacterProfilePalette,
   defaultDynamicPortraitPlacement,
-  getCharacterFontStack
+  getCharacterFontStack,
+  resolveCharacterAlternateProfile
 } from '../features/characters/characterProfileCustomization';
 import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
@@ -115,6 +115,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   const [character, setCharacter] = useState<Character | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [publicData, setPublicData] = useState<PublicCharacterProfileBundle | null>(null);
+  const [presentationCompanions, setPresentationCompanions] = useState<PublicCharacterProfileBundle['companions'] | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -139,15 +140,31 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     if (showLoading) setIsLoading(true);
 
     if (publicView) {
-      const response = await characterService.getPublicCharacterProfile(characterId);
+      const [response, presentationResponse] = await Promise.all([
+        characterService.getPublicCharacterProfile(characterId),
+        characterService.getCharacterProfilePresentation(characterId)
+      ]);
       if (response.success && response.data) {
-        setCharacter(response.data.character);
-        setPublicData(response.data);
+        const presentation = presentationResponse.success ? presentationResponse.data : undefined;
+        const presentedCharacter = presentation ? {
+          ...response.data.character,
+          profileChangeShapeEnabled: presentation.profileChangeShapeEnabled,
+          profileAlternateShape: presentation.profileAlternateShape
+        } : response.data.character;
+        const presentedData = {
+          ...response.data,
+          character: presentedCharacter,
+          companions: presentation?.companions ?? response.data.companions
+        };
+        setCharacter(presentedCharacter);
+        setPublicData(presentedData);
+        setPresentationCompanions(presentedData.companions);
         setCharacters([]);
         setLoadError('');
       } else {
         setCharacter(null);
         setPublicData(null);
+        setPresentationCompanions(undefined);
         setLoadError(response.error || 'This character page is private or unavailable.');
       }
       setIsLoading(false);
@@ -155,22 +172,31 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     }
 
     if (!user?.id) return;
-    const [characterResponse, publicResponse] = await Promise.all([
+    const [characterResponse, publicResponse, presentationResponse] = await Promise.all([
       characterService.getCharacterById(characterId),
-      characterService.getPublicCharacters()
+      characterService.getPublicCharacters(),
+      characterService.getCharacterProfilePresentation(characterId)
     ]);
 
     if (characterResponse.success && characterResponse.data) {
-      setCharacter(characterResponse.data);
+      const presentation = presentationResponse.success ? presentationResponse.data : undefined;
+      const presentedCharacter = presentation ? {
+        ...characterResponse.data,
+        profileChangeShapeEnabled: presentation.profileChangeShapeEnabled,
+        profileAlternateShape: presentation.profileAlternateShape
+      } : characterResponse.data;
+      setCharacter(presentedCharacter);
+      setPresentationCompanions(presentation?.companions);
       setLoadError('');
       const byId = new Map<string, Character>();
-      [...(publicResponse.data || []), characterResponse.data].forEach(item => {
+      [...(publicResponse.data || []), presentedCharacter].forEach(item => {
         if (item._id) byId.set(item._id, item);
       });
       setCharacters(Array.from(byId.values()));
     } else {
       setCharacter(null);
       setPublicData(null);
+      setPresentationCompanions(undefined);
       setLoadError(characterResponse.error || 'Character not found.');
     }
     setIsLoading(false);
@@ -196,8 +222,8 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     if (!character) return null;
     if (isEditingProfile && draft) return applyProfileCustomization(character, draft);
     if (activeShape === 2 && character.profileChangeShapeEnabled) {
-      const alternate = characterProfileCustomizationSchema.safeParse(character.profileAlternateShape);
-      if (alternate.success) return applyProfileCustomization(character, { ...alternate.data, isPublic: character.profileIsPublic ?? false });
+      const alternate = resolveCharacterAlternateProfile(character);
+      if (alternate) return applyProfileCustomization(character, alternate);
     }
     return character;
   }, [activeShape, character, draft, isEditingProfile]);
@@ -205,9 +231,9 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   const openEditor = () => {
     if (!character) return;
     const primary = customizationFromCharacter(character);
-    const alternate = characterProfileCustomizationSchema.safeParse(character.profileAlternateShape);
+    const alternate = resolveCharacterAlternateProfile(character);
     setDraft(primary);
-    setOtherShapeDraft(alternate.success ? { ...alternate.data, isPublic: primary.isPublic } : { ...primary, sectionVisibility: { ...primary.sectionVisibility } });
+    setOtherShapeDraft(alternate ? { ...alternate, isPublic: primary.isPublic } : { ...primary, sectionVisibility: { ...primary.sectionVisibility } });
     setDraftVersion(1);
     setChangeShapeEnabled(Boolean(character.profileChangeShapeEnabled));
     setEditorMessage('');
@@ -362,6 +388,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
             onEdit={() => setIsEditingCharacter(true)}
             onRelationshipsChanged={loadProfile}
             readOnlyData={publicView && publicData ? publicData : undefined}
+            companionData={!publicView ? presentationCompanions : undefined}
             onChangeShape={displayCharacter.profileChangeShapeEnabled ? handleChangeShape : undefined}
             shapeVersion={activeShape}
           />

@@ -51,6 +51,7 @@ interface CharacterDetailsModalProps {
   onRelationshipsChanged?: () => void | Promise<void>;
   pageMode?: boolean;
   readOnlyData?: Pick<PublicCharacterProfileBundle, 'journalEntries' | 'relationships' | 'relatedCharacterNames' | 'companions'>;
+  companionData?: CharacterCompanion[];
   onChangeShape?: () => void;
   shapeVersion?: 1 | 2;
 }
@@ -67,6 +68,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   onRelationshipsChanged,
   pageMode = false,
   readOnlyData,
+  companionData,
   onChangeShape,
   shapeVersion = 1
 }) => {
@@ -160,7 +162,9 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
         characterService.getJournalEntries(character._id, currentUserId),
         characterService.getRelationshipsForCharacters([character._id], canEdit),
         canEdit ? characterService.getFoundryFiles(character._id) : Promise.resolve({ success: true, data: [] as FoundryJsonEntry[] }),
-        characterService.getCompanionFiles(character._id)
+        companionData
+          ? Promise.resolve({ success: true, data: companionData })
+          : characterService.getCompanionFiles(character._id)
       ]);
 
       if (journalResponse.success && journalResponse.data) setJournalEntries(journalResponse.data);
@@ -170,7 +174,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [canEdit, character._id, characterService, currentUserId, readOnlyData]);
+  }, [canEdit, character._id, characterService, companionData, currentUserId, readOnlyData]);
 
   useEffect(() => {
     void loadModalData(true);

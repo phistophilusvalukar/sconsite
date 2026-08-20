@@ -191,3 +191,37 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   layoutStyle: character.profileLayoutStyle,
   sectionVisibility: { ...character.profileSectionVisibility }
 });
+
+export const resolveStoredCharacterProfile = (
+  primary: CharacterProfileCustomizationInput,
+  stored: unknown
+): CharacterProfileCustomizationInput | null => {
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return null;
+
+  const storedRecord = stored as Record<string, unknown>;
+  const merged = Object.fromEntries(
+    Object.entries(primary).map(([key, fallback]) => [
+      key,
+      Object.prototype.hasOwnProperty.call(storedRecord, key) ? storedRecord[key] : fallback
+    ])
+  ) as Record<string, unknown>;
+  const storedVisibility = storedRecord.sectionVisibility;
+  if (storedVisibility && typeof storedVisibility === 'object' && !Array.isArray(storedVisibility)) {
+    const visibilityRecord = storedVisibility as Record<string, unknown>;
+    merged.sectionVisibility = Object.fromEntries(
+      Object.entries(primary.sectionVisibility).map(([key, fallback]) => [
+        key,
+        Object.prototype.hasOwnProperty.call(visibilityRecord, key) ? visibilityRecord[key] : fallback
+      ])
+    );
+  } else {
+    merged.sectionVisibility = { ...primary.sectionVisibility };
+  }
+
+  merged.isPublic = primary.isPublic;
+  const parsed = characterProfileCustomizationSchema.safeParse(merged);
+  return parsed.success ? parsed.data : null;
+};
+
+export const resolveCharacterAlternateProfile = (character: Character): CharacterProfileCustomizationInput | null =>
+  resolveStoredCharacterProfile(customizationFromCharacter(character), character.profileAlternateShape);
