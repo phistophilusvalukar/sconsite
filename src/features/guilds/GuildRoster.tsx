@@ -15,15 +15,17 @@ const memberPortrait = (member: GuildMembership) =>
   normalizeFoundryAvatar(member.character?.stats?.avatar) || DEFAULT_NPC_PLACEHOLDER;
 
 const GuildRoster: React.FC<GuildRosterProps> = ({ guild, members }) => {
+  const visibleMembers = members.filter(member => member.character?.status === 'active');
+
   if (guild.rosterDisplay === 'lineup') {
-    return <GuildRosterLineup members={members} placements={guild.rosterLineup || []} />;
+    return <GuildRosterLineup members={visibleMembers} placements={guild.rosterLineup || []} />;
   }
 
   if (guild.rosterDisplay === 'ledger') {
     return (
       <div className="guild-ledger">
         <div className="guild-ledger-head"><span>Name entered</span><span>Station</span><span>Calling</span><span>Joined</span></div>
-        {members.map(member => (
+        {visibleMembers.map(member => (
           <article className="guild-ledger-row" key={member._id}>
             <span className="guild-ledger-name"><i>{member.character?.name?.slice(0, 1).toUpperCase() || '?'}</i>{member.characterId ? <Link to={`/characters/${member.characterId}`}><strong>{member.character?.name || 'Unknown character'}</strong></Link> : <strong>{member.character?.name || 'Unknown character'}</strong>}</span>
             <span>{member.roleTitle || guild.roleLabels[member.roleCategory]}</span>
@@ -38,7 +40,7 @@ const GuildRoster: React.FC<GuildRosterProps> = ({ guild, members }) => {
   if (guild.rosterDisplay === 'dossiers') {
     return (
       <div className="guild-dossier-grid">
-        {members.map((member, index) => (
+        {visibleMembers.map((member, index) => (
           <article className="guild-dossier" key={member._id} style={{ '--dossier-tilt': `${index % 2 === 0 ? '-.4deg' : '.45deg'}` } as React.CSSProperties}>
             <div className="guild-dossier-tab">FILE {String(index + 1).padStart(2, '0')}</div>
             <div className="guild-dossier-stamp">{member.roleCategory}</div>
@@ -57,7 +59,7 @@ const GuildRoster: React.FC<GuildRosterProps> = ({ guild, members }) => {
 
   return (
     <div className="guild-character-card-grid">
-      {members.map(member => (
+      {visibleMembers.map(member => (
         <article className="guild-character-card" key={member._id}>
           <DynamicCharacterPortrait character={member.character} fallbackSrc={memberPortrait(member)} alt={`${member.character?.name || 'Guild member'} portrait`} className="guild-character-card-portrait" motion="hover" />
           <div className="guild-character-card-shade" />

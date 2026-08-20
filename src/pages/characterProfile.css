@@ -26,6 +26,23 @@
   font-family: var(--character-text-font);
 }
 
+.character-profile-page.is-dead .character-profile-atmosphere,
+.character-profile-page.is-dead .character-profile-document {
+  filter: grayscale(1);
+}
+
+.character-profile-page.is-dead .character-profile-document {
+  opacity: .9;
+}
+
+.character-profile-skull {
+  display: inline-block;
+  width: .62em;
+  height: .62em;
+  margin-left: .22em;
+  vertical-align: .08em;
+}
+
 .character-profile-atmosphere {
   position: fixed;
   inset: 0;

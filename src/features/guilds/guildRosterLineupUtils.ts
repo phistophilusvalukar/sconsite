@@ -4,6 +4,7 @@ export const guildLineupCharacterId = (member: GuildMembership) => member.charac
 
 export const isEligibleForGuildLineup = (member: GuildMembership) => Boolean(
   guildLineupCharacterId(member)
+  && member.character?.status === 'active'
   && member.character?.profileDynamicPortraitEnabled
   && member.character.profilePortraitCutoutImageUrl
 );

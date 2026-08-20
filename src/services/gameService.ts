@@ -564,7 +564,10 @@ class GameService {
       roleBadges: Array.isArray(dbCharacter.role_badges) ? dbCharacter.role_badges.map(String) as Character['roleBadges'] : [],
       backstory: String(dbCharacter.backstory || ''),
       notes: String(dbCharacter.notes || ''),
-      isActive: Boolean(dbCharacter.is_active),
+      status: dbCharacter.character_status === 'dead' || dbCharacter.character_status === 'retired'
+        ? dbCharacter.character_status
+        : dbCharacter.is_active === false ? 'retired' : 'active',
+      isActive: dbCharacter.character_status ? dbCharacter.character_status === 'active' : Boolean(dbCharacter.is_active),
       guildId: dbCharacter.guild_id ? String(dbCharacter.guild_id) : undefined,
       profileSubtitle: String(dbCharacter.profile_subtitle || ''),
       profileTitleFontFamily: (dbCharacter.profile_title_font_family || dbCharacter.profile_font_family || 'cinzel') as Character['profileTitleFontFamily'],

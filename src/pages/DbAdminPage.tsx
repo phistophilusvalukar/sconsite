@@ -16,10 +16,12 @@ import type { LucideIcon } from 'lucide-react';
 import {
   deleteDbAdminContent,
   getDbAdminSnapshot,
+  setDbAdminCharacterStatus,
   setDbAdminUserBan,
   setDbAdminUserRoles,
   verifyDbAdminPassword,
   type DbAdminDeletableEntity,
+  type DbAdminCharacter,
   type DbAdminSnapshot,
   type DbAdminUser
 } from '../services/dbAdminService';
@@ -39,7 +41,7 @@ const DbAdminPage = () => {
     const matches = (...values: Array<string | number>) => values.some(value => String(value).toLocaleLowerCase().includes(normalizedQuery));
     return {
       users: snapshot.users.filter(user => matches(user.username, user.email)),
-      characters: snapshot.characters.filter(character => matches(character.name, character.className, character.ownerName, character.level)),
+      characters: snapshot.characters.filter(character => matches(character.name, character.className, character.ownerName, character.level, character.status)),
       guilds: snapshot.guilds.filter(guild => matches(guild.name, guild.leaderName)),
       loreEntries: snapshot.loreEntries.filter(entry => matches(entry.title, entry.authorName, entry.status))
     };
@@ -110,6 +112,27 @@ const DbAdminPage = () => {
       setMessage(`${user.username} was ${user.isBanned ? 'unbanned' : 'banned'}.`);
     } catch (cause) {
       setError(getErrorMessage(cause, `Unable to ${verb} this user.`));
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const updateCharacterStatus = async (character: DbAdminCharacter, status: DbAdminCharacter['status']) => {
+    if (status !== 'active') {
+      const consequence = status === 'dead'
+        ? 'This will remove the character from active play and publish a read-only memorial profile.'
+        : 'This will remove the character from guild rosters and any game applications.';
+      if (!window.confirm(`Set ${character.name} to ${status}? ${consequence}`)) return;
+    }
+    setBusyKey(`status-${character.id}`);
+    setError(null);
+    setMessage(null);
+    try {
+      await setDbAdminCharacterStatus(password, character.id, status);
+      await loadSnapshot();
+      setMessage(`${character.name} is now ${status}.`);
+    } catch (cause) {
+      setError(getErrorMessage(cause, `Unable to change ${character.name}'s status.`));
     } finally {
       setBusyKey(null);
     }
@@ -197,7 +220,22 @@ const DbAdminPage = () => {
         </AdminSection>
 
         <AdminSection icon={UserCog} title={`Characters (${filtered.characters.length})`}>
-          {filtered.characters.map(character => <DeleteRow busy={busyKey === `delete-character-${character.id}`} disabled={Boolean(busyKey)} key={character.id} name={character.name} onDelete={() => void deleteContent('character', character.id, character.name)} secondary={`${character.ownerName} · Level ${character.level} ${character.className}`} />)}
+          {filtered.characters.map(character => (
+            <article className="flex flex-col gap-3 rounded-xl border border-fantasy-700/30 bg-midnight-950/60 p-4 lg:flex-row lg:items-center lg:justify-between" key={character.id}>
+              <div className="min-w-0"><h3 className="truncate font-bold text-white">{character.name}</h3><p className="mt-1 truncate text-xs text-gray-400">{character.ownerName} · Level {character.level} {character.className}</p></div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
+                  Status
+                  <select className="rounded-lg border border-fantasy-700/50 bg-midnight-900 px-3 py-2 text-sm font-bold capitalize text-white outline-none focus:border-yellow-400 disabled:opacity-50" disabled={Boolean(busyKey)} onChange={event => void updateCharacterStatus(character, event.target.value as DbAdminCharacter['status'])} value={character.status}>
+                    <option value="active">Active</option>
+                    <option value="retired">Retired</option>
+                    <option value="dead">Dead</option>
+                  </select>
+                </label>
+                <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-3 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-50" disabled={Boolean(busyKey)} onClick={() => void deleteContent('character', character.id, character.name)} type="button">{busyKey === `delete-character-${character.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}Delete</button>
+              </div>
+            </article>
+          ))}
           {filtered.characters.length === 0 && <EmptyRecords />}
         </AdminSection>
 

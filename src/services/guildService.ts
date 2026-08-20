@@ -32,7 +32,7 @@ const guildCheckinResultSchema = z.object({
   checkinDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 }).strict();
 
-const GUILD_CHARACTER_COLUMNS = 'id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url';
+const GUILD_CHARACTER_COLUMNS = 'id,user_id,name,class,class_primary,class_secondary,level,race,ancestry,heritage,background,stats,equipment,foundry_file_name,backstory,notes,is_active,character_status,guild_id,profile_dynamic_portrait_enabled,profile_portrait_background_url,profile_portrait_cutout_url';
 const GUILD_CHARACTER_PLACEMENT_COLUMNS = 'profile_portrait_background_scale,profile_portrait_background_position_x,profile_portrait_background_position_y,profile_portrait_cutout_scale,profile_portrait_cutout_position_x,profile_portrait_cutout_position_y';
 const GUILD_CHARACTER_DATE_COLUMNS = 'created_at,updated_at';
 const guildCharacterColumns = (includeFocus: boolean, includePlacement: boolean) => [
@@ -101,6 +101,7 @@ interface GuildCharacterRow {
   backstory?: string;
   notes?: string;
   is_active: boolean;
+  character_status?: Character['status'] | null;
   guild_id?: string;
   profile_dynamic_portrait_enabled?: boolean | null;
   profile_portrait_background_url?: string | null;
@@ -1246,7 +1247,8 @@ export class GuildService {
       foundryFileName: dbCharacter.foundry_file_name,
       backstory: dbCharacter.backstory,
       notes: dbCharacter.notes,
-      isActive: dbCharacter.is_active,
+      status: dbCharacter.character_status || (dbCharacter.is_active ? 'active' : 'retired'),
+      isActive: (dbCharacter.character_status || (dbCharacter.is_active ? 'active' : 'retired')) === 'active',
       guildId: dbCharacter.guild_id,
       profileSubtitle: '',
       profileTitleFontFamily: 'cinzel',

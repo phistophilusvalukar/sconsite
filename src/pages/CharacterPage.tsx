@@ -310,7 +310,7 @@ function AllCharactersView({ characters, currentUserId, onSelectCharacter }: { c
       <div className="text-center py-16">
         <Users className="w-16 h-16 text-gray-400 mx-auto mb-6" />
         <h2 className="text-2xl font-bold text-white mb-4">No Public Characters Yet</h2>
-        <p className="text-gray-300">Active characters will appear here for other players to browse.</p>
+        <p className="text-gray-300">Active and retired characters will appear here for other players to browse.</p>
       </div>
     );
   }
@@ -320,7 +320,7 @@ function AllCharactersView({ characters, currentUserId, onSelectCharacter }: { c
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="font-fantasy text-2xl font-bold text-white">All Characters</h2>
-          <p className="text-sm text-gray-400">Browse public characters, read journals, and join the conversation.</p>
+          <p className="text-sm text-gray-400">Browse active and retired characters, read journals, and explore relationships.</p>
         </div>
         <Users className="h-8 w-8 text-yellow-300" />
       </div>
@@ -352,7 +352,7 @@ function AllCharactersView({ characters, currentUserId, onSelectCharacter }: { c
         ))}
       </div>
       {filteredCharacters.length === 0 && (
-        <p className="rounded-lg bg-midnight-900/60 p-4 text-sm text-gray-400">No active characters match that role yet.</p>
+        <p className="rounded-lg bg-midnight-900/60 p-4 text-sm text-gray-400">No characters match that role yet.</p>
       )}
     </div>
   );
@@ -375,6 +375,7 @@ function PublicCharacterCard({ character, isOwnCharacter, onSelect }: { characte
         overlayClassName="bg-gradient-to-r from-midnight-950 via-midnight-950/90 via-[55%] to-midnight-950/10"
       />
       <div className="relative z-10 flex min-h-[170px] max-w-[68%] flex-col">
+        {character.status === 'retired' && <span className="mb-2 w-fit rounded-full bg-gray-500/25 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-gray-200 ring-1 ring-gray-300/20">Retired</span>}
         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300">Level {character.level} {character.class}</p>
         <h3 className="mt-2 font-fantasy text-3xl font-bold text-white">{character.name}</h3>
         <p className="mt-2 text-sm text-gray-300">

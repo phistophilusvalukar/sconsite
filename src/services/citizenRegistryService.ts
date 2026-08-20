@@ -220,6 +220,7 @@ export class CitizenRegistryService {
       foundryFileName: dbCharacter.foundry_file_name,
       backstory: dbCharacter.backstory,
       notes: dbCharacter.notes,
+      status: 'active',
       isActive: dbCharacter.is_active,
       guildId: dbCharacter.guild_id,
       profileSubtitle: '',

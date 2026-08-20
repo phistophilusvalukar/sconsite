@@ -17,7 +17,7 @@ import {
   Shield,
   X
 } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import ProfileTypographyControls from '../components/ProfileTypographyControls';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
@@ -302,6 +302,10 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     return <main className="character-profile-state"><Shield /><h1>{loadError || (publicView ? 'This character page is private or unavailable.' : 'Character not found.')}</h1>{!publicView && <Link to="/characters">Return to characters</Link>}</main>;
   }
 
+  if (!publicView && displayCharacter.status === 'dead') {
+    return <Navigate replace to={`/public/characters/${displayCharacter._id}`} />;
+  }
+
   const publicPageUrl = `${window.location.origin}/public/characters/${displayCharacter._id}`;
 
   const profileStyle = {
@@ -334,7 +338,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   } as CSSProperties;
 
   return (
-    <main className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}`} data-theme={displayCharacter.profileThemeMode} style={profileStyle}>
+    <main className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}${displayCharacter.status === 'dead' ? ' is-dead' : ''}`} data-theme={displayCharacter.profileThemeMode} style={profileStyle}>
       <div className="character-profile-atmosphere" aria-hidden="true" />
       <div className={`character-profile-shell character-profile-shell-${displayCharacter.profileLayoutStyle}`}>
         <nav className="character-profile-nav" aria-label="Character profile controls">

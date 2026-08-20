@@ -6,6 +6,7 @@ import {
   Character,
   CharacterRoleBadge,
   CharacterRoleCategory,
+  CharacterStatus,
   CharacterStats,
   CharacterJournalComment,
   CharacterJournalEntry,
@@ -83,7 +84,6 @@ type CharacterUpdateRow = Partial<{
   profile_portrait_focus_y: number;
   backstory: string;
   notes: string;
-  is_active: boolean;
   guild_id: string | undefined;
   updated_at: string;
 }>;
@@ -93,6 +93,7 @@ type CharacterCreateInput = Omit<
   | '_id'
   | 'createdAt'
   | 'updatedAt'
+  | 'status'
   | 'profileSubtitle'
   | 'profileIsPublic'
   | 'profileTitleFontFamily'
@@ -194,6 +195,7 @@ interface CharacterRow {
   backstory?: string;
   notes?: string;
   is_active: boolean;
+  character_status?: CharacterStatus | null;
   profile_is_public?: boolean | null;
   guild_id?: string;
   profile_subtitle?: string | null;
@@ -351,6 +353,7 @@ const publicCharacterRowSchema = z.object({
   level: z.number().int(),
   race: z.string(),
   is_active: z.boolean(),
+  character_status: z.enum(['active', 'retired', 'dead']),
   profile_is_public: z.literal(true),
   created_at: z.string(),
   updated_at: z.string()
@@ -426,7 +429,6 @@ export class CharacterService {
         role_badges: characterData.roleBadges || [],
         backstory: characterData.backstory || '',
         notes: characterData.notes || '',
-        is_active: characterData.isActive !== false,
         guild_id: characterData.guildId || null,
         profile_subtitle: characterData.profileSubtitle || '',
         profile_title_font_family: characterData.profileTitleFontFamily || 'cinzel',
@@ -531,7 +533,7 @@ export class CharacterService {
       const { data, error } = await this.dbService.getClient()
         .from(DATABASE_TABLES.CHARACTERS)
         .select('*')
-        .eq('is_active', true)
+        .in('character_status', ['active', 'retired'])
         .order('name', { ascending: true });
 
       if (error) {
@@ -615,7 +617,6 @@ export class CharacterService {
       if (updates.profilePortraitFocusY !== undefined) updateData.profile_portrait_focus_y = updates.profilePortraitFocusY;
       if (updates.backstory !== undefined) updateData.backstory = updates.backstory;
       if (updates.notes !== undefined) updateData.notes = updates.notes;
-      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
       if (updates.guildId !== undefined) updateData.guild_id = updates.guildId;
 
       const { data, error } = await supabase
@@ -1264,7 +1265,7 @@ export class CharacterService {
         .from(DATABASE_TABLES.CHARACTERS)
         .select('*')
         .ilike('name', `%${trimmedQuery}%`)
-        .eq('is_active', true)
+        .eq('character_status', 'active')
         .order('name', { ascending: true })
         .limit(limit);
 
@@ -1362,7 +1363,8 @@ export class CharacterService {
       roleBadges: Array.isArray(dbCharacter.role_badges) ? dbCharacter.role_badges : [],
       backstory: dbCharacter.backstory,
       notes: dbCharacter.notes,
-      isActive: dbCharacter.is_active,
+      status: dbCharacter.character_status || (dbCharacter.is_active ? 'active' : 'retired'),
+      isActive: (dbCharacter.character_status || (dbCharacter.is_active ? 'active' : 'retired')) === 'active',
       profileIsPublic: Boolean(dbCharacter.profile_is_public),
       guildId: dbCharacter.guild_id,
       profileSubtitle: dbCharacter.profile_subtitle || '',

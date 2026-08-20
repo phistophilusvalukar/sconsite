@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Edit, Shield, Trash2, Users } from 'lucide-react';
+import { Calendar, Edit, Shield, Skull, Trash2, Users } from 'lucide-react';
 import { Character } from '../types/database';
 import CharacterRoleBadges from './CharacterRoleBadges';
 import DynamicCharacterPortrait from '../features/characters/DynamicCharacterPortrait';
@@ -39,11 +39,13 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         <DynamicCharacterPortrait character={character} fallbackSrc={characterAvatar} alt={character.name} className="dynamic-character-portrait-card-crop absolute inset-0 h-full w-full rounded-xl object-cover transition-transform duration-300 group-hover:scale-105" motion="hover" overlayClassName="bg-gradient-to-t from-midnight-950 via-midnight-950/45 to-midnight-950/10" />
         <div className="absolute left-4 right-4 top-4 z-10 flex items-center justify-between">
           <div className={`px-3 py-1 rounded-full text-xs font-semibold backdrop-blur ${
-            character.isActive
+            character.status === 'active'
               ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/30'
-              : 'bg-gray-500/25 text-gray-200 ring-1 ring-gray-300/20'
+              : character.status === 'dead'
+                ? 'bg-slate-950/75 text-gray-100 ring-1 ring-gray-300/30'
+                : 'bg-gray-500/25 text-gray-200 ring-1 ring-gray-300/20'
           }`}>
-            {character.isActive ? 'Active' : 'Inactive'}
+            {character.status.charAt(0).toUpperCase() + character.status.slice(1)}
           </div>
           {character.guildId && (
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20 text-blue-200 ring-1 ring-blue-300/30 backdrop-blur" title="Guild Member">
@@ -60,7 +62,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
           <p className="text-sm font-semibold uppercase tracking-[0.12em] text-yellow-300">
             Level {parsedData?.level || character.level} {character.class}
           </p>
-          <h3 className="font-fantasy text-3xl font-bold text-white drop-shadow">{character.name}</h3>
+          <h3 className="flex items-center gap-2 font-fantasy text-3xl font-bold text-white drop-shadow">{character.name}{character.status === 'dead' && <Skull className="h-6 w-6" aria-label="Deceased" />}</h3>
           <p className="mt-2 text-sm text-gray-200">
             {[character.heritage, character.ancestry || character.race].filter(Boolean).join(' ') || 'Adventurer'}
           </p>

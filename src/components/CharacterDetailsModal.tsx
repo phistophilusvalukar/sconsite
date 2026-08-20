@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Skull,
   Trash2,
   Upload,
   Users,
@@ -442,7 +443,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
         >
           <div>
             <p className={pageMode ? 'character-profile-kicker' : 'text-sm uppercase tracking-[0.14em] text-yellow-300'}>{'Character Profile'}</p>
-            <h2 className={pageMode ? '' : 'font-fantasy text-2xl font-bold text-white'}>{character.name}</h2>
+            <h2 className={pageMode ? '' : 'font-fantasy text-2xl font-bold text-white'}>{character.name}{character.status === 'dead' && <Skull className="character-profile-skull" aria-label="Deceased" />}</h2>
             {pageMode && <p className="character-profile-subtitle">{character.profileSubtitle || 'An adventurer of the Shattered Convergence'}</p>}
           </div>
           <div className="flex items-center space-x-2">
@@ -519,7 +520,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                     <Detail label="Ancestry" value={character.ancestry || character.race} />
                     <Detail label="Heritage" value={character.heritage || 'Unknown'} />
                     <Detail label="Background" value={character.background || 'Unrecorded'} />
-                    <Detail label="Status" value={character.isActive ? 'Active' : 'Inactive'} />
+                    <Detail label="Status" value={character.status.charAt(0).toUpperCase() + character.status.slice(1)} />
                     <Detail label="Age" value={parsedData?.age || character.stats?.age || 'Unknown'} />
                     <Detail label="Height" value={parsedData?.height || character.stats?.height || 'Unknown'} />
                     <Detail label="Weight" value={parsedData?.weight || character.stats?.weight || 'Unknown'} />

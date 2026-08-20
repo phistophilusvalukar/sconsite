@@ -437,19 +437,6 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
           </div>
 
           <div>
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                name="isActive"
-                checked={formData.isActive}
-                onChange={handleInputChange}
-                className="form-checkbox h-4 w-4 text-yellow-500 bg-fantasy-800 border-fantasy-600 rounded focus:ring-yellow-400"
-              />
-              <span className="text-gray-300">Active Character</span>
-            </label>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">
               Main Role
             </label>

@@ -147,7 +147,7 @@ const GamesPage: React.FC = () => {
       }
 
       if (characterResponse.success && characterResponse.data) {
-        setCharacters(characterResponse.data.filter(character => character.isActive));
+        setCharacters(characterResponse.data.filter(character => character.status === 'active'));
       }
     } finally {
       setIsLoading(false);

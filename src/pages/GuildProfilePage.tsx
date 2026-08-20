@@ -173,7 +173,7 @@ const GuildProfilePage: React.FC = () => {
 
   const isGuildmaster = Boolean(guild && user?.id === guild.leaderId);
   const activeRoster = useMemo(() => (guild?.memberships || [])
-    .filter(member => member.membershipStatus === 'Active')
+    .filter(member => member.membershipStatus === 'Active' && member.character?.status === 'active')
     .sort((left, right) => ROLE_ORDER.indexOf(left.roleCategory) - ROLE_ORDER.indexOf(right.roleCategory)), [guild?.memberships]);
   const currentMemberships = activeRoster.filter(member => member.userId === user?.id);
   const leaderMembership = activeRoster.find(member => member.roleCategory === 'Leader' || member.characterId === guild?.leaderCharacterId);

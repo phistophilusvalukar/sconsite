@@ -17,6 +17,7 @@ const dbAdminCharacterSchema = z.object({
   name: z.string(),
   className: z.string(),
   level: z.number().int(),
+  status: z.enum(['active', 'retired', 'dead']),
   ownerId: z.string(),
   ownerName: z.string()
 }).strict();
@@ -91,6 +92,19 @@ export async function setDbAdminUserBan(password: string, userId: string, isBann
     p_password: password,
     p_user_id: userId,
     p_is_banned: isBanned
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function setDbAdminCharacterStatus(
+  password: string,
+  characterId: string,
+  status: DbAdminCharacter['status']
+): Promise<void> {
+  const { error } = await supabase.rpc('set_db_admin_character_status_command', {
+    p_password: password,
+    p_character_id: characterId,
+    p_status: status
   });
   if (error) throw new Error(error.message);
 }

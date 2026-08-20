@@ -10,6 +10,8 @@ export interface CharacterStats extends JsonObject {
   };
 }
 
+export type CharacterStatus = 'active' | 'retired' | 'dead';
+
 export interface UserProfile {
   _id?: string;
   authUserId: string;
@@ -92,6 +94,7 @@ export interface Character {
   roleBadges?: CharacterRoleBadge[];
   backstory?: string;
   notes?: string;
+  status: CharacterStatus;
   isActive: boolean;
   profileIsPublic?: boolean;
   guildId?: string;
