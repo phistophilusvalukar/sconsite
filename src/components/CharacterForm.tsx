@@ -4,6 +4,14 @@ import { z } from 'zod';
 import { Character, CharacterRoleBadge, CharacterRoleCategory } from '../types/database';
 import { CharacterService, FoundryCharacterData } from '../services/characterService';
 import { mainRoleOptions, roleBadgeMap, roleBadgeTone, roleCategories, rolePillTone } from '../utils/characterRoles';
+import {
+  DEFAULT_AVATAR_FOCUS_X,
+  DEFAULT_AVATAR_FOCUS_Y,
+  DEFAULT_NPC_PLACEHOLDER,
+  getAvatarFromFoundryJson,
+  getAvatarObjectPosition,
+  normalizeFoundryAvatar
+} from '../utils/foundryCharacter';
 
 interface CharacterFormProps {
   character?: Character;
@@ -43,6 +51,8 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
     backstory: '',
     notes: '',
     isActive: true,
+    profilePortraitFocusX: DEFAULT_AVATAR_FOCUS_X,
+    profilePortraitFocusY: DEFAULT_AVATAR_FOCUS_Y,
     mainRole: '' as CharacterRoleCategory | '',
     roleBadges: [] as CharacterRoleBadge[]
   });
@@ -53,6 +63,10 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
   const [removedCompanionIds, setRemovedCompanionIds] = useState<string[]>([]);
 
   const characterService = CharacterService.getInstance();
+  const hasAvatarPreview = Boolean(importedJson || character?.foundryJson || character?.stats?.avatar);
+  const avatarPreviewSrc = getAvatarFromFoundryJson(importedJson || character?.foundryJson)
+    || normalizeFoundryAvatar(character?.stats?.avatar)
+    || DEFAULT_NPC_PLACEHOLDER;
   const isSummoner = `${formData.classPrimary} ${formData.classSecondary}`.toLowerCase().includes('summoner');
   const companionTypeLabel = (type: CompanionDraft['companionType']) => type === 'familiar'
     ? 'Familiar'
@@ -72,6 +86,8 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         backstory: character.backstory || '',
         notes: character.notes || '',
         isActive: character.isActive,
+        profilePortraitFocusX: character.profilePortraitFocusX ?? DEFAULT_AVATAR_FOCUS_X,
+        profilePortraitFocusY: character.profilePortraitFocusY ?? DEFAULT_AVATAR_FOCUS_Y,
         mainRole: character.mainRole || '',
         roleBadges: character.roleBadges || []
       });
@@ -188,6 +204,8 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         backstory: formData.backstory,
         notes: formData.notes,
         isActive: formData.isActive,
+        profilePortraitFocusX: formData.profilePortraitFocusX,
+        profilePortraitFocusY: formData.profilePortraitFocusY,
         mainRole: formData.mainRole || undefined,
         roleBadges: formData.roleBadges,
         userId,
@@ -276,6 +294,35 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
               </p>
             )}
           </div>
+
+          {hasAvatarPreview && (
+            <section className="rounded-xl border border-fantasy-700/30 bg-fantasy-800/30 p-4">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-white">Avatar alignment</h3>
+                <p className="mt-1 text-sm text-gray-400">Choose which part of the Foundry portrait remains visible when character and guild cards crop the image.</p>
+              </div>
+              <div className="grid gap-5 sm:grid-cols-[minmax(160px,220px)_1fr] sm:items-center">
+                <div className="h-52 overflow-hidden rounded-lg border border-fantasy-700/40 bg-midnight-950">
+                  <img
+                    src={avatarPreviewSrc}
+                    alt="Character avatar crop preview"
+                    className="h-full w-full object-cover"
+                    style={{ objectPosition: getAvatarObjectPosition(formData.profilePortraitFocusX, formData.profilePortraitFocusY) }}
+                  />
+                </div>
+                <div className="space-y-5">
+                  <label className="block text-sm font-medium text-gray-300">
+                    <span className="mb-2 flex items-center justify-between gap-3"><span>Horizontal focus</span><output>{formData.profilePortraitFocusX}%</output></span>
+                    <input type="range" min="0" max="100" value={formData.profilePortraitFocusX} onChange={event => setFormData(current => ({ ...current, profilePortraitFocusX: Number(event.target.value) }))} className="w-full accent-yellow-400" />
+                  </label>
+                  <label className="block text-sm font-medium text-gray-300">
+                    <span className="mb-2 flex items-center justify-between gap-3"><span>Vertical focus</span><output>{formData.profilePortraitFocusY}%</output></span>
+                    <input type="range" min="0" max="100" value={formData.profilePortraitFocusY} onChange={event => setFormData(current => ({ ...current, profilePortraitFocusY: Number(event.target.value) }))} className="w-full accent-yellow-400" />
+                  </label>
+                </div>
+              </div>
+            </section>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">

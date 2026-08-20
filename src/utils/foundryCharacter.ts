@@ -12,6 +12,12 @@ export const abilityLabels: Array<{ key: AbilityKey; label: string }> = [
 ];
 
 export const DEFAULT_NPC_PLACEHOLDER = '/npc-placeholder.png';
+export const DEFAULT_AVATAR_FOCUS_X = 50;
+export const DEFAULT_AVATAR_FOCUS_Y = 0;
+
+export function getAvatarObjectPosition(focusX?: number, focusY?: number) {
+  return `${normalizeAvatarFocus(focusX, DEFAULT_AVATAR_FOCUS_X)}% ${normalizeAvatarFocus(focusY, DEFAULT_AVATAR_FOCUS_Y)}%`;
+}
 
 const DEFAULT_FOUNDRY_CHARACTER_ICON = 'systems/pf2e/icons/default-icons/character.svg';
 
@@ -40,6 +46,10 @@ function normalizePathForComparison(path: string) {
   } catch {
     return trimmed.split(/[?#]/)[0].replace(/^\/+/, '').toLowerCase();
   }
+}
+
+function normalizeAvatarFocus(value: number | undefined, fallback: number) {
+  return Number.isFinite(value) ? Math.min(100, Math.max(0, value!)) : fallback;
 }
 
 export function getAbilityScoresFromFoundryJson(jsonData: unknown): Record<AbilityKey, number | null> {

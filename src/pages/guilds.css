@@ -517,12 +517,11 @@
 .guild-requirements-panel h2 { font-size: 1.35rem; }
 .guild-requirements-panel p:last-child { margin: .65rem 0 0; color: color-mix(in srgb, var(--guild-ink) 68%, transparent); font-family: var(--guild-text-font); font-size: var(--guild-text-size); line-height: 1.7; white-space: pre-wrap; }
 
-.guild-leader-card { overflow: hidden; }
-.guild-leader-card:has(.dynamic-character-portrait) { overflow: visible; }
-.guild-leader-portrait { position: relative; height: 250px; background: color-mix(in srgb, var(--guild-base) 70%, black 30%); }
+.guild-leader-card { min-width: 0; overflow: hidden; }
+.guild-leader-portrait { position: relative; width: 100%; min-height: 250px; max-height: 360px; overflow: hidden; aspect-ratio: 4 / 3; background: color-mix(in srgb, var(--guild-base) 70%, black 30%); }
 .guild-leader-portrait::after { position: absolute; inset: 40% 0 0; background: linear-gradient(transparent, color-mix(in srgb, var(--guild-base) 92%, black 8%)); content: ''; }
 .guild-leader-portrait img,
-.guild-leader-dynamic-portrait { width: 100%; height: 100%; border-radius: 5px 5px 0 0; object-fit: cover; }
+.guild-leader-dynamic-portrait { display: block; width: 100%; height: 100%; max-height: 100%; border-radius: 5px 5px 0 0; object-fit: cover; }
 .guild-leader-portrait > svg { position: absolute; z-index: 1; right: 1rem; bottom: .8rem; width: 33px; height: 33px; border: 1px solid color-mix(in srgb, var(--guild-accent) 55%, transparent); border-radius: 50%; padding: .45rem; background: var(--guild-base); color: var(--guild-accent); }
 .guild-leader-copy { position: relative; margin-top: -1rem; padding: 0 1.25rem 1.35rem; }
 .guild-leader-copy h2 { margin: 0; font-size: 1.65rem; line-height: 1.1; }

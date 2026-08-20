@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { Character } from '../../types/database';
+import { getAvatarObjectPosition } from '../../utils/foundryCharacter';
 
 type PortraitCharacter = Pick<
   Character,
@@ -47,6 +48,9 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
   const portraitRef = useRef<HTMLDivElement>(null);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const isDynamic = allowDynamic && hasDynamicCharacterPortrait(character) && !imageLoadFailed;
+  const fallbackImageStyle = {
+    objectPosition: getAvatarObjectPosition(character?.profilePortraitFocusX, character?.profilePortraitFocusY)
+  };
 
   useEffect(() => {
     setImageLoadFailed(false);
@@ -86,12 +90,12 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
     if (overlayClassName) {
       return (
         <div title={title} className={`dynamic-character-portrait-fallback ${className}`.trim()}>
-          <img src={fallbackSrc} alt={alt} />
+          <img src={fallbackSrc} alt={alt} style={fallbackImageStyle} />
           <div className={`dynamic-character-portrait-overlay ${overlayClassName}`} aria-hidden="true" />
         </div>
       );
     }
-    return <img src={fallbackSrc} alt={alt} title={title} className={className} />;
+    return <img src={fallbackSrc} alt={alt} title={title} className={className} style={fallbackImageStyle} />;
   }
 
   const portraitStyle = {

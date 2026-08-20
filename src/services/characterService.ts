@@ -79,6 +79,8 @@ type CharacterUpdateRow = Partial<{
   foundry_file_name: string | null;
   main_role: CharacterRoleCategory | null;
   role_badges: CharacterRoleBadge[];
+  profile_portrait_focus_x: number;
+  profile_portrait_focus_y: number;
   backstory: string;
   notes: string;
   is_active: boolean;
@@ -609,6 +611,8 @@ export class CharacterService {
       if (updates.foundryFileName !== undefined) updateData.foundry_file_name = updates.foundryFileName || null;
       if (updates.mainRole !== undefined) updateData.main_role = updates.mainRole || null;
       if (updates.roleBadges !== undefined) updateData.role_badges = updates.roleBadges || [];
+      if (updates.profilePortraitFocusX !== undefined) updateData.profile_portrait_focus_x = updates.profilePortraitFocusX;
+      if (updates.profilePortraitFocusY !== undefined) updateData.profile_portrait_focus_y = updates.profilePortraitFocusY;
       if (updates.backstory !== undefined) updateData.backstory = updates.backstory;
       if (updates.notes !== undefined) updateData.notes = updates.notes;
       if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
