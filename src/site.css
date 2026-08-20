@@ -339,7 +339,8 @@ select:focus-visible {
 .site-empty-state-card { width: min(100%, 560px); border: 1px solid var(--site-line-strong); padding: 2rem; background: rgba(29,35,33,.65); text-align: center; }
 .site-empty-state-card .site-kicker { justify-content: center; }
 .site-empty-state-card h1 { margin: .8rem 0 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.7rem; font-weight: 600; }
-.site-empty-state-card > p:last-child { margin: .7rem 0 0; color: var(--site-muted); font-size: .8rem; line-height: 1.7; }
+.site-empty-state-card > p:not(.site-kicker) { margin: .7rem 0 0; color: var(--site-muted); font-size: .8rem; line-height: 1.7; }
+.site-empty-state-action { display: flex; justify-content: center; margin-top: 1.25rem; }
 
 @keyframes site-spin { to { transform: rotate(360deg); } }
 

@@ -5,6 +5,7 @@ import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
 import { UserService } from '../services/userService';
 import { UserProfile } from '../types/database';
 import { AuthContext, AuthUser } from './authContextCore';
+import { storeAuthReturnPath } from './authReturnPath';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -140,22 +141,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [session?.user, syncUserProfile]);
 
-  const login = async () => {
+  const login = async (returnTo?: string) => {
     setIsLoading(true);
     setError(null);
 
+    storeAuthReturnPath(returnTo);
+
     const { error: signInError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: 'discord',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
       },
     });
 
     if (signInError) {
+      storeAuthReturnPath();
       setIsLoading(false);
       setError(signInError.message);
       throw signInError;

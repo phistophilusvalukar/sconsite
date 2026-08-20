@@ -1,17 +1,19 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Loader2, LogIn } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 
-const GoogleLogin: React.FC = () => {
+const DiscordLogin: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const location = useLocation();
   const { login } = useAuth();
 
-  const handleGoogleLogin = async () => {
+  const handleDiscordLogin = async () => {
     try {
       setIsLoading(true);
-      await login();
+      await login(`${location.pathname}${location.search}${location.hash}`);
     } catch (error) {
-      console.error('Failed to start Google login:', error);
+      console.error('Failed to start Discord login:', error);
       alert('Failed to start login process. Please try again.');
       setIsLoading(false);
     }
@@ -19,7 +21,8 @@ const GoogleLogin: React.FC = () => {
 
   return (
     <button
-      onClick={handleGoogleLogin}
+      type="button"
+      onClick={handleDiscordLogin}
       disabled={isLoading}
       className="site-login-button"
     >
@@ -28,9 +31,9 @@ const GoogleLogin: React.FC = () => {
       ) : (
         <LogIn className="w-4 h-4" />
       )}
-      <span>{isLoading ? 'Connecting...' : 'Login with Google'}</span>
+      <span>{isLoading ? 'Connecting...' : 'Login with Discord'}</span>
     </button>
   );
 };
 
-export default GoogleLogin;
+export default DiscordLogin;

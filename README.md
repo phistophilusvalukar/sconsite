@@ -1,6 +1,6 @@
 # Pathfinder 2e Westmarch Server
 
-A React/Supabase community hub for Pathfinder 2e Westmarch campaigns. It supports Google sign-in through Supabase Auth, player profiles, character management, social walls, friends, and FoundryVTT JSON character imports.
+A React/Supabase community hub for Pathfinder 2e Westmarch campaigns. It supports Discord sign-in through Supabase Auth, player profiles, character management, social walls, friends, and FoundryVTT JSON character imports.
 
 ## Stack
 
@@ -31,14 +31,20 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-4. In Supabase, enable Google Auth and add redirect URLs:
+4. Create a Discord OAuth application. Set its OAuth2 redirect to the callback URL shown under Supabase Authentication > Sign In / Providers > Discord:
+
+```text
+https://your-project-ref.supabase.co/auth/v1/callback
+```
+
+5. Enable Discord in Supabase Auth with the application's client ID and secret, then add these application redirect URLs to Supabase Authentication > URL Configuration:
 
 ```text
 http://localhost:5173/auth/callback
 https://your-vercel-domain.vercel.app/auth/callback
 ```
 
-5. Start development:
+6. Start development:
 
 ```bash
 npm run dev

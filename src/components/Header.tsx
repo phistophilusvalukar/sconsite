@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, ScrollText, X } from 'lucide-react';
 import { adminPage, sitePages, type SitePageDefinition, type SitePageKey } from '../config/sitePages';
 import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
-import GoogleLogin from './GoogleLogin';
+import DiscordLogin from './DiscordLogin';
 
-type PreloadableRoute = '/' | '/about' | '/lore' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/citadel-tactics' | '/tactical-puzzles' | '/campaign-objectives' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
+type PreloadableRoute = '/' | '/about' | '/lore' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/ticket-log' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/citadel-tactics' | '/tactical-puzzles' | '/campaign-objectives' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -17,6 +17,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/guilds': () => import('../pages/GuildsPage'),
   '/schedule': () => import('../pages/SchedulePage'),
   '/games': () => import('../pages/GamesPage'),
+  '/ticket-log': () => import('../pages/TicketLogsPage'),
   '/arcana': () => import('../pages/CardGamePage'),
   '/underhaul/contracts': () => import('../features/contracts/routes/ContractsOfficePage'),
   '/arcane-locks': () => import('../features/arcane-locks/routes/ArcaneLocksPage'),
@@ -39,11 +40,17 @@ function preloadRoute(href: PreloadableRoute) {
   routePreloaders[href]().catch(() => preloadedRoutes.delete(href));
 }
 
-type NavigationGroup = { name: string; pageKeys: SitePageKey[] };
 type NavigationItem = Pick<SitePageDefinition, 'name' | 'href' | 'icon'>;
+type NavigationGroup = { name: string; pageKeys: SitePageKey[]; staticItems?: NavigationItem[] };
+
+const ticketLogNavigation: NavigationItem = {
+  name: 'Ticket Logs',
+  href: '/ticket-log',
+  icon: ScrollText
+};
 
 const navigationGroups: NavigationGroup[] = [
-  { name: 'Discover', pageKeys: ['home', 'about', 'lore', 'news'] },
+  { name: 'Discover', pageKeys: ['home', 'about', 'lore', 'news'], staticItems: [ticketLogNavigation] },
   { name: 'People', pageKeys: ['characters', 'guilds', 'citizens'] },
   { name: 'Play', pageKeys: ['schedule', 'games'] },
   { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals', 'citadel-tactics'] },
@@ -64,9 +71,12 @@ const Header: React.FC = () => {
   const groupedNavigation = navigationGroups
     .map(group => ({
       ...group,
-      items: group.pageKeys
-        .map(pageKey => navigationByKey.get(pageKey))
-        .filter((page): page is SitePageDefinition => Boolean(page))
+      items: [
+        ...group.pageKeys
+          .map(pageKey => navigationByKey.get(pageKey))
+          .filter((page): page is SitePageDefinition => Boolean(page)),
+        ...(group.staticItems || [])
+      ]
     }))
     .filter(group => group.items.length > 0);
   const adminNavigation: NavigationItem[] = isAdmin ? [adminPage] : [];
@@ -110,7 +120,7 @@ const Header: React.FC = () => {
                 <img src={user?.avatar || '/npc-placeholder.png'} alt="" />
                 <span><small>Signed in as</small><strong>{user?.username}</strong></span>
               </Link>
-            ) : <GoogleLogin />}
+            ) : <DiscordLogin />}
           </div>
 
           <button type="button" onClick={() => setIsMenuOpen(!isMenuOpen)} className="site-menu-toggle" aria-expanded={isMenuOpen} aria-label={isMenuOpen ? 'Close navigation' : 'Open navigation'}>
@@ -132,7 +142,7 @@ const Header: React.FC = () => {
                 <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
                   <img src={user?.avatar || '/npc-placeholder.png'} alt="" /><span><small>Account</small><strong>{user?.username}</strong></span>
                 </Link>
-              ) : <GoogleLogin />}
+              ) : <DiscordLogin />}
             </div>
           </div>
         )}

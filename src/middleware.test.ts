@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import middleware from '../middleware';
 
 describe('public resource routes', () => {
+  it('serves the homepage instead of redirecting it to the ticket archive', () => {
+    expect(middleware(new Request('https://example.test/'))).toBeUndefined();
+  });
+
   it('keeps ticket logs public', () => {
     expect(middleware(new Request('https://example.test/ticket-log'))).toBeUndefined();
   });
@@ -14,13 +18,18 @@ describe('public resource routes', () => {
     expect(middleware(new Request('https://example.test/public/characters/11111111-1111-4111-8111-111111111111'))).toBeUndefined();
   });
 
-  it('keeps normal character profile routes protected', () => {
-    const response = middleware(new Request('https://example.test/characters/11111111-1111-4111-8111-111111111111'));
-    expect(response?.status).toBe(401);
+  it.each([
+    '/characters',
+    '/characters/11111111-1111-4111-8111-111111111111',
+    '/citizens',
+    '/guilds',
+    '/guilds/11111111-1111-4111-8111-111111111111'
+  ])('lets member registry route %s reach the client-side session gate', (pathname) => {
+    expect(middleware(new Request(`https://example.test${pathname}`))).toBeUndefined();
   });
 
-  it('continues to protect registry routes', () => {
-    const response = middleware(new Request('https://example.test/guilds'));
+  it('continues to protect unreleased routes', () => {
+    const response = middleware(new Request('https://example.test/games'));
     expect(response?.status).toBe(401);
   });
 });

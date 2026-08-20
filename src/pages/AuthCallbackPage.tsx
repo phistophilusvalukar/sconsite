@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../config/database';
+import { consumeAuthReturnPath } from '../context/authReturnPath';
 
 const AuthCallbackPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -34,12 +35,13 @@ const AuthCallbackPage: React.FC = () => {
 
         if (!data.session) {
           setStatus('error');
-          setErrorMessage('No active session was returned from Google. Please try logging in again.');
+          setErrorMessage('No active session was returned from Discord. Please try logging in again.');
           return;
         }
 
         setStatus('success');
-        setTimeout(() => navigate('/', { replace: true }), 1200);
+        const returnTo = consumeAuthReturnPath(searchParams.get('next'));
+        setTimeout(() => navigate(returnTo, { replace: true }), 1200);
       } catch (err) {
         console.error('Authentication callback failed:', err);
         setStatus('error');

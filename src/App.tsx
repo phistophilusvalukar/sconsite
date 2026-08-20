@@ -4,6 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { BrowserRouter as Router, Navigate, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import DiscordLogin from './components/DiscordLogin';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import { AuthProvider } from './context/AuthContext';
 import { PageVisibilityProvider } from './context/PageVisibilityContext';
@@ -67,14 +68,14 @@ function AppRoutes() {
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/lore" element={<PageGate pageKey="lore"><LorePage /></PageGate>} />
         <Route path="/lore/:slug" element={<PageGate pageKey="lore"><LorePage /></PageGate>} />
-        <Route path="/characters" element={<PageGate pageKey="characters"><CharacterPage /></PageGate>} />
-        <Route path="/characters/:characterId" element={<PageGate pageKey="characters"><CharacterProfilePage /></PageGate>} />
-        <Route path="/characters/:characterId/planner" element={<PageGate pageKey="characters"><CharacterPlannerPage /></PageGate>} />
+        <Route path="/characters" element={<MemberPageGate pageKey="characters"><CharacterPage /></MemberPageGate>} />
+        <Route path="/characters/:characterId" element={<MemberPageGate pageKey="characters"><CharacterProfilePage /></MemberPageGate>} />
+        <Route path="/characters/:characterId/planner" element={<MemberPageGate pageKey="characters"><CharacterPlannerPage /></MemberPageGate>} />
         <Route path="/public/characters/:characterId" element={<CharacterProfilePage publicView />} />
-        <Route path="/citizens" element={<PageGate pageKey="citizens"><CitizenRegistryPage /></PageGate>} />
-        <Route path="/guilds" element={<PageGate pageKey="guilds"><GuildsPage /></PageGate>} />
-        <Route path="/guilds/:guildId/manage" element={<PageGate pageKey="guilds"><GuildManagementPage /></PageGate>} />
-        <Route path="/guilds/:guildId" element={<PageGate pageKey="guilds"><GuildProfilePage /></PageGate>} />
+        <Route path="/citizens" element={<MemberPageGate pageKey="citizens"><CitizenRegistryPage /></MemberPageGate>} />
+        <Route path="/guilds" element={<MemberPageGate pageKey="guilds"><GuildsPage /></MemberPageGate>} />
+        <Route path="/guilds/:guildId/manage" element={<MemberPageGate pageKey="guilds"><GuildManagementPage /></MemberPageGate>} />
+        <Route path="/guilds/:guildId" element={<MemberPageGate pageKey="guilds"><GuildProfilePage /></MemberPageGate>} />
         <Route path="/schedule" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/schedule/:pollId" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/games" element={<PageGate pageKey="games"><GamesPage /></PageGate>} />
@@ -173,6 +174,29 @@ function PageGate({ children, pageKey }: { children: React.ReactNode; pageKey: S
   }
 
   return <>{children}</>;
+}
+
+function MemberPageGate({ children, pageKey }: { children: React.ReactNode; pageKey: SitePageKey }) {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <RouteFallback />;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="site-empty-state">
+        <div className="site-empty-state-card">
+          <p className="site-kicker">Members only</p>
+          <h1>Continue with Discord</h1>
+          <p>Sign in with your Shattered Convergence Discord account to open this registry.</p>
+          <div className="site-empty-state-action"><DiscordLogin /></div>
+        </div>
+      </div>
+    );
+  }
+
+  return <PageGate pageKey={pageKey}>{children}</PageGate>;
 }
 
 export default App;

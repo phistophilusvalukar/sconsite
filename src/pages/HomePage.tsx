@@ -46,8 +46,8 @@ const HomePage: React.FC = () => {
         <section className="site-home-hero">
           <div className="site-home-copy">
             <p className="site-kicker"><Shield /> The Shattered Convergence</p>
-            <h1>Lost worlds converge.<br /><em>Your story continues.</em></h1>
-            <p className="site-home-lede">Shattered Convergence is a Pathfinder 2e Living World where Wayfinders gather in Axiom, cross unstable realms, and return with stories that permanently shape Ao.</p>
+            <h1>Worlds converge.<br /><em>Your story continues.</em></h1>
+            <p className="site-home-lede">Shattered Convergence is a Pathfinder 2e Living World where Wayfinders gather in Axiom, adventure to far off realms, and return with stories that permanently shape Ao.</p>
             <div className="site-home-actions">
               <Link to="/characters" className="site-primary-link">Enter the registry <ArrowRight /></Link>
               <Link to="/lore" className="site-text-link">Enter the atlas <span>↗</span></Link>

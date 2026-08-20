@@ -5,17 +5,23 @@ This project deploys through GitHub Actions to Vercel and pushes Supabase migrat
 ## Supabase
 
 1. Create a Supabase project.
-2. Enable Google Auth in Authentication > Providers.
-3. Add callback URLs:
+2. Create a Discord OAuth application and set its OAuth2 redirect to the callback URL shown under Supabase Authentication > Sign In / Providers > Discord:
+
+```text
+https://your-project-ref.supabase.co/auth/v1/callback
+```
+
+3. Enable Discord in Supabase Auth using the application's client ID and secret.
+4. Add application callback URLs under Supabase Authentication > URL Configuration:
 
 ```text
 http://localhost:5173/auth/callback
 https://your-vercel-domain.vercel.app/auth/callback
 ```
 
-4. Get your project ref from the Supabase dashboard URL.
-5. Create a Supabase access token from your account settings.
-6. Keep the database password available for CI.
+5. Get your project ref from the Supabase dashboard URL.
+6. Create a Supabase access token from your account settings.
+7. Keep the database password available for CI.
 
 ## Vercel
 

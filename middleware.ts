@@ -2,6 +2,9 @@ const PUBLIC_PREFIXES = [
   '/ticket-log',
   '/ticket-log-archive-data',
   '/rules',
+  '/characters',
+  '/citizens',
+  '/guilds',
   '/public/characters',
   '/assets',
   '/api',
@@ -23,7 +26,7 @@ export const config = {
 export default function middleware(request: Request) {
   const url = new URL(request.url);
 
-  if (url.pathname === '/' || url.pathname === '/ticket-logs') {
+  if (url.pathname === '/ticket-logs') {
     return Response.redirect(new URL('/ticket-log', url), 307);
   }
 
@@ -63,7 +66,8 @@ export default function middleware(request: Request) {
 }
 
 function isPublicPath(pathname: string) {
-  return PUBLIC_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return pathname === '/'
+    || PUBLIC_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 function isBasicAuthMatch(authorization: string, expectedUser: string, expectedPassword: string) {
