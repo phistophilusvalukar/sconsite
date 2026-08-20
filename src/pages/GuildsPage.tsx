@@ -106,7 +106,7 @@ const GuildsPage: React.FC = () => {
     return (
       <main className="guild-directory guild-auth-wall">
         <Shield aria-hidden="true" />
-        <p className="guild-eyebrow">The Concordance</p>
+        <p className="guild-eyebrow">The Charter</p>
         <h1>Guild Registry</h1>
         <p>Sign in to browse the charters and strongholds of the convergence.</p>
       </main>
@@ -118,7 +118,7 @@ const GuildsPage: React.FC = () => {
       <section className="guild-directory-hero">
         <div className="guild-directory-glow" aria-hidden="true" />
         <div className="guild-directory-hero-copy">
-          <p className="guild-eyebrow"><Sparkles size={14} /> The Concordance of Guilds</p>
+          <p className="guild-eyebrow"><Sparkles size={14} /> The Charter of Guilds</p>
           <h1>Find your <span>banner.</span></h1>
           <p className="guild-directory-lede">
             Explore player-run orders, meet their people, and discover the places they call home.
