@@ -7,6 +7,7 @@ export interface AuthUser {
   avatar: string;
   email: string;
   isAdmin?: boolean;
+  isBanned?: boolean;
   profile?: UserProfile;
 }
 

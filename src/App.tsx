@@ -38,6 +38,7 @@ const BrokenSealsPage = lazy(() => import('./features/broken-seals/routes/Broken
 const CampaignObjectivesPage = lazy(() => import('./features/campaign-objectives/routes/CampaignObjectivesPage'));
 const HellknightAutobattlerPage = lazy(() => import('./features/hellknight-autobattler/routes/HellknightAutobattlerPage'));
 const TacticalPuzzlesPage = lazy(() => import('./features/tactical-puzzles/routes/TacticalPuzzlesPage'));
+const DbAdminPage = lazy(() => import('./pages/DbAdminPage'));
 
 function RouteFallback() {
   return (
@@ -102,6 +103,7 @@ function AppRoutes() {
         <Route path="/news" element={<PageGate pageKey="news"><NewsPage /></PageGate>} />
         <Route path="/news/:slug" element={<PageGate pageKey="news"><NewsPage /></PageGate>} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/db-admin" element={<DbAdminPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
       </Routes>
@@ -124,10 +126,19 @@ function App() {
 
 function AppLayout() {
   const location = useLocation();
+  const { isLoading, user } = useAuth();
   const isPublicResource = location.pathname.startsWith('/ticket-log')
     || location.pathname === '/rules'
     || location.pathname.startsWith('/public/characters/');
   const hideFooter = location.pathname === '/';
+
+  if (isLoading) {
+    return <RouteFallback />;
+  }
+
+  if (user?.isBanned || user?.profile?.isBanned) {
+    return <BannedPage />;
+  }
 
   if (isPublicResource) {
     return (
@@ -147,6 +158,17 @@ function AppLayout() {
       </main>
       {!hideFooter && <Footer />}
     </div>
+  );
+}
+
+function BannedPage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-midnight-950 px-6">
+      <section className="max-w-xl rounded-2xl border border-red-500/40 bg-red-950/20 p-8 text-center shadow-2xl">
+        <h1 className="font-fantasy text-4xl font-bold text-white">Account banned</h1>
+        <p className="mt-4 text-lg leading-8 text-red-100">You have been banned. Please contact staff on the SCON discord.</p>
+      </section>
+    </main>
   );
 }
 

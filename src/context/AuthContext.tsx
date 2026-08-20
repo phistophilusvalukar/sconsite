@@ -31,6 +31,7 @@ const defaultStats = {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | undefined>(undefined);
+  const [isProfileResolved, setIsProfileResolved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const userService = useMemo(() => UserService.getInstance(), []);
@@ -46,6 +47,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       avatar: profile?.avatar || authUser.avatar,
       email: profile?.email || authUser.email,
       isAdmin: profile?.isAdmin,
+      isBanned: profile?.isBanned,
       profile,
     };
   }, [session, profile]);
@@ -62,6 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       setSession(data.session ?? null);
+      setIsProfileResolved(!data.session?.user);
       setIsLoading(false);
     });
 
@@ -70,6 +73,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setSession(nextSession);
       setProfile(undefined);
+      setIsProfileResolved(!nextSession?.user);
       setError(null);
       setIsLoading(false);
     });
@@ -127,12 +131,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       .then((syncedProfile) => {
         if (isCurrent) {
           setProfile(syncedProfile);
+          setIsProfileResolved(true);
         }
       })
       .catch((err) => {
         console.error('Signed in, but profile sync failed:', err);
         if (isCurrent) {
           setError(err instanceof Error ? err.message : 'Signed in, but profile sync failed');
+          setIsProfileResolved(true);
         }
       });
 
@@ -171,6 +177,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await supabase.auth.signOut();
     setSession(null);
     setProfile(undefined);
+    setIsProfileResolved(true);
     setError(null);
   };
 
@@ -197,7 +204,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       login,
       logout,
       isAuthenticated: Boolean(session?.user),
-      isLoading,
+      isLoading: isLoading || Boolean(session?.user && !isProfileResolved),
       error,
       refreshUserProfile
     }}>

@@ -41,7 +41,7 @@ function preloadRoute(href: PreloadableRoute) {
 }
 
 type NavigationItem = Pick<SitePageDefinition, 'name' | 'href' | 'icon'>;
-type NavigationGroup = { name: string; pageKeys: SitePageKey[]; staticItems?: NavigationItem[] };
+type NavigationGroup = { name: string; pageKeys: SitePageKey[]; adminItems?: NavigationItem[] };
 
 const ticketLogNavigation: NavigationItem = {
   name: 'Ticket Logs',
@@ -50,7 +50,7 @@ const ticketLogNavigation: NavigationItem = {
 };
 
 const navigationGroups: NavigationGroup[] = [
-  { name: 'Discover', pageKeys: ['home', 'about', 'lore', 'news'], staticItems: [ticketLogNavigation] },
+  { name: 'Discover', pageKeys: ['home', 'about', 'lore', 'news'], adminItems: [ticketLogNavigation] },
   { name: 'People', pageKeys: ['characters', 'guilds', 'citizens'] },
   { name: 'Play', pageKeys: ['schedule', 'games'] },
   { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals', 'citadel-tactics'] },
@@ -75,7 +75,7 @@ const Header: React.FC = () => {
         ...group.pageKeys
           .map(pageKey => navigationByKey.get(pageKey))
           .filter((page): page is SitePageDefinition => Boolean(page)),
-        ...(group.staticItems || [])
+        ...(isAdmin ? group.adminItems || [] : [])
       ]
     }))
     .filter(group => group.items.length > 0);

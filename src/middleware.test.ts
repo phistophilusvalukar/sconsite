@@ -18,6 +18,10 @@ describe('public resource routes', () => {
     expect(middleware(new Request('https://example.test/public/characters/11111111-1111-4111-8111-111111111111'))).toBeUndefined();
   });
 
+  it('lets the password-only database admin screen reach its client-side gate', () => {
+    expect(middleware(new Request('https://example.test/db-admin'))).toBeUndefined();
+  });
+
   it.each([
     '/characters',
     '/characters/11111111-1111-4111-8111-111111111111',

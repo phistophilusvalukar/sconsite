@@ -5,6 +5,7 @@ const PUBLIC_PREFIXES = [
   '/characters',
   '/citizens',
   '/guilds',
+  '/db-admin',
   '/public/characters',
   '/assets',
   '/api',

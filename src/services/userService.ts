@@ -37,6 +37,8 @@ interface UserRow {
   is_online: boolean;
   is_admin?: boolean;
   is_loremaster?: boolean;
+  is_banned?: boolean;
+  banned_at?: string | null;
   settings: UserProfile['settings'];
   stats: UserProfile['stats'] & JsonObject;
   created_at: string;
@@ -481,6 +483,8 @@ export class UserService {
       isOnline: dbUser.is_online,
       isAdmin: Boolean(dbUser.is_admin),
       isLoremaster: Boolean(dbUser.is_loremaster),
+      isBanned: Boolean(dbUser.is_banned),
+      bannedAt: dbUser.banned_at ? new Date(dbUser.banned_at) : undefined,
       settings: dbUser.settings,
       stats: dbUser.stats,
       createdAt: new Date(dbUser.created_at),

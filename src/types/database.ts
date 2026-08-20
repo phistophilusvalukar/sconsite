@@ -23,6 +23,8 @@ export interface UserProfile {
   isOnline: boolean;
   isAdmin?: boolean;
   isLoremaster?: boolean;
+  isBanned?: boolean;
+  bannedAt?: Date;
   primaryGuildId?: string;
   settings: {
     allowWallPosts: boolean;

@@ -474,7 +474,7 @@ class GameService {
       description: String(dbGame.description || ''),
       gmId: String(dbGame.gm_id),
       gmName: String(dbGame.gm_name || 'GM'),
-      rewardCharacterId: String(dbGame.reward_character_id),
+      rewardCharacterId: dbGame.reward_character_id ? String(dbGame.reward_character_id) : '',
       rewardCharacter,
       schedulePollId: dbGame.schedule_poll_id ? String(dbGame.schedule_poll_id) : undefined,
       startTime: new Date(String(dbGame.start_time)),
