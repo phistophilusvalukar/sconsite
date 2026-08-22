@@ -1,4 +1,4 @@
-import React, { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { DATABASE_TABLES, supabase } from '../config/database';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
@@ -6,6 +6,7 @@ import { UserService } from '../services/userService';
 import { UserProfile } from '../types/database';
 import { AuthContext, AuthUser } from './authContextCore';
 import { storeAuthReturnPath } from './authReturnPath';
+import { hasAuthIdentityChanged } from './authSessionIdentity';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -34,6 +35,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isProfileResolved, setIsProfileResolved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const sessionUserIdRef = useRef<string | null>(null);
   const userService = useMemo(() => UserService.getInstance(), []);
 
   const user = useMemo(() => {
@@ -63,6 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setError(sessionError.message);
       }
 
+      sessionUserIdRef.current = data.session?.user.id ?? null;
       setSession(data.session ?? null);
       setIsProfileResolved(!data.session?.user);
       setIsLoading(false);
@@ -71,9 +74,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!isMounted) return;
 
+      const nextUserId = nextSession?.user.id ?? null;
+      const identityChanged = hasAuthIdentityChanged(sessionUserIdRef.current, nextUserId);
+      sessionUserIdRef.current = nextUserId;
       setSession(nextSession);
-      setProfile(undefined);
-      setIsProfileResolved(!nextSession?.user);
+      if (identityChanged) {
+        setProfile(undefined);
+        setIsProfileResolved(!nextSession?.user);
+      }
       setError(null);
       setIsLoading(false);
     });
