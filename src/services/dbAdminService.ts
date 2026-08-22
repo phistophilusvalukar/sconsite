@@ -27,7 +27,14 @@ const dbAdminGuildSchema = z.object({
   name: z.string(),
   leaderId: z.string(),
   leaderName: z.string(),
-  memberCount: z.number().int()
+  memberCount: z.number().int(),
+  status: z.enum(['Active', 'Recruiting', 'Disbanded']),
+  leaderCandidates: z.array(z.object({
+    membershipId: z.string().uuid(),
+    userId: z.string(),
+    characterName: z.string(),
+    userName: z.string()
+  }).strict())
 }).strict();
 
 const dbAdminLoreEntrySchema = z.object({
@@ -105,6 +112,28 @@ export async function setDbAdminCharacterStatus(
     p_password: password,
     p_character_id: characterId,
     p_status: status
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function setDbAdminGuildStatus(
+  password: string,
+  guildId: string,
+  status: DbAdminGuild['status']
+): Promise<void> {
+  const { error } = await supabase.rpc('set_db_admin_guild_status_command', {
+    p_password: password,
+    p_guild_id: guildId,
+    p_status: status
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function setDbAdminGuildLeader(password: string, guildId: string, membershipId: string): Promise<void> {
+  const { error } = await supabase.rpc('set_db_admin_guild_leader_command', {
+    p_password: password,
+    p_guild_id: guildId,
+    p_membership_id: membershipId
   });
   if (error) throw new Error(error.message);
 }

@@ -213,7 +213,7 @@ export interface Guild {
   headquartersImageUrl?: string;
   roleLabels: GuildRoleLabels;
   established: Date;
-  status: 'Active' | 'Inactive' | 'Recruiting';
+  status: 'Active' | 'Recruiting' | 'Disbanded';
   recruitmentStatus: 'open' | 'selective' | 'closed';
   requirements: string;
   messageBoardHtml: string;

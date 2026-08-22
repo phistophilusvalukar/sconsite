@@ -172,15 +172,16 @@ const GuildProfilePage: React.FC = () => {
   });
 
   const isGuildmaster = Boolean(guild && user?.id === guild.leaderId);
+  const isDisbanded = guild?.status === 'Disbanded';
   const activeRoster = useMemo(() => (guild?.memberships || [])
     .filter(member => member.membershipStatus === 'Active' && member.character?.status === 'active')
     .sort((left, right) => ROLE_ORDER.indexOf(left.roleCategory) - ROLE_ORDER.indexOf(right.roleCategory)), [guild?.memberships]);
   const currentMemberships = activeRoster.filter(member => member.userId === user?.id);
   const leaderMembership = activeRoster.find(member => member.roleCategory === 'Leader' || member.characterId === guild?.leaderCharacterId);
   const nextLeaderMembership = activeRoster.find(member => member.characterId === guild?.nextLeaderCharacterId);
-  const canCustomizeGuild = isGuildmaster || currentMemberships.some(member => member.permissions.customizeGuild);
-  const canSetMessageBoard = isGuildmaster || currentMemberships.some(member => member.permissions.setMessageBoard);
-  const canManageGuild = isGuildmaster || currentMemberships.some(member => Object.values(member.permissions).some(Boolean));
+  const canCustomizeGuild = !isDisbanded && (isGuildmaster || currentMemberships.some(member => member.permissions.customizeGuild));
+  const canSetMessageBoard = !isDisbanded && (isGuildmaster || currentMemberships.some(member => member.permissions.setMessageBoard));
+  const canManageGuild = !isDisbanded && (isGuildmaster || currentMemberships.some(member => Object.values(member.permissions).some(Boolean)));
   const checkedInCharacterIds = useMemo(() => new Set(todayCheckins.map(checkin => checkin.characterId)), [todayCheckins]);
 
   useEffect(() => {
@@ -405,7 +406,9 @@ const GuildProfilePage: React.FC = () => {
           </div>
         </header>
 
-        {displayGuild.autoLeaderEnabled && (
+        {isDisbanded && <div className="guild-action-message">This guild has disbanded. Its charter and history are preserved as a read-only record.</div>}
+
+        {!isDisbanded && displayGuild.autoLeaderEnabled && (
           <section className="guild-succession-banner" aria-label="Automatic guild leadership succession">
             <div className="guild-succession-member is-current">
               <div className="guild-succession-portrait">
@@ -513,7 +516,7 @@ const GuildProfilePage: React.FC = () => {
             </section>
           )}
 
-          {displayGuild.sectionVisibility.checkIn && (
+          {!isDisbanded && displayGuild.sectionVisibility.checkIn && (
             <section className="guild-checkin-panel">
               <div className="guild-checkin-intro">
                 <div className="guild-checkin-icon"><UserCheck /></div>
@@ -554,7 +557,7 @@ const GuildProfilePage: React.FC = () => {
                 <div>{displayGuild.sectionHeadings.guestbookLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.guestbookLabel}</p>}{displayGuild.sectionHeadings.guestbookTitle && <h2>{displayGuild.sectionHeadings.guestbookTitle}</h2>}</div>
                 <span><BookOpen size={16} /> {displayGuild.guestbookEnabled ? 'Open to visitors' : 'Closed by the guildmaster'}</span>
               </div>
-              {displayGuild.guestbookEnabled && (
+              {!isDisbanded && displayGuild.guestbookEnabled && (
                 <div className="guild-guestbook-compose">
                   <label className="guild-field"><span>Visit as</span><select value={guestbookCharacterId} onChange={event => setGuestbookCharacterId(event.target.value)}><option value="">A passing traveler</option>{characters.map(character => <option key={character._id} value={character._id}>{character.name}</option>)}</select></label>
                   <label className="guild-field guild-guestbook-message"><span>Leave a roleplay note</span><textarea maxLength={1200} rows={3} value={guestbookMessage} onChange={event => setGuestbookMessage(event.target.value)} placeholder={`What happens as you visit ${displayGuild.headquartersName || 'the headquarters'}?`} /></label>
@@ -569,7 +572,7 @@ const GuildProfilePage: React.FC = () => {
                       <header><strong>{entry.character?.name || 'A passing traveler'}</strong><time dateTime={entry.createdAt.toISOString()}>{formatTimestamp(entry.createdAt)}</time></header>
                       <p>{entry.isHidden ? 'This entry is hidden from public view.' : entry.message}</p>
                     </div>
-                    {isGuildmaster && <button type="button" onClick={() => void handleModerateGuestbook(entry)} disabled={moderatingEntryId === entry._id}>{moderatingEntryId === entry._id ? <Loader2 className="guild-spin" size={15} /> : entry.isHidden ? <Eye size={15} /> : <EyeOff size={15} />}{entry.isHidden ? 'Restore' : 'Hide'}</button>}
+                    {!isDisbanded && isGuildmaster && <button type="button" onClick={() => void handleModerateGuestbook(entry)} disabled={moderatingEntryId === entry._id}>{moderatingEntryId === entry._id ? <Loader2 className="guild-spin" size={15} /> : entry.isHidden ? <Eye size={15} /> : <EyeOff size={15} />}{entry.isHidden ? 'Restore' : 'Hide'}</button>}
                   </article>
                 ))}
                 {guestbookEntries.length === 0 && <p className="guild-empty-copy">The first page awaits its first visitor.</p>}
@@ -592,7 +595,7 @@ const GuildProfilePage: React.FC = () => {
               </div>
             )}
 
-            {currentMemberships.length > 0 ? (
+            {!isDisbanded && (currentMemberships.length > 0 ? (
               <div className="guild-action-card guild-membership-card">
                 {displayGuild.sectionHeadings.membershipLabel && <p className="guild-section-label">{displayGuild.sectionHeadings.membershipLabel}</p>}
                 {displayGuild.sectionHeadings.membershipTitle && <h2>{displayGuild.sectionHeadings.membershipTitle}</h2>}
@@ -615,7 +618,7 @@ const GuildProfilePage: React.FC = () => {
                 <label className="guild-field"><span>Message</span><textarea rows={3} value={applicationMessage} onChange={event => setApplicationMessage(event.target.value)} placeholder="Introduce yourself..." /></label>
                 <button type="button" className="guild-profile-primary" onClick={handleApply}><UserPlus size={17} /> Submit petition</button>
               </div>
-            )}
+            ))}
 
           </aside>
         </div>

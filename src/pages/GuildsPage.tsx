@@ -147,7 +147,7 @@ const GuildsPage: React.FC = () => {
             />
           </div>
           <div className="guild-filter-tabs" aria-label="Filter guilds">
-            {(['All', 'Active', 'Recruiting', 'Inactive'] as GuildFilter[]).map(option => (
+            {(['All', 'Active', 'Recruiting', 'Disbanded'] as GuildFilter[]).map(option => (
               <button
                 type="button"
                 key={option}

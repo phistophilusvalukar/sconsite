@@ -1034,7 +1034,7 @@ export class GuildService {
       .from(DATABASE_TABLES.GUILDS)
       .select('*', { count: 'exact', head: true })
       .eq('leader_character_id', characterId)
-      .neq('status', 'Inactive');
+      .neq('status', 'Disbanded');
 
     return Boolean(count && count > 0);
   }
@@ -1074,6 +1074,7 @@ export class GuildService {
 
     const activeCount = count || 0;
     const guild = await this.getGuildById(guildId);
+    if (guild?.status === 'Disbanded') return;
     const requiredFounderCount = guild?.foundingRequired ?? 3;
     await supabase
       .from(DATABASE_TABLES.GUILDS)

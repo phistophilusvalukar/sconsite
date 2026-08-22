@@ -213,7 +213,7 @@
 .guild-status { border: 1px solid currentColor; border-radius: 999px; padding: .26rem .62rem; font-size: .63rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .guild-status-active { color: #76dbb1; }
 .guild-status-recruiting { color: #efd17d; }
-.guild-status-inactive { color: #a8a3ae; }
+.guild-status-disbanded { color: #a8a3ae; }
 .guild-card-identity { position: relative; display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 1rem; margin: 2rem 0 1rem; }
 .guild-card-emblem { display: grid; width: 76px; height: 76px; place-items: center; overflow: hidden; border: 1px solid color-mix(in srgb, var(--guild-card-accent) 40%, transparent); border-radius: 50%; background: rgba(0,0,0,.22); color: var(--guild-card-accent); }
 .guild-card-emblem img { width: 100%; height: 100%; object-fit: cover; }

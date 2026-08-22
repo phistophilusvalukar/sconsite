@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, Clock, Loader2, LogOut, Save, Settings, Upload, User, X } from 'lucide-react';
+import { BookOpen, Calendar, Clock, Loader2, LogOut, Save, ShieldCheck, User, X } from 'lucide-react';
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
@@ -7,13 +7,14 @@ import GameService from '../services/gameService';
 import { UserService } from '../services/userService';
 import { GameListing } from '../types/database';
 
-type ProfileTab = 'schedule' | 'settings';
+// The schedule implementation is intentionally retained while the unfinished
+// profile surface is hidden. Flip this flag when it is ready to return.
+const SHOW_PROFILE_SCHEDULE = false;
 
 const ProfilePage: React.FC = () => {
   const { user, logout, isAuthenticated, refreshUserProfile } = useAuth();
   const userService = useMemo(() => UserService.getInstance(), []);
   const gameService = useMemo(() => GameService.getInstance(), []);
-  const [activeTab, setActiveTab] = useState<ProfileTab>('schedule');
   const [games, setGames] = useState<GameListing[]>([]);
   const [isLoadingGames, setIsLoadingGames] = useState(true);
   const [selectedGame, setSelectedGame] = useState<GameListing | null>(null);
@@ -21,27 +22,15 @@ const ProfilePage: React.FC = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [settingsState, setSettingsState] = useState({
-    allowWallPosts: true,
-    showOnlineStatus: true,
-    profilePrivate: false,
-    notifications: {
-      guildAnnouncements: true,
-      friendRequests: true,
-      eventReminders: false,
-    }
-  });
 
   useEffect(() => {
     if (user?.profile) {
       setProfileName(user.profile.username);
-      setSettingsState(user.profile.settings);
     }
   }, [user?.profile]);
 
   const loadGames = useCallback(async (showLoading = false) => {
-    if (!user?.id) {
+    if (!SHOW_PROFILE_SCHEDULE || !user?.id) {
       setIsLoadingGames(false);
       return;
     }
@@ -77,7 +66,7 @@ const ProfilePage: React.FC = () => {
       DATABASE_TABLES.CHARACTERS
     ],
     onChange: loadGames,
-    enabled: isAuthenticated
+    enabled: SHOW_PROFILE_SCHEDULE && isAuthenticated
   });
 
   useEffect(() => {
@@ -118,26 +107,6 @@ const ProfilePage: React.FC = () => {
     );
   }
 
-  const handleSaveSettings = async () => {
-    if (!user.id) return;
-
-    setIsSavingSettings(true);
-    try {
-      const response = await userService.updateUser(user.id, { settings: settingsState });
-      if (response.success) {
-        await refreshUserProfile();
-        alert('Settings saved successfully!');
-      } else {
-        alert(response.error || 'Failed to save settings');
-      }
-    } catch (error) {
-      console.error('Error updating settings:', error);
-      alert('Failed to save settings');
-    } finally {
-      setIsSavingSettings(false);
-    }
-  };
-
   const handleSaveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user.id) return;
@@ -168,10 +137,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleAvatarUpload = () => {
-    alert('Avatar upload functionality will be implemented. For now, your Google profile image is used automatically.');
-  };
-
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -179,14 +144,6 @@ const ProfilePage: React.FC = () => {
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="relative">
               <img src={user.avatar} alt={user.username} className="w-24 h-24 rounded-full border-4 border-yellow-400" />
-              <button
-                type="button"
-                onClick={handleAvatarUpload}
-                className="absolute bottom-0 right-0 p-2 bg-yellow-500 hover:bg-yellow-400 text-midnight-900 rounded-full transition-colors"
-                title="Upload Avatar"
-              >
-                <Upload className="w-4 h-4" />
-              </button>
               <div className={`absolute bottom-2 left-2 w-6 h-6 rounded-full border-2 border-fantasy-900 ${user.profile?.isOnline ? 'bg-emerald-400' : 'bg-gray-400'}`} />
             </div>
 
@@ -194,6 +151,12 @@ const ProfilePage: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <h1 className="font-fantasy text-3xl font-bold text-white mb-2">{user.username}</h1>
+                  {(user.profile?.isAdmin || user.profile?.isLoremaster) && (
+                    <div className="mb-2 flex flex-wrap gap-2" aria-label="Site roles">
+                      {user.profile.isAdmin && <RoleBadge icon={ShieldCheck} label="Admin" />}
+                      {user.profile.isLoremaster && <RoleBadge icon={BookOpen} label="Loremaster" />}
+                    </div>
+                  )}
                   <p className="text-gray-300">
                     Member since {user.profile?.joinDate ? new Date(user.profile.joinDate).toLocaleDateString() : 'Unknown'}
                   </p>
@@ -211,13 +174,8 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-8 bg-fantasy-900/30 p-2 rounded-lg">
-          <TabButton active={activeTab === 'schedule'} icon={Calendar} label="Schedule" onClick={() => setActiveTab('schedule')} />
-          <TabButton active={activeTab === 'settings'} icon={Settings} label="Settings" onClick={() => setActiveTab('settings')} />
-        </div>
-
         <div className="bg-fantasy-900/30 border border-fantasy-700/30 rounded-xl p-6">
-          {activeTab === 'schedule' && (
+          {SHOW_PROFILE_SCHEDULE && (
             <section>
               <div className="flex items-center gap-2 mb-6">
                 <Calendar className="w-5 h-5 text-yellow-400" />
@@ -234,24 +192,18 @@ const ProfilePage: React.FC = () => {
             </section>
           )}
 
-          {activeTab === 'settings' && (
-            <SettingsPanel
-              username={profileName}
-              settings={settingsState}
-              isSavingProfile={isSavingProfile}
-              isSaving={isSavingSettings}
-              profileMessage={profileMessage}
-              profileError={profileError}
-              onUsernameChange={(value) => {
-                setProfileName(value);
-                setProfileMessage(null);
-                setProfileError(null);
-              }}
-              onSaveProfile={handleSaveProfile}
-              onChange={setSettingsState}
-              onSave={handleSaveSettings}
-            />
-          )}
+          <SettingsPanel
+            username={profileName}
+            isSavingProfile={isSavingProfile}
+            profileMessage={profileMessage}
+            profileError={profileError}
+            onUsernameChange={(value) => {
+              setProfileName(value);
+              setProfileMessage(null);
+              setProfileError(null);
+            }}
+            onSaveProfile={handleSaveProfile}
+          />
         </div>
       </div>
 
@@ -316,48 +268,22 @@ const TimelineCard: React.FC<{
 
 const SettingsPanel: React.FC<{
   username: string;
-  settings: {
-    allowWallPosts: boolean;
-    showOnlineStatus: boolean;
-    profilePrivate: boolean;
-    notifications: {
-      guildAnnouncements: boolean;
-      friendRequests: boolean;
-      eventReminders: boolean;
-    };
-  };
   isSavingProfile: boolean;
-  isSaving: boolean;
   profileMessage: string | null;
   profileError: string | null;
   onUsernameChange: (value: string) => void;
   onSaveProfile: (event: React.FormEvent<HTMLFormElement>) => void;
-  onChange: React.Dispatch<React.SetStateAction<{
-    allowWallPosts: boolean;
-    showOnlineStatus: boolean;
-    profilePrivate: boolean;
-    notifications: {
-      guildAnnouncements: boolean;
-      friendRequests: boolean;
-      eventReminders: boolean;
-    };
-  }>>;
-  onSave: () => void;
 }> = ({
   username,
-  settings,
   isSavingProfile,
-  isSaving,
   profileMessage,
   profileError,
   onUsernameChange,
-  onSaveProfile,
-  onChange,
-  onSave
+  onSaveProfile
 }) => (
   <div className="space-y-6">
-    <h2 className="text-2xl font-bold text-white">Settings</h2>
-    <form onSubmit={onSaveProfile} className="border-b border-fantasy-700/30 pb-6">
+    <div><h2 className="text-2xl font-bold text-white">Display name</h2><p className="mt-1 text-sm text-gray-400">This is the name other members see across the site.</p></div>
+    <form onSubmit={onSaveProfile}>
       <label htmlFor="profile-display-name" className="mb-2 block text-lg font-semibold text-white">
         Display name
       </label>
@@ -384,46 +310,7 @@ const SettingsPanel: React.FC<{
       {profileError && <p className="mt-2 text-sm text-red-300">{profileError}</p>}
       {profileMessage && <p className="mt-2 text-sm text-emerald-300">{profileMessage}</p>}
     </form>
-    <div>
-      <h3 className="text-lg font-semibold text-white mb-4">Privacy Settings</h3>
-      <div className="space-y-3">
-        <SettingCheckbox label="Allow profile posts" checked={settings.allowWallPosts} onChange={checked => onChange(prev => ({ ...prev, allowWallPosts: checked }))} />
-        <SettingCheckbox label="Show online status" checked={settings.showOnlineStatus} onChange={checked => onChange(prev => ({ ...prev, showOnlineStatus: checked }))} />
-        <SettingCheckbox label="Make profile private" checked={settings.profilePrivate} onChange={checked => onChange(prev => ({ ...prev, profilePrivate: checked }))} />
-      </div>
-    </div>
-    <div>
-      <h3 className="text-lg font-semibold text-white mb-4">Notifications</h3>
-      <div className="space-y-3">
-        <SettingCheckbox label="Guild announcements" checked={settings.notifications.guildAnnouncements} onChange={checked => onChange(prev => ({ ...prev, notifications: { ...prev.notifications, guildAnnouncements: checked } }))} />
-        <SettingCheckbox label="Connection requests" checked={settings.notifications.friendRequests} onChange={checked => onChange(prev => ({ ...prev, notifications: { ...prev.notifications, friendRequests: checked } }))} />
-        <SettingCheckbox label="Event reminders" checked={settings.notifications.eventReminders} onChange={checked => onChange(prev => ({ ...prev, notifications: { ...prev.notifications, eventReminders: checked } }))} />
-      </div>
-    </div>
-    <div className="pt-6 border-t border-fantasy-700/30">
-      <button
-        type="button"
-        onClick={onSave}
-        disabled={isSaving}
-        className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-600 text-midnight-900 font-bold rounded-lg transition-colors flex items-center gap-2"
-      >
-        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        <span>{isSaving ? 'Saving...' : 'Save Settings'}</span>
-      </button>
-    </div>
   </div>
-);
-
-const SettingCheckbox: React.FC<{ label: string; checked: boolean; onChange: (checked: boolean) => void }> = ({ label, checked, onChange }) => (
-  <label className="flex items-center gap-3">
-    <input
-      type="checkbox"
-      checked={checked}
-      onChange={(event) => onChange(event.target.checked)}
-      className="form-checkbox h-4 w-4 text-yellow-500 bg-fantasy-800 border-fantasy-600 rounded focus:ring-yellow-400"
-    />
-    <span className="text-gray-300">{label}</span>
-  </label>
 );
 
 const ScheduleGameModal: React.FC<{ game: GameListing; userId: string; onClose: () => void }> = ({ game, userId, onClose }) => (
@@ -462,17 +349,11 @@ const ScheduleGameModal: React.FC<{ game: GameListing; userId: string; onClose: 
   </div>
 );
 
-const TabButton: React.FC<{ active: boolean; icon: React.ComponentType<{ className?: string }>; label: string; onClick: () => void }> = ({ active, icon: Icon, label, onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all ${
-      active ? 'bg-yellow-500 text-midnight-900' : 'text-gray-300 hover:text-white hover:bg-fantasy-700/50'
-    }`}
-  >
-    <Icon className="w-4 h-4" />
-    <span>{label}</span>
-  </button>
+const RoleBadge: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string }> = ({ icon: Icon, label }) => (
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-yellow-200">
+    <Icon className="h-3.5 w-3.5" />
+    {label}
+  </span>
 );
 
 const isUserGame = (game: GameListing, userId: string) =>

@@ -68,6 +68,7 @@ const GuildManagementPage: React.FC = () => {
   });
 
   const roster = useMemo(() => (guild?.memberships || []).filter(member => member.membershipStatus === 'Active'), [guild?.memberships]);
+  const isDisbanded = guild?.status === 'Disbanded';
   const isLeader = Boolean(guild && user?.id === guild.leaderId);
   const actorPermissions = useMemo<GuildManagementPermissions>(() => {
     if (isLeader) return { kickMembers: true, setMessageBoard: true, acceptApplications: true, customizeGuild: true };
@@ -78,7 +79,7 @@ const GuildManagementPage: React.FC = () => {
       customizeGuild: combined.customizeGuild || member.permissions.customizeGuild
     }), { ...defaultGuildManagementPermissions });
   }, [isLeader, roster, user?.id]);
-  const canAccess = isLeader || hasAnyPermission(actorPermissions);
+  const canAccess = !isDisbanded && (isLeader || hasAnyPermission(actorPermissions));
   const actorRank = isLeader ? RANK_PRIORITY.Leader : Math.min(
     ...roster.filter(member => member.userId === user?.id).map(member => RANK_PRIORITY[member.roleCategory]),
     Number.POSITIVE_INFINITY
@@ -145,6 +146,7 @@ const GuildManagementPage: React.FC = () => {
   if (!isAuthenticated) return <main className="guild-management-state"><ShieldCheck /><h1>Sign in to manage a guild.</h1></main>;
   if (isLoading) return <main className="guild-management-state"><Loader2 className="guild-spin" /><span>Opening the guild ledger…</span></main>;
   if (!guild || loadError) return <main className="guild-management-state"><ShieldCheck /><h1>{loadError || 'Guild not found.'}</h1></main>;
+  if (isDisbanded) return <main className="guild-management-state"><ShieldCheck /><h1>This guild has disbanded and is read-only.</h1><Link to={`/guilds/${guild._id}`}>View its preserved guild page</Link></main>;
   if (!canAccess) return <main className="guild-management-state"><ShieldCheck /><h1>You do not have guild management privileges.</h1><Link to={`/guilds/${guild._id}`}>Return to guild page</Link></main>;
 
   return (

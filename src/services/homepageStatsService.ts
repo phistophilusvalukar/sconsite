@@ -59,7 +59,7 @@ class HomepageStatsService {
         supabase
           .from(DATABASE_TABLES.GUILDS)
           .select('*', { count: 'exact', head: true })
-          .neq('status', 'Inactive'),
+          .neq('status', 'Disbanded'),
         supabase
           .from(DATABASE_TABLES.GAMES)
           .select('*', { count: 'exact', head: true })
