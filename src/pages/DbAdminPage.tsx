@@ -157,15 +157,15 @@ const DbAdminPage = () => {
     }
   };
 
-  const updateGuildLeader = async (guild: DbAdminGuild, membershipId: string) => {
-    if (!membershipId) return;
-    const candidate = guild.leaderCandidates.find(item => item.membershipId === membershipId);
+  const updateGuildLeader = async (guild: DbAdminGuild, characterId: string) => {
+    if (!characterId) return;
+    const candidate = guild.leaderCandidates.find(item => item.characterId === characterId);
     if (!candidate || !window.confirm(`Make ${candidate.characterName} the leader of ${guild.name}?`)) return;
     setBusyKey(`guild-leader-${guild.id}`);
     setError(null);
     setMessage(null);
     try {
-      await setDbAdminGuildLeader(password, guild.id, membershipId);
+      await setDbAdminGuildLeader(password, guild.id, characterId);
       await loadSnapshot();
       setMessage(`${candidate.characterName} now leads ${guild.name}.`);
     } catch (cause) {
@@ -283,7 +283,7 @@ const DbAdminPage = () => {
                 <div className="min-w-0"><h3 className="truncate font-bold text-white">{guild.name}</h3><p className="mt-1 truncate text-xs text-gray-400">Led by {guild.leaderName} · {guild.memberCount} members · {guild.status}</p></div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">Status<select className="rounded-lg border border-fantasy-700/50 bg-midnight-900 px-3 py-2 text-sm font-bold text-white outline-none focus:border-yellow-400 disabled:opacity-50" disabled={Boolean(busyKey)} onChange={event => void updateGuildStatus(guild, event.target.value as DbAdminGuild['status'])} value={guild.status}><option value="Recruiting">Recruiting</option><option value="Active">Active</option><option value="Disbanded">Disbanded</option></select></label>
-                  <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">Leader<select className="max-w-64 rounded-lg border border-fantasy-700/50 bg-midnight-900 px-3 py-2 text-sm font-bold normal-case text-white outline-none focus:border-yellow-400 disabled:opacity-50" disabled={Boolean(busyKey) || guild.status === 'Disbanded'} onChange={event => void updateGuildLeader(guild, event.target.value)} value=""><option value="">{guild.leaderName}</option>{guild.leaderCandidates.map(candidate => <option key={candidate.membershipId} value={candidate.membershipId}>{candidate.characterName} ({candidate.userName})</option>)}</select></label>
+                  <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">Leader character<select className="max-w-64 rounded-lg border border-fantasy-700/50 bg-midnight-900 px-3 py-2 text-sm font-bold normal-case text-white outline-none focus:border-yellow-400 disabled:opacity-50" disabled={Boolean(busyKey) || guild.status === 'Disbanded'} onChange={event => void updateGuildLeader(guild, event.target.value)} value=""><option value="">Choose a character</option>{guild.leaderCandidates.map(candidate => <option key={candidate.characterId} value={candidate.characterId}>{candidate.characterName} ({candidate.userName})</option>)}</select></label>
                   <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-3 py-2 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-50" disabled={Boolean(busyKey)} onClick={() => void deleteContent('guild', guild.id, guild.name)} type="button">{busyKey === `delete-guild-${guild.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}Delete</button>
                 </div>
               </div>

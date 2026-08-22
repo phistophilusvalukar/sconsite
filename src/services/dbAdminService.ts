@@ -30,7 +30,7 @@ const dbAdminGuildSchema = z.object({
   memberCount: z.number().int(),
   status: z.enum(['Active', 'Recruiting', 'Disbanded']),
   leaderCandidates: z.array(z.object({
-    membershipId: z.string().uuid(),
+    characterId: z.string().uuid(),
     userId: z.string(),
     characterName: z.string(),
     userName: z.string()
@@ -129,11 +129,11 @@ export async function setDbAdminGuildStatus(
   if (error) throw new Error(error.message);
 }
 
-export async function setDbAdminGuildLeader(password: string, guildId: string, membershipId: string): Promise<void> {
-  const { error } = await supabase.rpc('set_db_admin_guild_leader_command', {
+export async function setDbAdminGuildLeader(password: string, guildId: string, characterId: string): Promise<void> {
+  const { error } = await supabase.rpc('set_db_admin_guild_leader_by_character_command', {
     p_password: password,
     p_guild_id: guildId,
-    p_membership_id: membershipId
+    p_character_id: characterId
   });
   if (error) throw new Error(error.message);
 }
