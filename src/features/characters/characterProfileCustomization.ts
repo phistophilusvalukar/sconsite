@@ -35,8 +35,8 @@ export const characterLayoutOptions = [
   { value: 'dossier', label: 'Dossier', description: 'A detective-noir case file with evidence photography and confidential records.' },
   { value: 'spotlight', label: 'Spotlight', description: 'A dramatic, portrait-led composition with ornamental framing and bold typography.' },
   { value: 'saga', label: 'Saga', description: 'An epic full-width hero with an arched portrait and sweeping records.' },
-  { value: 'cyberpunk', label: 'Cyberpunk', description: 'Neon circuitry, angular panels, scanlines, and a futuristic dossier display.' },
-  { value: 'nostalgia', label: 'Nostalgia', description: 'Game Boy greens, NES-era pixel borders, and hard-edged retro interface panels.' }
+  { value: 'cyberpunk', label: 'Splash', description: 'A full-bleed, art-first profile with an overlaid title and a vertical story flow.' },
+  { value: 'nostalgia', label: 'Nostalgia', description: 'A four-tone handheld screen with pixel type, chunky controls, and original Game Boy energy.' }
 ] as const;
 
 export const defaultCharacterProfileSectionVisibility = {
