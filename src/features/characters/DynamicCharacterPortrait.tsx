@@ -23,7 +23,7 @@ interface DynamicCharacterPortraitProps {
   fallbackSrc: string;
   alt: string;
   className?: string;
-  motion?: 'parallax' | 'hover' | 'none';
+  motion?: 'parallax' | 'hover' | 'zoom' | 'none';
   overlayClassName?: string;
   title?: string;
   allowDynamic?: boolean;
@@ -110,7 +110,7 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
   } as React.CSSProperties;
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (motion === 'none') return;
+    if (motion === 'none' || motion === 'zoom') return;
     const bounds = event.currentTarget.getBoundingClientRect();
     const horizontal = (event.clientX - bounds.left) / bounds.width - 0.5;
     const vertical = (event.clientY - bounds.top) / bounds.height - 0.5;

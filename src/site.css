@@ -617,6 +617,19 @@ select:focus-visible {
   --portrait-cutout-scale: 1.28;
 }
 
+/* A flat, restrained treatment for art-first layouts: only the foreground moves. */
+.dynamic-character-portrait-zoom {
+  perspective: none;
+  transform: none;
+}
+.dynamic-character-portrait-zoom .dynamic-character-portrait-cutout {
+  transition: filter 320ms ease, transform 420ms cubic-bezier(.2,.8,.2,1);
+}
+.dynamic-character-portrait-zoom:hover .dynamic-character-portrait-cutout {
+  --portrait-cutout-scale: 1.17;
+  filter: drop-shadow(0 22px 22px rgb(0 0 0 / .52));
+}
+
 .dynamic-character-portrait-hover:hover .dynamic-character-portrait-cutout,
 .dynamic-character-portrait-parallax:hover .dynamic-character-portrait-cutout {
   filter: drop-shadow(0 30px 24px rgb(0 0 0 / .58));

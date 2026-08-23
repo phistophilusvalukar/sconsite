@@ -36,7 +36,7 @@ export const characterLayoutOptions = [
   { value: 'spotlight', label: 'Spotlight', description: 'A dramatic, portrait-led composition with ornamental framing and bold typography.' },
   { value: 'saga', label: 'Saga', description: 'An epic full-width hero with an arched portrait and sweeping records.' },
   { value: 'cyberpunk', label: 'Splash', description: 'A full-bleed, art-first profile with an overlaid title and a vertical story flow.' },
-  { value: 'nostalgia', label: 'Nostalgia', description: 'A four-tone handheld screen with pixel type, chunky controls, and original Game Boy energy.' }
+  { value: 'nostalgia', label: 'Quest', description: 'A handmade quest board of pinned notes, angled portraits, and layered notices.' }
 ] as const;
 
 export const defaultCharacterProfileSectionVisibility = {
