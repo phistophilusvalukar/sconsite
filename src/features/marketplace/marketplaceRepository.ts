@@ -33,8 +33,12 @@ export async function listShops(): Promise<PlayerShop[]> {
 
 export async function listMyShopCharacters(): Promise<ShopCharacterOption[]> {
   const { data, error } = await supabase.rpc('get_my_shop_characters');
-  if (error) throw error;
-  return z.array(z.object({ id: z.string(), name: z.string(), level: z.number(), avatar: z.string().nullish() })).parse(data ?? []).map(row => ({ ...row, avatar: row.avatar ?? undefined }));
+  if (error) throw new Error(error.message);
+  try {
+    return z.array(z.object({ id: z.string(), name: z.string(), level: z.number(), avatar: z.string().nullish() })).parse(data ?? []).map(row => ({ ...row, avatar: row.avatar ?? undefined }));
+  } catch (error) {
+    throw new Error(`Character data returned by the server was invalid: ${error instanceof Error ? error.message : 'unknown response'}`);
+  }
 }
 
 export async function saveShop(shop: Omit<PlayerShop, 'id' | 'ownerId' | 'ownerName' | 'ownerAvatar' | 'characterName' | 'characterAvatar' | 'updatedAt'> & { id?: string }): Promise<string> {
