@@ -60,4 +60,6 @@ export const DATABASE_TABLES = {
   CAMPAIGN_JOURNAL_ENTRIES: 'campaign_journal_entries',
   TACTICAL_PUZZLE_DESIGNS: 'tactical_puzzle_designs',
   TACTICAL_PUZZLE_PROGRESS: 'tactical_puzzle_progress',
+  PLAYER_SHOPS: 'player_shops',
+  SHOP_COMMISSIONS: 'shop_commissions',
 };

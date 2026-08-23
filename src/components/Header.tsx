@@ -6,7 +6,7 @@ import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
 import DiscordLogin from './DiscordLogin';
 
-type PreloadableRoute = '/' | '/about' | '/lore' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/ticket-log' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/citadel-tactics' | '/tactical-puzzles' | '/campaign-objectives' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
+type PreloadableRoute = '/' | '/about' | '/lore' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/marketplace' | '/ticket-log' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/citadel-tactics' | '/tactical-puzzles' | '/campaign-objectives' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -17,6 +17,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/guilds': () => import('../pages/GuildsPage'),
   '/schedule': () => import('../pages/SchedulePage'),
   '/games': () => import('../pages/GamesPage'),
+  '/marketplace': () => import('../features/marketplace/MarketplacePage'),
   '/ticket-log': () => import('../pages/TicketLogsPage'),
   '/arcana': () => import('../pages/CardGamePage'),
   '/underhaul/contracts': () => import('../features/contracts/routes/ContractsOfficePage'),
@@ -51,7 +52,7 @@ const ticketLogNavigation: NavigationItem = {
 
 const navigationGroups: NavigationGroup[] = [
   { name: 'Discover', pageKeys: ['home', 'about', 'lore', 'news'], adminItems: [ticketLogNavigation] },
-  { name: 'People', pageKeys: ['characters', 'guilds', 'citizens'] },
+  { name: 'People', pageKeys: ['characters', 'guilds', 'citizens', 'marketplace'] },
   { name: 'Play', pageKeys: ['schedule', 'games'] },
   { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals', 'citadel-tactics'] },
   { name: 'Tactics', pageKeys: ['tactical-puzzles'] },

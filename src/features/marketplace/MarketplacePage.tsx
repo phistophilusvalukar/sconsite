@@ -1,0 +1,130 @@
+import { useEffect, useMemo, useState } from 'react';
+import { BadgePercent, Check, ChevronRight, Hammer, Plus, Search, Sparkles, X } from 'lucide-react';
+import { useAuth } from '../../context/useAuth';
+import { listShops, saveShop, submitCommission } from './marketplaceRepository';
+import { assuranceDc, emptyBonus, totalBonus, type BonusBreakdown, type CommissionDraft, type PlayerShop, type ShopKind } from './types';
+import './marketplace.css';
+
+const blankShop = (kind: ShopKind = 'crafting') => ({
+  kind, title: '', description: '', imageUrl: '', discordUserId: '', tags: [] as string[], specialty: '', tier: 1,
+  overallDiscountPercent: 0, feats: [], craftingBonus: emptyBonus(), craftingAssurance: false,
+  craftingDegreeBoost: '', ritualSkills: [], rituals: [], contributors: [], acceptsCommissions: true
+});
+
+export default function MarketplacePage() {
+  const { isAuthenticated, user } = useAuth();
+  const [shops, setShops] = useState<PlayerShop[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [kind, setKind] = useState<'all' | ShopKind>('all');
+  const [tag, setTag] = useState('');
+  const [tier, setTier] = useState(0);
+  const [minimumBonus, setMinimumBonus] = useState(0);
+  const [selected, setSelected] = useState<PlayerShop | null>(null);
+  const [editing, setEditing] = useState(false);
+
+  const refresh = () => listShops().then(setShops).catch(err => setError(err instanceof Error ? err.message : 'Unable to load shops')).finally(() => setLoading(false));
+  useEffect(() => { void refresh(); }, []);
+
+  const tags = useMemo(() => [...new Set(shops.flatMap(shop => shop.tags))].sort(), [shops]);
+  const visible = useMemo(() => shops.filter(shop => {
+    const searchable = `${shop.title} ${shop.ownerName} ${shop.description} ${shop.specialty ?? ''} ${shop.tags.join(' ')}`.toLowerCase();
+    const bestBonus = shop.kind === 'crafting' ? totalBonus(shop.craftingBonus) : Math.max(0, ...shop.ritualSkills.map(skill => totalBonus(skill.bonus)));
+    return (!query || searchable.includes(query.toLowerCase())) && (kind === 'all' || shop.kind === kind)
+      && (!tag || shop.tags.includes(tag)) && (!tier || shop.tier >= tier) && (!minimumBonus || bestBonus >= minimumBonus);
+  }), [shops, query, kind, tag, tier, minimumBonus]);
+
+  return <main className="marketplace-shell">
+    <header className="marketplace-hero">
+      <p className="marketplace-kicker">The Convergence Exchange</p>
+      <h1>Commission extraordinary work.</h1>
+      <p>Find a specialist, inspect every modifier, and send a detailed request without chasing down a Discord thread.</p>
+      {isAuthenticated && <button className="marketplace-primary" onClick={() => setEditing(true)}><Plus /> {shops.some(shop => shop.ownerId === user?.id) ? 'Manage my shop' : 'Open a shop'}</button>}
+    </header>
+
+    <section className="marketplace-toolbar" aria-label="Marketplace filters">
+      <label className="marketplace-search"><Search /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search shops, specialties, or owners" /></label>
+      <select value={kind} onChange={event => setKind(event.target.value as typeof kind)}><option value="all">All shop types</option><option value="crafting">Crafting</option><option value="ritual">Rituals</option></select>
+      <select value={tag} onChange={event => setTag(event.target.value)}><option value="">All tags</option>{tags.map(value => <option key={value}>{value}</option>)}</select>
+      <label>Tier ≥ <input type="number" min="0" max="20" value={tier} onChange={event => setTier(Number(event.target.value))} /></label>
+      <label>Bonus ≥ <input type="number" min="0" max="50" value={minimumBonus} onChange={event => setMinimumBonus(Number(event.target.value))} /></label>
+    </section>
+
+    {error && <p className="marketplace-error">{error}</p>}
+    {loading ? <p className="marketplace-empty">Consulting the market ledger…</p> : visible.length === 0 ? <p className="marketplace-empty">No shops match these filters.</p> :
+      <section className="shop-grid">{visible.map(shop => <ShopCard key={shop.id} shop={shop} onClick={() => setSelected(shop)} />)}</section>}
+    {selected && <ShopDetail shop={selected} authenticated={isAuthenticated} onClose={() => setSelected(null)} />}
+    {editing && <ShopEditor existing={shops.find(shop => shop.ownerId === user?.id)} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void refresh(); }} />}
+  </main>;
+}
+
+function ShopCard({ shop, onClick }: { shop: PlayerShop; onClick: () => void }) {
+  const primaryBonus = shop.kind === 'crafting' ? totalBonus(shop.craftingBonus) : Math.max(0, ...shop.ritualSkills.map(skill => totalBonus(skill.bonus)));
+  return <button className="shop-card" onClick={onClick}>
+    <div className="shop-card-art" style={shop.imageUrl ? { backgroundImage: `linear-gradient(180deg, transparent, #111615), url(${shop.imageUrl})` } : undefined}>
+      <span>{shop.kind === 'crafting' ? <Hammer /> : <Sparkles />}{shop.kind}</span>
+    </div>
+    <div className="shop-card-body"><div className="shop-card-title"><div><small>{shop.ownerName}</small><h2>{shop.title}</h2></div><ChevronRight /></div>
+      <p>{shop.description}</p><div className="shop-metrics"><b>Tier {shop.tier}</b><b>+{primaryBonus} best bonus</b><b>{shop.overallDiscountPercent}% off</b></div>
+      <div className="shop-tags">{shop.tags.slice(0, 4).map(value => <span key={value}>{value}</span>)}</div>
+    </div>
+  </button>;
+}
+
+function BonusPanel({ label, bonus, assurance, degreeBoost }: { label: string; bonus: BonusBreakdown; assurance: boolean; degreeBoost: string }) {
+  return <div className="bonus-panel"><div><small>{label}</small><strong>+{totalBonus(bonus)}</strong></div>
+    <dl>{Object.entries(bonus).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{Number(value) >= 0 ? '+' : ''}{value}</dd></div>)}</dl>
+    <p>Assurance DC <b>{assurance ? assuranceDc(bonus) : '—'}</b></p>{degreeBoost && <p><b>Degree boost:</b> {degreeBoost}</p>}
+  </div>;
+}
+
+function ShopDetail({ shop, authenticated, onClose }: { shop: PlayerShop; authenticated: boolean; onClose: () => void }) {
+  const [commissioning, setCommissioning] = useState(false);
+  return <div className="marketplace-modal" role="dialog" aria-modal="true"><article className="shop-detail">
+    <button className="modal-close" onClick={onClose} aria-label="Close"><X /></button>
+    {shop.imageUrl && <img className="shop-detail-image" src={shop.imageUrl} alt="" />}
+    <p className="marketplace-kicker">{shop.kind} shop · Tier {shop.tier}</p><h1>{shop.title}</h1><p className="shop-owner">Operated by {shop.ownerName}</p><p className="shop-description">{shop.description}</p>
+    <div className="shop-tags">{shop.tags.map(value => <span key={value}>{value}</span>)}</div>
+    <section className="detail-summary"><div><BadgePercent /><b>{shop.overallDiscountPercent}%</b><span>overall discount</span></div><div><Check /><b>Tier {shop.tier}</b><span>maximum offering</span></div></section>
+    {shop.feats.length > 0 && <section><h2>Discount feats</h2><div className="listing-table">{shop.feats.map((feat, index) => <div key={`${feat.name}-${index}`}><b>{feat.name}</b><span>{feat.appliesTo}</span><strong>-{feat.discountPercent}%</strong></div>)}</div></section>}
+    {shop.kind === 'crafting' ? <section><h2>{shop.specialty || 'Crafting'} check</h2><BonusPanel label="Crafting modifier" bonus={shop.craftingBonus} assurance={shop.craftingAssurance} degreeBoost={shop.craftingDegreeBoost} /></section> : <>
+      <section><h2>Disclosed ritual skills</h2><div className="bonus-grid">{shop.ritualSkills.map(skill => <BonusPanel key={skill.skill} label={skill.skill} bonus={skill.bonus} assurance={skill.assurance} degreeBoost={skill.degreeBoost} />)}</div></section>
+      <section><h2>Available rituals</h2><div className="listing-table">{shop.rituals.map((ritual, index) => <div key={`${ritual.name}-${index}`}><a href={ritual.aonUrl} target="_blank" rel="noreferrer"><b>{ritual.name}</b></a><span>Tier {ritual.tier} · {ritual.bypassesSecondaries ? 'No secondary checks required' : `Secondaries: ${ritual.secondarySkills.join(', ')}`}</span></div>)}</div></section>
+      {shop.contributors.length > 0 && <section><h2>Contributors</h2><div className="listing-table">{shop.contributors.map((person, index) => <div key={`${person.name}-${index}`}><b>{person.name}</b><span>{person.skills.join(', ')}</span><strong>+{person.bonus}</strong></div>)}</div></section>}
+    </>}
+    {shop.acceptsCommissions && <button className="marketplace-primary wide" disabled={!authenticated} onClick={() => setCommissioning(true)}>{authenticated ? 'Request a commission' : 'Sign in to commission'}</button>}
+    {commissioning && <CommissionForm shop={shop} onClose={() => setCommissioning(false)} />}
+  </article></div>;
+}
+
+function CommissionForm({ shop, onClose }: { shop: PlayerShop; onClose: () => void }) {
+  const [draft, setDraft] = useState<CommissionDraft>({ shopId: shop.id, itemName: '', aonUrl: '', itemTier: 1, quantity: 1, details: '', needsSecondaryHelp: false });
+  const [status, setStatus] = useState<'idle' | 'saving' | 'done'>('idle'); const [error, setError] = useState('');
+  const set = <K extends keyof CommissionDraft>(key: K, value: CommissionDraft[K]) => setDraft(current => ({ ...current, [key]: value }));
+  async function submit(event: React.FormEvent) { event.preventDefault(); setStatus('saving'); setError(''); try { await submitCommission(draft); setStatus('done'); } catch (err) { setError(err instanceof Error ? err.message : 'Commission could not be sent'); setStatus('idle'); } }
+  if (status === 'done') return <div className="commission-form success"><Check /><h2>Request delivered</h2><p>The shop owner has been alerted on Discord.</p><button onClick={onClose}>Close</button></div>;
+  return <form className="commission-form" onSubmit={submit}><h2>Commission request</h2><p>Provide the exact Archives of Nethys page so everyone is discussing the same offering.</p>
+    <div className="form-grid"><label>Item or ritual name<input required value={draft.itemName} onChange={e => set('itemName', e.target.value)} /></label><label>Archives of Nethys URL<input required type="url" pattern="https://2e\.aonprd\.com/.*" placeholder="https://2e.aonprd.com/..." value={draft.aonUrl} onChange={e => set('aonUrl', e.target.value)} /></label><label>Tier / level<input type="number" min="0" max="25" value={draft.itemTier} onChange={e => set('itemTier', Number(e.target.value))} /></label><label>Quantity<input type="number" min="1" max="99" value={draft.quantity} onChange={e => set('quantity', Number(e.target.value))} /></label><label>Budget (optional)<input value={draft.budget ?? ''} onChange={e => set('budget', e.target.value)} /></label><label>Needed by (optional)<input type="date" value={draft.deadline ?? ''} onChange={e => set('deadline', e.target.value)} /></label></div>
+    {shop.kind === 'ritual' && <label className="checkbox"><input type="checkbox" checked={draft.needsSecondaryHelp} onChange={e => set('needsSecondaryHelp', e.target.checked)} /> I also need help filling secondary checks</label>}
+    <label>Requirements, materials, and notes<textarea required rows={5} value={draft.details} onChange={e => set('details', e.target.value)} /></label>{error && <p className="marketplace-error">{error}</p>}
+    <div className="form-actions"><button type="button" onClick={onClose}>Cancel</button><button className="marketplace-primary" disabled={status === 'saving'}>{status === 'saving' ? 'Sending…' : 'Send request & Discord alert'}</button></div>
+  </form>;
+}
+
+function ShopEditor({ existing, onClose, onSaved }: { existing?: PlayerShop; onClose: () => void; onSaved: () => void }) {
+  const [shop, setShop] = useState(existing ? { ...existing } : blankShop()); const [tagText, setTagText] = useState(shop.tags.join(', ')); const [saving, setSaving] = useState(false); const [error, setError] = useState('');
+  const set = (key: string, value: unknown) => setShop(current => ({ ...current, [key]: value }));
+  async function submit(event: React.FormEvent) { event.preventDefault(); setSaving(true); setError(''); try { await saveShop({ ...shop, id: existing?.id, tags: tagText.split(',').map(value => value.trim()).filter(Boolean) }); onSaved(); } catch (err) { setError(err instanceof Error ? err.message : 'Shop could not be saved'); setSaving(false); } }
+  return <div className="marketplace-modal"><form className="shop-editor" onSubmit={submit}><button type="button" className="modal-close" onClick={onClose}><X /></button><p className="marketplace-kicker">Shop profile</p><h1>{existing ? 'Manage your shop' : 'Open your shop'}</h1>
+    <div className="form-grid"><label>Shop type<select value={shop.kind} onChange={e => setShop({ ...blankShop(e.target.value as ShopKind), title: shop.title, description: shop.description, tags: shop.tags, discordUserId: shop.discordUserId })}><option value="crafting">Crafting</option><option value="ritual">Ritual</option></select></label><label>Title<input required minLength={3} maxLength={80} value={shop.title} onChange={e => set('title', e.target.value)} /></label><label className="span-2">Description<textarea required rows={4} maxLength={1200} value={shop.description} onChange={e => set('description', e.target.value)} /></label><label>Optional image URL<input type="url" value={shop.imageUrl ?? ''} onChange={e => set('imageUrl', e.target.value)} /></label><label>Discord user ID for @mentions<input inputMode="numeric" pattern="[0-9]{17,20}" value={shop.discordUserId ?? ''} onChange={e => set('discordUserId', e.target.value)} placeholder="Enable commission alerts" /></label><label>Tags, comma separated<input value={tagText} onChange={e => setTagText(e.target.value)} placeholder="weapons, alchemy, rush orders" /></label><label>Maximum tier<input type="number" min="1" max="20" value={shop.tier} onChange={e => set('tier', Number(e.target.value))} /></label><label>Overall discount %<input type="number" min="0" max="100" value={shop.overallDiscountPercent} onChange={e => set('overallDiscountPercent', Number(e.target.value))} /></label></div>
+    {shop.kind === 'crafting' ? <><label>Current specialty<input value={shop.specialty ?? ''} onChange={e => set('specialty', e.target.value)} /></label><BonusEditor bonus={shop.craftingBonus} onChange={value => set('craftingBonus', value)} /><label className="checkbox"><input type="checkbox" checked={shop.craftingAssurance} onChange={e => set('craftingAssurance', e.target.checked)} /> Has Assurance</label><label>Degree-of-success boost<input value={shop.craftingDegreeBoost} onChange={e => set('craftingDegreeBoost', e.target.value)} placeholder="e.g. critical failures become failures" /></label></> : <RitualEditor shop={shop} set={set} />}
+    <FeatEditor feats={shop.feats} onChange={value => set('feats', value)} /><label className="checkbox"><input type="checkbox" checked={shop.acceptsCommissions} onChange={e => set('acceptsCommissions', e.target.checked)} /> Accepting commissions</label>{error && <p className="marketplace-error">{error}</p>}<div className="form-actions"><button type="button" onClick={onClose}>Cancel</button><button className="marketplace-primary" disabled={saving}>{saving ? 'Saving…' : 'Publish shop'}</button></div>
+  </form></div>;
+}
+
+function BonusEditor({ bonus, onChange }: { bonus: BonusBreakdown; onChange: (bonus: BonusBreakdown) => void }) { return <fieldset className="bonus-editor"><legend>Bonus breakdown · total +{totalBonus(bonus)}</legend>{Object.entries(bonus).map(([key, value]) => <label key={key}>{key}<input type="number" value={value} onChange={e => onChange({ ...bonus, [key]: Number(e.target.value) })} /></label>)}</fieldset>; }
+function FeatEditor({ feats, onChange }: { feats: PlayerShop['feats']; onChange: (value: PlayerShop['feats']) => void }) { return <section className="repeat-editor"><div><h2>Discount feats</h2><button type="button" onClick={() => onChange([...feats, { name: '', discountPercent: 0, appliesTo: '' }])}><Plus /> Add feat</button></div>{feats.map((feat, index) => <div className="repeat-row" key={index}><input placeholder="Feat name" value={feat.name} onChange={e => onChange(feats.map((v, i) => i === index ? { ...v, name: e.target.value } : v))} /><input placeholder="Applies to" value={feat.appliesTo} onChange={e => onChange(feats.map((v, i) => i === index ? { ...v, appliesTo: e.target.value } : v))} /><input type="number" aria-label="Discount percent" value={feat.discountPercent} onChange={e => onChange(feats.map((v, i) => i === index ? { ...v, discountPercent: Number(e.target.value) } : v))} /><button type="button" onClick={() => onChange(feats.filter((_, i) => i !== index))}><X /></button></div>)}</section>; }
+function RitualEditor({ shop, set }: { shop: ReturnType<typeof blankShop> | PlayerShop; set: (key: string, value: unknown) => void }) { return <><section className="repeat-editor"><div><h2>Ritual skills</h2><button type="button" onClick={() => set('ritualSkills', [...shop.ritualSkills, { skill: '', bonus: emptyBonus(), assurance: false, degreeBoost: '' }])}><Plus /> Add skill</button></div>{shop.ritualSkills.map((skill, index) => <div className="ritual-block" key={index}><input placeholder="Skill name" value={skill.skill} onChange={e => set('ritualSkills', shop.ritualSkills.map((v, i) => i === index ? { ...v, skill: e.target.value } : v))} /><BonusEditor bonus={skill.bonus} onChange={bonus => set('ritualSkills', shop.ritualSkills.map((v, i) => i === index ? { ...v, bonus } : v))} /><label className="checkbox"><input type="checkbox" checked={skill.assurance} onChange={e => set('ritualSkills', shop.ritualSkills.map((v, i) => i === index ? { ...v, assurance: e.target.checked } : v))} /> Assurance</label><input placeholder="Degree boost" value={skill.degreeBoost} onChange={e => set('ritualSkills', shop.ritualSkills.map((v, i) => i === index ? { ...v, degreeBoost: e.target.value } : v))} /></div>)}</section><section className="repeat-editor"><div><h2>Available rituals</h2><button type="button" onClick={() => set('rituals', [...shop.rituals, { name: '', tier: 1, aonUrl: '', secondarySkills: [], bypassesSecondaries: false }])}><Plus /> Add ritual</button></div>{shop.rituals.map((ritual, index) => <div className="repeat-row ritual" key={index}><input placeholder="Ritual" value={ritual.name} onChange={e => set('rituals', shop.rituals.map((v, i) => i === index ? { ...v, name: e.target.value } : v))} /><input type="number" min="1" max="20" aria-label="Ritual tier" value={ritual.tier} onChange={e => set('rituals', shop.rituals.map((v, i) => i === index ? { ...v, tier: Number(e.target.value) } : v))} /><input placeholder="AoN URL" value={ritual.aonUrl} onChange={e => set('rituals', shop.rituals.map((v, i) => i === index ? { ...v, aonUrl: e.target.value } : v))} /><input placeholder="Secondary skills" value={ritual.secondarySkills.join(', ')} onChange={e => set('rituals', shop.rituals.map((v, i) => i === index ? { ...v, secondarySkills: e.target.value.split(',').map(x => x.trim()).filter(Boolean) } : v))} /><label className="checkbox"><input type="checkbox" checked={ritual.bypassesSecondaries} onChange={e => set('rituals', shop.rituals.map((v, i) => i === index ? { ...v, bypassesSecondaries: e.target.checked } : v))} /> Bypass secondaries</label></div>)}</section><ContributorEditor contributors={shop.contributors} onChange={value => set('contributors', value)} /></>; }
+
+function ContributorEditor({ contributors, onChange }: { contributors: PlayerShop['contributors']; onChange: (value: PlayerShop['contributors']) => void }) { return <section className="repeat-editor"><div><h2>Ritual contributors</h2><button type="button" onClick={() => onChange([...contributors, { name: '', discordUserId: '', skills: [], bonus: 0 }])}><Plus /> Add contributor</button></div>{contributors.map((person, index) => <div className="repeat-row ritual" key={index}><input placeholder="Display name" value={person.name} onChange={e => onChange(contributors.map((v, i) => i === index ? { ...v, name: e.target.value } : v))} /><input inputMode="numeric" placeholder="Discord user ID" value={person.discordUserId ?? ''} onChange={e => onChange(contributors.map((v, i) => i === index ? { ...v, discordUserId: e.target.value } : v))} /><input placeholder="Skills, comma separated" value={person.skills.join(', ')} onChange={e => onChange(contributors.map((v, i) => i === index ? { ...v, skills: e.target.value.split(',').map(x => x.trim()).filter(Boolean) } : v))} /><input type="number" aria-label="Contributor bonus" value={person.bonus} onChange={e => onChange(contributors.map((v, i) => i === index ? { ...v, bonus: Number(e.target.value) } : v))} /></div>)}</section>; }

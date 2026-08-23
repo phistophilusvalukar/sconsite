@@ -28,6 +28,7 @@ export type SitePageKey =
   | 'guilds'
   | 'schedule'
   | 'games'
+  | 'marketplace'
   | 'arcana'
   | 'underhaul-contracts'
   | 'arcane-locks'
@@ -112,6 +113,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Game listings, applications, rosters, and archives.',
     icon: Ticket,
     routePrefixes: ['/games']
+  },
+  {
+    key: 'marketplace',
+    name: 'Marketplace',
+    href: '/marketplace',
+    description: 'Player crafting and ritual shops, searchable listings, and commissions.',
+    icon: Briefcase,
+    routePrefixes: ['/marketplace']
   },
   {
     key: 'arcana',
