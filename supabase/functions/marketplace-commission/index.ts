@@ -12,12 +12,16 @@ Deno.serve(async request => {
   const payload = await request.json();
   const { data, error } = await client.rpc('create_shop_commission_command', { p_commission: payload });
   if (error) return json({ error: error.message }, 400);
+  const { data: delivery, error: deliveryError } = await client.rpc('get_commission_discord_delivery_command', { p_commission_id: data.commissionId });
+  if (deliveryError) return json({ error: 'Commission saved, but notification preferences could not be checked', commissionId: data.commissionId }, 503);
+  if (!delivery?.enabled) return json({ commissionId: data.commissionId, discordNotification: 'disabled' });
   const webhook = Deno.env.get('MARKETPLACE_DISCORD_WEBHOOK_URL');
   if (!webhook) return json({ error: 'Commission saved, but Discord delivery is not configured', commissionId: data.commissionId }, 503);
   const siteOrigin = Deno.env.get('SITE_ORIGIN') ?? '';
-  const mention = /^\d{17,20}$/.test(data.ownerDiscordId ?? '') ? `<@${data.ownerDiscordId}>` : `**${data.shopTitle} owner**`;
+  const discordUserId = delivery.discordUserId ?? '';
+  const mention = /^\d{17,20}$/.test(discordUserId) ? `<@${discordUserId}>` : `**${data.shopTitle} owner**`;
   const discordResponse = await fetch(webhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-    content: `${mention} — a new ${data.shopKind} commission has arrived.`, allowed_mentions: { users: /^\d{17,20}$/.test(data.ownerDiscordId ?? '') ? [data.ownerDiscordId] : [] },
+    content: `${mention} — a new ${data.shopKind} commission has arrived.`, allowed_mentions: { users: /^\d{17,20}$/.test(discordUserId) ? [discordUserId] : [] },
     embeds: [{ title: payload.itemName, url: payload.aonUrl, color: data.shopKind === 'ritual' ? 0x8b5cf6 : 0xd1cabf, fields: [
       { name: 'Requested by', value: data.requesterName, inline: true }, { name: 'Tier / quantity', value: `${payload.itemTier} / ${payload.quantity}`, inline: true },
       { name: 'Budget', value: payload.budget || 'Not specified', inline: true }, { name: 'Needed by', value: payload.deadline || 'No deadline', inline: true },

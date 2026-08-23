@@ -47,6 +47,7 @@ export interface PlayerShop {
   characterName: string;
   characterAvatar?: string;
   discordUserId?: string;
+  discordPingsEnabled: boolean;
   kind: ShopKind;
   title: string;
   description: string;
@@ -64,6 +65,27 @@ export interface PlayerShop {
   contributors: ShopContributor[];
   acceptsCommissions: boolean;
   updatedAt: string;
+}
+
+export type CommissionStatus = 'requested' | 'accepted' | 'declined' | 'completed' | 'cancelled';
+export interface ShopCommission {
+  id: string;
+  shopId: string;
+  shopTitle: string;
+  characterName: string;
+  requesterName: string;
+  itemName: string;
+  aonUrl: string;
+  itemTier: number;
+  quantity: number;
+  budget?: string;
+  deadline?: string;
+  details: string;
+  needsSecondaryHelp: boolean;
+  status: CommissionStatus;
+  createdAt: string;
+  updatedAt: string;
+  perspective: 'owner' | 'requester';
 }
 
 export interface CommissionDraft {
