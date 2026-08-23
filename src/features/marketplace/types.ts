@@ -1,7 +1,9 @@
 export type ShopKind = 'crafting' | 'ritual';
+export type ProficiencyRank = 'untrained' | 'trained' | 'expert' | 'master' | 'legendary';
 
 export interface BonusBreakdown {
   level: number;
+  proficiency: ProficiencyRank;
   ability: number;
   item: number;
   circumstance: number;
@@ -41,6 +43,9 @@ export interface PlayerShop {
   ownerId: string;
   ownerName: string;
   ownerAvatar?: string;
+  characterId: string;
+  characterName: string;
+  characterAvatar?: string;
   discordUserId?: string;
   kind: ShopKind;
   title: string;
@@ -73,7 +78,8 @@ export interface CommissionDraft {
   needsSecondaryHelp: boolean;
 }
 
-export const emptyBonus = (): BonusBreakdown => ({ level: 0, ability: 0, item: 0, circumstance: 0, status: 0 });
-export const totalBonus = (bonus: BonusBreakdown) => Object.values(bonus).reduce((total, value) => total + Number(value || 0), 0);
-export const assuranceDc = (bonus: BonusBreakdown) => 10 + Number(bonus.level || 0) + Number(bonus.item || 0) + Number(bonus.circumstance || 0) + Number(bonus.status || 0);
-
+export interface ShopCharacterOption { id: string; name: string; level: number; avatar?: string; }
+export const proficiencyValues: Record<ProficiencyRank, number> = { untrained: 0, trained: 2, expert: 4, master: 6, legendary: 8 };
+export const emptyBonus = (level = 0): BonusBreakdown => ({ level, proficiency: 'untrained', ability: 0, item: 0, circumstance: 0, status: 0 });
+export const totalBonus = (bonus: BonusBreakdown) => Number(bonus.level || 0) + proficiencyValues[bonus.proficiency] + Number(bonus.ability || 0) + Number(bonus.item || 0) + Number(bonus.circumstance || 0) + Number(bonus.status || 0);
+export const assuranceDc = (bonus: BonusBreakdown) => 10 + Number(bonus.level || 0) + proficiencyValues[bonus.proficiency];
