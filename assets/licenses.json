@@ -1,30 +1,5 @@
 {
   "schemaVersion": 1,
-  "assets": [
-    {
-      "path": "public/assets/profiles/quest-parchment-texture.jpg",
-      "source": "Generated for this project with OpenAI image generation on 2026-08-25",
-      "license": "Project-owned generated asset; use governed by the project's OpenAI terms",
-      "notes": "Seamless aged-parchment texture; generated without third-party reference media."
-    },
-    {
-      "path": "public/assets/profiles/quest-iron-nail.png",
-      "source": "Generated for this project with OpenAI image generation on 2026-08-25",
-      "license": "Project-owned generated asset; use governed by the project's OpenAI terms",
-      "notes": "Transparent hand-forged iron nail sprite. Regenerated at higher source resolution for a sharper small-size silhouette; a user-supplied quest-board image was used only as a scale and mood reference."
-    },
-    {
-      "path": "public/assets/profiles/quest-parchment-frame.png",
-      "source": "Generated for this project with OpenAI image generation on 2026-08-25",
-      "license": "Project-owned generated asset; use governed by the project's OpenAI terms",
-      "notes": "Transparent deckled parchment perimeter used as a scalable CSS border frame; a user-supplied quest-board image was used only as a material and edge-quality reference."
-    },
-    {
-      "path": "public/assets/profiles/quest-board-wood.jpg",
-      "source": "Generated for this project with OpenAI image generation on 2026-08-25",
-      "license": "Project-owned generated asset; use governed by the project's OpenAI terms",
-      "notes": "Original weathered vertical-timber quest-board texture. A user-supplied quest-board image was used only as a material and mood reference; no reference artwork is bundled."
-    }
-  ],
+  "assets": [],
   "note": "Generated media is tracked here with source and usage metadata."
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  characterLayoutOptions,
   characterProfileCustomizationSchema,
   defaultCharacterProfileSectionVisibility,
   resolveStoredCharacterProfile
@@ -48,6 +49,12 @@ const validProfile = {
 };
 
 describe('character profile customization', () => {
+  it('presents the persisted nostalgia layout as Minimal', () => {
+    expect(characterLayoutOptions.find(option => option.value === 'nostalgia')).toMatchObject({
+      label: 'Minimal'
+    });
+  });
+
   it('accepts a complete profile presentation', () => {
     expect(characterProfileCustomizationSchema.safeParse(validProfile).success).toBe(true);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, themeMode: 'light' }).success).toBe(true);

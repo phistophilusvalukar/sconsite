@@ -803,194 +803,106 @@
 .character-profile-document[data-layout='cyberpunk'] .character-profile-records { min-height: 680px; margin: 0 clamp(24px, 6vw, 96px) clamp(24px, 6vw, 96px); border: 1px solid color-mix(in srgb, var(--character-accent) 28%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--character-panel) 92%, var(--character-depth)); }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-records > div:first-child { background: color-mix(in srgb, var(--character-accent) 7%, transparent); }
 
-/* Quest: a clustered collection of physical notices on a weathered timber board.
-   The persisted key remains `nostalgia` so existing profiles migrate visually. */
+/* Minimal: a quiet, contemporary profile with strong typography and open space.
+   The persisted key remains `nostalgia` so existing Quest profiles update automatically. */
 .character-profile-document[data-layout='nostalgia'] {
-  --quest-paper: color-mix(in srgb, var(--character-panel) 78%, #d8b874 22%);
-  overflow: visible;
-  isolation: isolate;
-  padding: 112px clamp(18px, 3.4vw, 52px) clamp(44px, 5vw, 76px);
-  border: 10px solid #17110d;
-  border-radius: 2px;
-  background-color: #211914;
-  background-image:
-    linear-gradient(rgb(9 6 4 / .18), rgb(9 6 4 / .08)),
-    url('/assets/profiles/quest-board-wood.jpg');
-  background-position: center;
-  background-size: auto, 900px 900px;
-  box-shadow:
-    0 38px 100px rgb(0 0 0 / .56),
-    inset 0 0 0 2px rgb(210 169 101 / .16),
-    inset 0 0 90px rgb(0 0 0 / .72);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--character-ink) 12%, transparent);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--character-base) 97%, var(--character-depth));
+  box-shadow: 0 28px 80px color-mix(in srgb, var(--character-drop-shadow) 70%, transparent);
 }
 .character-profile-document[data-layout='nostalgia']::before {
-  content: 'QUEST BOARD';
-  position: absolute;
-  z-index: 2;
-  top: 24px;
-  left: 50%;
-  color: #d7aa49;
-  font-family: var(--character-title-font);
-  font-size: clamp(1.65rem, 3.5vw, 3.4rem);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: .035em;
-  text-align: center;
-  text-shadow: 0 3px #21140a, 0 7px 15px rgb(0 0 0 / .85);
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-.character-profile-document[data-layout='nostalgia']::after {
   content: '';
   position: absolute;
-  z-index: 1;
-  top: 76px;
-  left: 50%;
-  width: min(410px, 55%);
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #a77a31, transparent);
-  transform: translateX(-50%);
+  z-index: 4;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--character-accent);
 }
+.character-profile-document[data-layout='nostalgia']::after { display: none; }
 .character-profile-document[data-layout='nostalgia'] .character-profile-heading {
-  z-index: 1;
-  box-sizing: border-box;
-  width: min(76%, 920px);
-  min-height: 230px;
-  margin: 0 auto clamp(36px, 5vw, 68px);
-  padding: clamp(42px, 5vw, 70px);
-  border: 18px solid transparent;
-  border-radius: 0;
-  background-color: var(--quest-paper);
-  background-image:
-    linear-gradient(rgb(245 224 174 / .14), rgb(92 54 20 / .08)),
-    url('/assets/profiles/quest-parchment-texture.jpg');
-  background-size: auto, 430px 430px;
-  background-blend-mode: soft-light, multiply;
-  background-clip: padding-box;
-  border-image-source: url('/assets/profiles/quest-parchment-frame.png');
-  border-image-slice: 150;
-  border-image-width: 32px;
-  border-image-outset: 7px;
-  border-image-repeat: stretch;
-  filter: drop-shadow(11px 17px 11px rgb(0 0 0 / .62));
-  transform: rotate(-.55deg);
-}
-.character-profile-document[data-layout='nostalgia'] .character-profile-heading > div:first-child { position: relative; z-index: 1; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-heading > div:last-child { position: relative; z-index: 7; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-heading::after { right: 7%; bottom: 28px; width: 34%; height: 1px; background: color-mix(in srgb, var(--character-ink) 28%, transparent); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-kicker { color: color-mix(in srgb, var(--character-accent) 78%, #5a3515); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-heading h2 { text-shadow: 1px 2px rgb(255 244 210 / .25); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-content {
-  grid-template-columns: minmax(0, .88fr) minmax(430px, 1.12fr);
-  min-height: 680px;
-  gap: clamp(20px, 3vw, 44px);
-}
-.character-profile-document[data-layout='nostalgia'] .character-profile-content.has-no-records { grid-template-columns: 1fr; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-core { border: 0; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-identity {
-  grid-template-columns: minmax(170px, .72fr) minmax(0, 1.28fr);
-  gap: clamp(20px, 3vw, 38px);
-  padding: 0;
-}
-.character-profile-document[data-layout='nostalgia'] .character-profile-portrait-column { position: relative; gap: 20px; padding-top: 22px; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-portrait {
-  border: 11px solid var(--character-panel);
-  border-bottom-width: 18px;
-  border-radius: 0;
-  background: var(--character-panel);
-  box-shadow: 10px 15px 22px rgb(0 0 0 / .65);
-  filter: sepia(.08) saturate(.85) contrast(1.06);
-  transform: rotate(-2.4deg);
-}
-.character-profile-document[data-layout='nostalgia'] .character-profile-portrait-actions { position: relative; z-index: 8; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-shape-button { border-radius: 3px; box-shadow: 2px 4px 8px rgb(0 0 0 / .45); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-identity > div:last-child { display: grid; align-content: start; gap: 22px; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-rankline {
-  position: relative;
-  box-sizing: border-box;
-  display: grid;
-  gap: 10px;
-  border: 14px solid transparent;
-  padding: 35px 24px 27px;
-  background-color: var(--quest-paper);
-  background-image: url('/assets/profiles/quest-parchment-texture.jpg');
-  background-size: 330px 330px;
-  background-blend-mode: multiply;
-  background-clip: padding-box;
-  border-image-source: url('/assets/profiles/quest-parchment-frame.png');
-  border-image-slice: 150;
-  border-image-width: 27px;
-  border-image-outset: 6px;
-  border-image-repeat: stretch;
-  filter: drop-shadow(7px 10px 7px rgb(0 0 0 / .55));
-  transform: rotate(1.2deg);
-}
-.character-profile-document[data-layout='nostalgia'] .character-profile-rankline span { width: max-content; border-radius: 2px; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-rankline strong { line-height: 1.05; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-facts,
-.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory,
-.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory-empty,
-.character-profile-document[data-layout='nostalgia'] .character-profile-records,
-.character-profile-document[data-layout='nostalgia'] .character-profile-ability,
-.character-profile-document[data-layout='nostalgia'] .character-profile-companion-features {
-  position: relative;
-  overflow: visible;
-  box-sizing: border-box;
-  border: 14px solid transparent;
-  border-radius: 0;
-  background-color: var(--quest-paper) !important;
-  background-image:
-    linear-gradient(rgb(245 224 174 / .12), rgb(90 53 21 / .08)),
-    url('/assets/profiles/quest-parchment-texture.jpg') !important;
-  background-size: auto, 380px 380px !important;
-  background-blend-mode: soft-light, multiply !important;
-  background-clip: padding-box !important;
-  border-image-source: url('/assets/profiles/quest-parchment-frame.png');
-  border-image-slice: 150;
-  border-image-width: 27px;
-  border-image-outset: 6px;
-  border-image-repeat: stretch;
-  filter: drop-shadow(8px 12px 8px rgb(0 0 0 / .58));
-}
-.character-profile-document[data-layout='nostalgia'] .character-profile-heading::before,
-.character-profile-document[data-layout='nostalgia'] .character-profile-portrait-column::before,
-.character-profile-document[data-layout='nostalgia'] .character-profile-rankline::before,
-.character-profile-document[data-layout='nostalgia'] .character-profile-facts::before,
-.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory::before,
-.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory-empty::before,
-.character-profile-document[data-layout='nostalgia'] .character-profile-records::before,
-.character-profile-document[data-layout='nostalgia'] .character-profile-ability::before,
-.character-profile-document[data-layout='nostalgia'] .character-profile-companion-features::before {
-  content: '';
-  position: absolute;
-  z-index: 9;
-  top: 8px;
-  left: 50%;
-  width: 17px;
-  height: 26px;
-  background: url('/assets/profiles/quest-iron-nail.png') center / contain no-repeat;
-  filter: drop-shadow(0 2px 1px rgb(0 0 0 / .72));
-  pointer-events: none;
-  transform: translateX(-50%) rotate(-3deg);
-}
-.character-profile-document[data-layout='nostalgia'] .character-profile-heading::before { top: 13px; width: 19px; height: 29px; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-portrait-column::before { top: 12px; }
-.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory { min-height: 290px; padding: 38px 24px 28px !important; transform: rotate(-.7deg); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory-empty { min-height: 180px; padding: 38px 24px 28px !important; transform: rotate(-.7deg); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-ability { padding: 35px 16px 18px; transform: rotate(1.3deg); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-records { min-height: 650px; margin: 18px 0 0; transform: rotate(.45deg); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-records > div:first-child { position: relative; z-index: 2; margin: 9px 14px 0; border-bottom-style: dashed; background: color-mix(in srgb, var(--character-accent) 8%, transparent); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-records > div:last-child { position: relative; z-index: 1; padding: clamp(34px, 4vw, 52px) clamp(22px, 3vw, 38px); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-facts { gap: 0; padding: 34px 24px 24px; transform: rotate(-.35deg); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-facts > div {
-  position: static;
-  border: 0;
-  border-bottom: 1px dotted color-mix(in srgb, var(--character-ink) 22%, transparent);
-  border-radius: 0;
-  padding: 15px 12px;
+  min-height: 310px;
+  padding: clamp(48px, 7vw, 96px);
+  border-bottom: 1px solid color-mix(in srgb, var(--character-ink) 10%, transparent);
   background: transparent;
 }
-.character-profile-document[data-layout='nostalgia'] .character-profile-facts > div:nth-child(odd) { border-right: 1px dotted color-mix(in srgb, var(--character-ink) 22%, transparent); }
+.character-profile-document[data-layout='nostalgia'] .character-profile-heading > div:first-child { max-width: 980px; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-heading::after {
+  right: clamp(48px, 7vw, 96px);
+  bottom: 48px;
+  width: min(28vw, 340px);
+  height: 1px;
+  background: color-mix(in srgb, var(--character-ink) 14%, transparent);
+}
+.character-profile-document[data-layout='nostalgia'] .character-profile-kicker { margin-bottom: 18px; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-heading h2 {
+  max-width: 12ch;
+  font-weight: 500;
+  line-height: .9;
+  letter-spacing: -.065em;
+  text-shadow: none;
+}
+.character-profile-document[data-layout='nostalgia'] .character-profile-subtitle { max-width: 58ch; margin-top: 24px; font-style: normal; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-heading > div:last-child button { border-radius: 12px; box-shadow: none; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-content {
+  grid-template-columns: minmax(0, .94fr) minmax(430px, 1.06fr);
+  min-height: 720px;
+}
+.character-profile-document[data-layout='nostalgia'] .character-profile-content.has-no-records { grid-template-columns: 1fr; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-core { border-color: color-mix(in srgb, var(--character-ink) 10%, transparent); }
+.character-profile-document[data-layout='nostalgia'] .character-profile-identity {
+  grid-template-columns: minmax(190px, .72fr) minmax(0, 1.28fr);
+  gap: clamp(30px, 4vw, 56px);
+  padding: clamp(34px, 5vw, 72px);
+}
+.character-profile-document[data-layout='nostalgia'] .character-profile-portrait-column { gap: 20px; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-portrait {
+  border: 10px solid var(--character-panel);
+  border-radius: 22px;
+  background: var(--character-panel);
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--character-drop-shadow) 54%, transparent);
+  filter: saturate(.92) contrast(1.02);
+}
+.character-profile-document[data-layout='nostalgia'] .character-profile-shape-button { box-shadow: none; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-rankline { gap: 16px; padding-bottom: 22px; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-rankline span { border-radius: 8px; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-rankline strong { font-weight: 550; line-height: 1.08; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory,
+.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory-empty,
+.character-profile-document[data-layout='nostalgia'] .character-profile-ability,
+.character-profile-document[data-layout='nostalgia'] .character-profile-companion-features {
+  border: 1px solid color-mix(in srgb, var(--character-ink) 10%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--character-panel) 96%, var(--character-base)) !important;
+  box-shadow: none !important;
+}
+.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory { min-height: 300px; padding: 28px !important; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory-empty { min-height: 160px; padding: 28px !important; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-ability { padding: 20px; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-records {
+  min-height: 660px;
+  margin: 32px 32px 32px 0;
+  border: 1px solid color-mix(in srgb, var(--character-ink) 10%, transparent);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--character-panel) 96%, var(--character-base));
+  box-shadow: none;
+}
+.character-profile-document[data-layout='nostalgia'] .character-profile-records > div:first-child {
+  margin: 8px 8px 0;
+  border: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--character-base) 42%, transparent);
+}
+.character-profile-document[data-layout='nostalgia'] .character-profile-records > div:first-child button { border-radius: 10px; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-records > div:last-child { padding: clamp(24px, 3vw, 40px); }
+.character-profile-document[data-layout='nostalgia'] .character-profile-facts { gap: 12px; }
+.character-profile-document[data-layout='nostalgia'] .character-profile-facts > div {
+  border: 1px solid color-mix(in srgb, var(--character-ink) 9%, transparent);
+  border-radius: 14px;
+  padding: 18px;
+  background: color-mix(in srgb, var(--character-base) 28%, transparent);
+}
 
 .character-profile-state,
 .character-profile-loading {
@@ -1210,10 +1122,9 @@
 .character-layout-sketch-cyberpunk i:first-child { grid-column: 1; grid-row: 1; }
 .character-layout-sketch-cyberpunk i:nth-child(2),
 .character-layout-sketch-cyberpunk i:nth-child(3) { grid-row: 2; }
-.character-layout-sketch-nostalgia { grid-template-columns: 38% 1fr; padding: 4px; }
-.character-layout-sketch-nostalgia i:first-child { transform: rotate(-5deg); box-shadow: 2px 2px 0 color-mix(in srgb, currentColor 24%, transparent); }
-.character-layout-sketch-nostalgia i:nth-child(2) { transform: rotate(3deg); }
-.character-layout-sketch-nostalgia i:nth-child(3) { transform: rotate(-2deg); }
+.character-layout-sketch-nostalgia { grid-template-columns: 34% 1fr; gap: 3px; padding: 5px; border: 1px solid #53605a; border-radius: 7px; background: transparent; }
+.character-layout-sketch-nostalgia i { border-radius: 4px; opacity: .82; }
+.character-layout-sketch-nostalgia i:first-child { box-shadow: none; }
 .character-visibility-options { display: grid; gap: 8px; }
 .character-visibility-options button { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 11px; border: 1px solid #363f3a; border-radius: 8px; color: #808a84; background: #0e1311; text-align: left; }
 .character-visibility-options button.is-visible { border-color: #56645c; color: #d8ddd9; background: #18201c; }
@@ -1228,8 +1139,8 @@
 @media (max-width: 1100px) {
   .character-profile-content { grid-template-columns: 1fr; }
   .character-profile-document[data-layout='dossier'] .character-profile-content { grid-template-columns: 1fr; }
-  .character-profile-document[data-layout='nostalgia'] .character-profile-content { grid-template-columns: 1fr; gap: 44px; }
-  .character-profile-document[data-layout='nostalgia'] .character-profile-records { margin-inline: clamp(12px, 5vw, 56px); }
+  .character-profile-document[data-layout='nostalgia'] .character-profile-content { grid-template-columns: 1fr; }
+  .character-profile-document[data-layout='nostalgia'] .character-profile-records { margin: 0 clamp(28px, 5vw, 56px) clamp(28px, 5vw, 56px); }
   .character-profile-core { border-right: 0; border-bottom: 1px solid color-mix(in srgb, var(--character-accent) 20%, transparent); }
   .character-profile-records { min-height: 620px; }
 }
@@ -1279,17 +1190,13 @@
   .character-profile-document[data-layout='cyberpunk'] .character-profile-ability,
   .character-profile-document[data-layout='cyberpunk'] .character-profile-identity > div:last-child { grid-column: 1; width: 100%; padding-top: 0; margin-top: 48px; }
   .character-profile-document[data-layout='cyberpunk'] .character-profile-records { margin: 0 12px 12px; border-radius: 12px; }
-  .character-profile-document[data-layout='nostalgia'] { padding: 92px 10px 32px; border-width: 6px; }
-  .character-profile-document[data-layout='nostalgia']::before { top: 24px; font-size: clamp(1.5rem, 9vw, 2.7rem); }
-  .character-profile-document[data-layout='nostalgia']::after { top: 66px; }
-  .character-profile-document[data-layout='nostalgia'] .character-profile-heading { width: calc(100% - 18px); min-height: 250px; margin: 0 auto 38px; padding: 48px 26px 34px; }
-  .character-profile-document[data-layout='nostalgia'] .character-profile-heading > div:last-child { align-self: flex-end; }
-  .character-profile-document[data-layout='nostalgia'] .character-profile-content { gap: 40px; }
-  .character-profile-document[data-layout='nostalgia'] .character-profile-portrait-column { width: min(88%, 420px); margin-inline: auto; }
-  .character-profile-document[data-layout='nostalgia'] .character-profile-identity > div:last-child { gap: 30px; }
-  .character-profile-document[data-layout='nostalgia'] .character-profile-records { margin: 0; transform: none; }
+  .character-profile-document[data-layout='nostalgia'] { border-radius: 18px; }
+  .character-profile-document[data-layout='nostalgia'] .character-profile-heading { min-height: 250px; padding: 44px 26px 34px; }
+  .character-profile-document[data-layout='nostalgia'] .character-profile-heading::after { right: 26px; bottom: 24px; width: 34%; }
+  .character-profile-document[data-layout='nostalgia'] .character-profile-heading > div:last-child { align-self: flex-start; }
+  .character-profile-document[data-layout='nostalgia'] .character-profile-portrait-column { width: min(100%, 430px); margin-inline: auto; }
+  .character-profile-document[data-layout='nostalgia'] .character-profile-records { margin: 0 14px 14px; border-radius: 16px; }
   .character-profile-document[data-layout='nostalgia'] .character-profile-facts { grid-template-columns: 1fr; }
-  .character-profile-document[data-layout='nostalgia'] .character-profile-facts > div:nth-child(odd) { border-right: 0; }
   .character-profile-portrait { max-height: 660px; }
   .character-profile-facts { grid-template-columns: 1fr; }
   .character-profile-records > div:last-child { padding: 18px; }
