@@ -225,6 +225,7 @@ interface CharacterRow {
   profile_banner_image_url?: string | null;
   profile_portrait_image_url?: string | null;
   profile_dynamic_portrait_enabled?: boolean | null;
+  profile_splash_hide_portrait_background?: boolean | null;
   profile_portrait_background_url?: string | null;
   profile_portrait_cutout_url?: string | null;
   profile_portrait_background_scale?: number | null;
@@ -716,7 +717,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v9_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v10_command', {
         p_character_id: characterId,
         p_profile: parsed.data,
         p_change_shape_enabled: shape?.enabled ?? false,
@@ -1446,6 +1447,7 @@ export class CharacterService {
         ? dbCharacter.profile_portrait_image_url || undefined
         : undefined,
       profileDynamicPortraitEnabled: Boolean(dbCharacter.profile_dynamic_portrait_enabled),
+      profileSplashHidePortraitBackground: Boolean(dbCharacter.profile_splash_hide_portrait_background),
       profilePortraitBackgroundImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_portrait_background_url || '')
         ? dbCharacter.profile_portrait_background_url || undefined
         : undefined,

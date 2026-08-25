@@ -33,6 +33,7 @@ const validProfile = {
   bannerImageUrl: '',
   portraitImageUrl: '',
   dynamicPortraitEnabled: false,
+  splashHideDynamicPortraitBackground: false,
   portraitBackgroundImageUrl: '',
   portraitCutoutImageUrl: '',
   portraitBackgroundScale: 100,
@@ -179,6 +180,17 @@ describe('character profile customization', () => {
       ...validProfile,
       portraitFocusY: 140
     }).success).toBe(false);
+  });
+
+  it('stores the Splash-only Dynamic Portrait background preference', () => {
+    expect(characterProfileCustomizationSchema.safeParse({
+      ...validProfile,
+      layoutStyle: 'cyberpunk',
+      dynamicPortraitEnabled: true,
+      splashHideDynamicPortraitBackground: true,
+      portraitBackgroundImageUrl: 'https://images.example.com/ruins.webp',
+      portraitCutoutImageUrl: 'https://images.example.com/ranger.png'
+    }).success).toBe(true);
   });
 
   it('validates independent Dynamic Portrait layer placement', () => {

@@ -27,6 +27,7 @@ interface DynamicCharacterPortraitProps {
   overlayClassName?: string;
   title?: string;
   allowDynamic?: boolean;
+  hideBackground?: boolean;
 }
 
 const hasDynamicCharacterPortrait = (character?: PortraitCharacter): boolean => Boolean(
@@ -43,7 +44,8 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
   motion = 'hover',
   overlayClassName,
   title,
-  allowDynamic = false
+  allowDynamic = false,
+  hideBackground = false
 }) => {
   const portraitRef = useRef<HTMLDivElement>(null);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
@@ -154,7 +156,7 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
       onPointerLeave={resetPointer}
       onPointerCancel={resetPointer}
     >
-      <div className="dynamic-character-portrait-frame" aria-hidden="true">
+      {!hideBackground && <div className="dynamic-character-portrait-frame" aria-hidden="true">
         <img
           className="dynamic-character-portrait-background"
           src={character.profilePortraitBackgroundImageUrl}
@@ -164,7 +166,7 @@ const DynamicCharacterPortrait: React.FC<DynamicCharacterPortraitProps> = ({
         />
         <div className="dynamic-character-portrait-depth" />
         <div className="dynamic-character-portrait-glint" />
-      </div>
+      </div>}
       {overlayClassName && <div className={`dynamic-character-portrait-overlay ${overlayClassName}`} aria-hidden="true" />}
       <div className="dynamic-character-portrait-cutout-stage" aria-hidden="true">
         <img

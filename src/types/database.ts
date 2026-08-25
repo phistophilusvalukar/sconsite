@@ -123,6 +123,7 @@ export interface Character {
   profileBannerImageUrl?: string;
   profilePortraitImageUrl?: string;
   profileDynamicPortraitEnabled?: boolean;
+  profileSplashHidePortraitBackground?: boolean;
   profilePortraitBackgroundImageUrl?: string;
   profilePortraitCutoutImageUrl?: string;
   profilePortraitBackgroundScale: number;
