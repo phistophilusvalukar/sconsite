@@ -1057,10 +1057,30 @@
   box-shadow: -30px 0 80px rgb(0 0 0 / .45);
   font-family: Inter, sans-serif;
 }
+.character-editor-reopen {
+  position: fixed;
+  z-index: 80;
+  top: 18px;
+  right: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #59665f;
+  border-radius: 999px;
+  padding: 10px 15px;
+  color: #f0ede7;
+  background: #121715;
+  box-shadow: 0 12px 35px rgb(0 0 0 / .4);
+  font: 750 12px/1 Inter, sans-serif;
+}
+.character-editor-reopen:hover { border-color: #bfa36d; background: #1a211e; }
 .character-editor-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid #303934; }
 .character-editor-heading p { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; color: #bfa36d; font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
 .character-editor-heading h2 { margin: 0; font: 600 1.65rem/1.1 Cinzel, serif; }
-.character-editor-heading > button { color: #a9b0ab; background: transparent; border: 0; }
+.character-editor-heading-actions { display: flex; align-items: center; gap: 7px; }
+.character-editor-heading-actions button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #3e4843; border-radius: 999px; padding: 7px 9px; color: #c7cdc9; background: #1a211e; font-size: 11px; font-weight: 750; }
+.character-editor-heading-actions button:hover { border-color: #bfa36d; color: #f0ede7; }
+.character-editor-heading-actions button:last-child { border-color: transparent; border-radius: 6px; padding-inline: 6px; background: transparent; }
 .character-editor-error { margin-top: 16px; padding: 12px; border: 1px solid #754c49; border-radius: 8px; color: #f2c9c3; background: #2b1c1a; }
 .character-editor-section { padding: 24px 0; border-bottom: 1px solid #29302d; }
 .character-editor-section h3 { margin: 0 0 14px; color: #efece5; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }

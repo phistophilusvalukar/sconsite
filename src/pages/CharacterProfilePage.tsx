@@ -146,6 +146,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isEditorCollapsed, setIsEditorCollapsed] = useState(false);
   const [isEditingCharacter, setIsEditingCharacter] = useState(false);
   const [draft, setDraft] = useState<CharacterProfileCustomizationInput | null>(null);
   const [otherShapeDraft, setOtherShapeDraft] = useState<CharacterProfileCustomizationInput | null>(null);
@@ -291,6 +292,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     setChangeShapeEnabled(Boolean(character.profileChangeShapeEnabled));
     setEditorMessage('');
     setShowDynamicPortraitTutorial(false);
+    setIsEditorCollapsed(false);
     setIsEditingProfile(true);
   };
 
@@ -299,6 +301,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     setOtherShapeDraft(null);
     setEditorMessage('');
     setShowDynamicPortraitTutorial(false);
+    setIsEditorCollapsed(false);
     setIsEditingProfile(false);
   };
 
@@ -450,12 +453,21 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
         </Suspense>
       </div>
 
-      {isEditingProfile && draft && (
+      {isEditingProfile && draft && isEditorCollapsed && (
+        <button type="button" className="character-editor-reopen" onClick={() => setIsEditorCollapsed(false)} aria-label="Show customization editor">
+          <Palette size={18} /> Show editor
+        </button>
+      )}
+
+      {isEditingProfile && draft && !isEditorCollapsed && (
         <div className="character-editor-backdrop">
           <aside className="character-editor" aria-label="Customize character page">
             <div className="character-editor-heading">
               <div><p><Pencil size={14} /> Live preview</p><h2>Customize character page</h2></div>
-              <button type="button" onClick={closeEditor} aria-label="Close editor"><X /></button>
+              <div className="character-editor-heading-actions">
+                <button type="button" onClick={() => setIsEditorCollapsed(true)} aria-label="Hide editor to preview the full page"><Eye size={17} /><span>Preview</span></button>
+                <button type="button" onClick={closeEditor} aria-label="Close editor"><X size={20} /></button>
+              </div>
             </div>
             {editorMessage && <div className="character-editor-error">{editorMessage}</div>}
 
