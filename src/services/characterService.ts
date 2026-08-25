@@ -233,6 +233,7 @@ interface CharacterRow {
   profile_atmosphere_opacity?: number | null;
   profile_atmosphere_parallax?: boolean | null;
   profile_foreground_image_url?: string | null;
+  profile_foreground_anchor?: Character['profileForegroundAnchor'] | null;
   profile_foreground_position_x?: number | null;
   profile_foreground_position_y?: number | null;
   profile_foreground_size?: number | null;
@@ -729,7 +730,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v11_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v13_command', {
         p_character_id: characterId,
         p_profile: parsed.data,
         p_change_shape_enabled: shape?.enabled ?? false,
@@ -1471,6 +1472,7 @@ export class CharacterService {
       profileForegroundImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_foreground_image_url || '')
         ? dbCharacter.profile_foreground_image_url || undefined
         : undefined,
+      profileForegroundAnchor: dbCharacter.profile_foreground_anchor || 'page',
       profileForegroundPositionX: dbCharacter.profile_foreground_position_x ?? 50,
       profileForegroundPositionY: dbCharacter.profile_foreground_position_y ?? 50,
       profileForegroundSize: dbCharacter.profile_foreground_size ?? 50,

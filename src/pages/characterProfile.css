@@ -65,11 +65,55 @@
 }
 
 .character-profile-foreground {
-  position: fixed;
   z-index: 10;
+  pointer-events: none;
+}
+
+.character-profile-view {
+  position: relative;
+}
+
+.character-profile-document > .character-profile-foreground-page {
+  position: absolute;
   inset: 0;
   overflow: hidden;
-  pointer-events: none;
+}
+
+.character-profile-view > :is(.character-profile-foreground-left, .character-profile-foreground-right) {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: visible;
+}
+
+.character-profile-view > .character-profile-foreground-left {
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.character-profile-view > .character-profile-foreground-right {
+  right: 0;
+  transform: translateX(50%);
+}
+
+.character-profile-portrait-stage {
+  position: relative;
+  width: 100%;
+}
+
+.character-profile-portrait-stage > .character-profile-portrait { display: block; }
+.character-profile-portrait-stage > .character-profile-foreground-portrait {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.character-profile-foreground-backstory {
+  position: relative;
+  width: 100%;
+  overflow: visible;
 }
 
 .character-profile-layer-image {
@@ -841,6 +885,7 @@
 .character-profile-document[data-layout='cyberpunk'] .character-profile-identity { display: grid; grid-template-columns: minmax(280px, .72fr) minmax(0, 1.28fr); gap: clamp(28px, 5vw, 72px); padding: 0 clamp(24px, 6vw, 96px) clamp(56px, 8vw, 112px); }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-identity.has-no-portrait { padding-top: min(78vh, 900px); }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-portrait-column { display: contents; }
+.character-profile-document[data-layout='cyberpunk'] .character-profile-portrait-stage { grid-column: 1 / -1; width: 100%; height: min(78vh, 900px); }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-portrait {
   grid-column: 1 / -1;
   width: 100%;
@@ -1031,6 +1076,12 @@
 .character-decoration-sliders span { color: #c7cdc9; font-size: 10px; font-weight: 750; }
 .character-decoration-sliders output { color: #d8bd89; font-size: 10px; font-weight: 800; }
 .character-decoration-sliders input { grid-column: 1 / -1; width: 100%; accent-color: #b99a60; }
+.character-decoration-anchor { display: grid; gap: 8px; }
+.character-decoration-anchor > span { color: #c7cdc9; font-size: 11px; font-weight: 750; }
+.character-decoration-anchor > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.character-decoration-anchor button { border: 1px solid #3c4540; border-radius: 8px; padding: 9px 6px; color: #aeb6b0; background: #0a0e0c; font-size: 9px; font-weight: 750; }
+.character-decoration-anchor button.is-selected { border-color: #b99a60; color: #f3e8cf; background: #252217; }
+.character-decoration-anchor small { color: #78827c; font-size: 10px; line-height: 1.45; }
 .character-field { display: grid; gap: 7px; }
 .character-field > span,
 .character-color-grid > label > span { color: #c7cdc9; font-size: 12px; font-weight: 700; }
@@ -1253,6 +1304,7 @@
   }
   .character-profile-document[data-layout='cyberpunk'] .character-profile-heading h2 { font-size: clamp(3rem, 18vw, var(--character-title-size)); }
   .character-profile-document[data-layout='cyberpunk'] .character-profile-portrait { height: min(72vh, 720px); }
+  .character-profile-document[data-layout='cyberpunk'] .character-profile-portrait-stage { height: min(72vh, 720px); }
   .character-profile-document[data-layout='cyberpunk'] .character-profile-identity { display: grid; grid-template-columns: 1fr; gap: 0; padding: 0 18px 56px; }
   .character-profile-document[data-layout='cyberpunk'] .character-profile-identity.has-no-portrait { padding-top: min(72vh, 720px); }
   .character-profile-document[data-layout='cyberpunk'] .character-profile-ability,

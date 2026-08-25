@@ -41,6 +41,7 @@ const validProfile = {
   atmosphereOpacity: 35,
   atmosphereParallax: false,
   foregroundImageUrl: '',
+  foregroundAnchor: 'page' as const,
   foregroundPositionX: 50,
   foregroundPositionY: 50,
   foregroundSize: 50,
@@ -215,6 +216,7 @@ describe('character profile customization', () => {
       atmosphereOpacity: 42,
       atmosphereParallax: true,
       foregroundImageUrl: 'https://images.example.com/infernal-seal.webp',
+      foregroundAnchor: 'portrait',
       foregroundPositionX: 82,
       foregroundPositionY: 64,
       foregroundSize: 35,
@@ -223,6 +225,9 @@ describe('character profile customization', () => {
     }).success).toBe(true);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, atmosphereSize: 201 }).success).toBe(false);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, foregroundOpacity: -1 }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, foregroundAnchor: 'left' }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, foregroundAnchor: 'right' }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, foregroundAnchor: 'viewport' }).success).toBe(false);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, foregroundImageUrl: 'javascript:alert(1)' }).success).toBe(false);
   });
 

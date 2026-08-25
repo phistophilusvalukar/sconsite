@@ -131,6 +131,7 @@ export interface Character {
   profileAtmosphereOpacity: number;
   profileAtmosphereParallax: boolean;
   profileForegroundImageUrl?: string;
+  profileForegroundAnchor: 'page' | 'left' | 'right' | 'portrait' | 'backstory';
   profileForegroundPositionX: number;
   profileForegroundPositionY: number;
   profileForegroundSize: number;

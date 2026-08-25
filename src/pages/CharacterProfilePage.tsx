@@ -80,6 +80,7 @@ const applyProfileCustomization = (character: Character, profile: CharacterProfi
   profileAtmosphereOpacity: profile.atmosphereOpacity,
   profileAtmosphereParallax: profile.atmosphereParallax,
   profileForegroundImageUrl: profile.foregroundImageUrl || undefined,
+  profileForegroundAnchor: profile.foregroundAnchor,
   profileForegroundPositionX: profile.foregroundPositionX,
   profileForegroundPositionY: profile.foregroundPositionY,
   profileForegroundSize: profile.foregroundSize,
@@ -449,8 +450,6 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
         </Suspense>
       </div>
 
-      {displayCharacter.profileForegroundImageUrl && <div className="character-profile-foreground" aria-hidden="true"><img className={`character-profile-layer-image${displayCharacter.profileForegroundParallax ? ' is-parallax' : ''}`} src={displayCharacter.profileForegroundImageUrl} alt="" draggable={false} style={profileLayerImageStyle(displayCharacter.profileForegroundPositionX, displayCharacter.profileForegroundPositionY, displayCharacter.profileForegroundSize, displayCharacter.profileForegroundOpacity)} /></div>}
-
       {isEditingProfile && draft && (
         <div className="character-editor-backdrop">
           <aside className="character-editor" aria-label="Customize character page">
@@ -534,7 +533,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
 
             <div className="character-editor-section">
               <div className="character-editor-section-heading"><h3>Decorative image layers</h3><button type="button" onClick={() => setDraft(current => current ? { ...current, ...defaultCharacterProfileLayers } : current)}><RotateCcw size={14} /> Reset layers</button></div>
-              <p>Add transparent artwork behind the profile or above it. Position values use the browser window, so artwork can peek around the profile edges.</p>
+              <p>Add transparent artwork behind the profile or attach it to the page, its edges, the portrait, or the backstory flow.</p>
               <div className="character-decoration-controls">
                 <fieldset>
                   <legend>Atmosphere · behind profile</legend>
@@ -553,6 +552,17 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
                   <legend>Foreground · above profile</legend>
                   <label className="character-field"><span>Image URL</span><input type="url" value={draft.foregroundImageUrl} onChange={event => updateDraft('foregroundImageUrl', event.target.value)} placeholder="https://example.com/infernal-seal.png" /><small>This layer never blocks profile controls or links.</small></label>
                   {draft.foregroundImageUrl && <>
+                    <div className="character-decoration-anchor" role="group" aria-label="Attach foreground image to">
+                      <span>Attach to</span>
+                      <div>
+                        <button type="button" className={draft.foregroundAnchor === 'page' ? 'is-selected' : ''} aria-pressed={draft.foregroundAnchor === 'page'} onClick={() => updateDraft('foregroundAnchor', 'page')}>Page canvas</button>
+                        <button type="button" className={draft.foregroundAnchor === 'left' ? 'is-selected' : ''} aria-pressed={draft.foregroundAnchor === 'left'} onClick={() => updateDraft('foregroundAnchor', 'left')}>Left edge</button>
+                        <button type="button" className={draft.foregroundAnchor === 'right' ? 'is-selected' : ''} aria-pressed={draft.foregroundAnchor === 'right'} onClick={() => updateDraft('foregroundAnchor', 'right')}>Right edge</button>
+                        <button type="button" className={draft.foregroundAnchor === 'portrait' ? 'is-selected' : ''} aria-pressed={draft.foregroundAnchor === 'portrait'} onClick={() => updateDraft('foregroundAnchor', 'portrait')}>Portrait</button>
+                        <button type="button" className={draft.foregroundAnchor === 'backstory' ? 'is-selected' : ''} aria-pressed={draft.foregroundAnchor === 'backstory'} onClick={() => updateDraft('foregroundAnchor', 'backstory')}>Below backstory</button>
+                      </div>
+                      <small>Position and size are relative to the selected part of the profile.</small>
+                    </div>
                     <div className="character-decoration-sliders">
                       <label><span>Horizontal position</span><output>{draft.foregroundPositionX}%</output><input type="range" min="0" max="100" value={draft.foregroundPositionX} onChange={event => updateDraft('foregroundPositionX', Number(event.target.value))} /></label>
                       <label><span>Vertical position</span><output>{draft.foregroundPositionY}%</output><input type="range" min="0" max="100" value={draft.foregroundPositionY} onChange={event => updateDraft('foregroundPositionY', Number(event.target.value))} /></label>

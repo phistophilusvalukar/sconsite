@@ -430,6 +430,17 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   };
 
   const hasPortraitColumn = sectionVisibility.portrait || sectionVisibility.abilityMatrix;
+  const foregroundAnchor = character.profileForegroundAnchor || 'page';
+  const renderForegroundLayer = (anchor: Character['profileForegroundAnchor']) => {
+    if (!pageMode || !character.profileForegroundImageUrl || foregroundAnchor !== anchor) return null;
+    const slotStyle = anchor === 'backstory'
+      ? { minHeight: `${Math.max(120, Math.min(420, character.profileForegroundSize * 3))}px` }
+      : undefined;
+    return <div className={`character-profile-foreground character-profile-foreground-${anchor}`} style={slotStyle} aria-hidden="true"><img className={`character-profile-layer-image${character.profileForegroundParallax ? ' is-parallax' : ''}`} src={character.profileForegroundImageUrl} alt="" draggable={false} style={{ left: `${character.profileForegroundPositionX}%`, top: `${character.profileForegroundPositionY}%`, width: `${character.profileForegroundSize}%`, opacity: character.profileForegroundOpacity / 100 }} /></div>;
+  };
+  const portraitArtwork = activeCompanion
+    ? <img src={characterPortrait} alt={`${activeCompanion.name} portrait`} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} />
+    : <DynamicCharacterPortrait character={character} fallbackSrc={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} motion={pageMode ? (character.profileLayoutStyle === 'cyberpunk' ? 'zoom' : 'parallax') : 'hover'} allowDynamic={pageMode} hideBackground={pageMode && character.profileLayoutStyle === 'cyberpunk' && character.profileSplashHidePortraitBackground} />;
 
   return (
     <div className={pageMode ? 'character-profile-view' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4'}>
@@ -464,9 +475,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
           <section className={pageMode ? 'character-profile-core' : 'border-b border-fantasy-700/30 lg:border-b-0 lg:border-r'}>
             <div className={pageMode ? `character-profile-identity${hasPortraitColumn ? '' : ' has-no-portrait'}${sectionVisibility.abilityMatrix && !activeCompanion ? '' : ' has-no-ability'}` : 'grid gap-6 p-6 md:grid-cols-[minmax(220px,0.85fr)_1fr] lg:grid-cols-1 xl:grid-cols-[minmax(260px,0.85fr)_1fr]'}>
               {hasPortraitColumn && <div className={pageMode ? 'character-profile-portrait-column' : 'space-y-4'}>
-                {sectionVisibility.portrait && (activeCompanion
-                  ? <img src={characterPortrait} alt={`${activeCompanion.name} portrait`} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} />
-                  : <DynamicCharacterPortrait character={character} fallbackSrc={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} motion={pageMode ? (character.profileLayoutStyle === 'cyberpunk' ? 'zoom' : 'parallax') : 'hover'} allowDynamic={pageMode} hideBackground={pageMode && character.profileLayoutStyle === 'cyberpunk' && character.profileSplashHidePortraitBackground} />)}
+                {sectionVisibility.portrait && (pageMode ? <div className="character-profile-portrait-stage">{portraitArtwork}{!activeCompanion && renderForegroundLayer('portrait')}</div> : portraitArtwork)}
                 {pageMode && sectionVisibility.portrait && (onChangeShape || companions.length > 0) && <div className="character-profile-portrait-actions">
                   {onChangeShape && <button type="button" className="character-profile-shape-button" onClick={onChangeShape} aria-label={`Change Shape — currently Version ${shapeVersion}`} data-tooltip="Change Shape"><RefreshCw size={16} /></button>}
                   {companions.length > 0 && <button type="button" className="character-profile-shape-button character-profile-companion-button" onClick={() => setActiveSubjectIndex(current => (current + 1) % (companions.length + 1))} aria-label={activeSubjectIndex === companions.length ? `Return to ${character.name}` : `Show ${companions[activeSubjectIndex]?.name || character.name}`} data-tooltip={activeSubjectIndex === companions.length ? character.name : companions[activeSubjectIndex]?.name || character.name}><Ghost size={17} /></button>}
@@ -489,6 +498,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                     ? <SafeRichText className="character-profile-backstory character-profile-main-backstory rounded-lg bg-fantasy-900/30 p-5 text-sm leading-relaxed text-gray-100" html={character.backstory} />
                     : <p className="character-profile-main-backstory-empty rounded-lg bg-fantasy-900/30 p-4 text-sm text-gray-400">No backstory has been added yet.</p>
                 )}
+                {!activeCompanion && sectionVisibility.backstory && renderForegroundLayer('backstory')}
                 {activeCompanion && <div className="character-profile-companion-features">
                   <h4>{activeCompanion.companionType === 'familiar' ? 'Familiar abilities' : activeCompanion.companionType === 'eidolon' ? 'Eidolon feats' : 'Companion features'}</h4>
                   {activeCompanion.features.length > 0
@@ -843,7 +853,10 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
             </div>
           </section>}
         </div>
+        {renderForegroundLayer('page')}
       </div>
+      {renderForegroundLayer('left')}
+      {renderForegroundLayer('right')}
     </div>
   );
 };
