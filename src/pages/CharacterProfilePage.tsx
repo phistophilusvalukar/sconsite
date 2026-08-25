@@ -10,6 +10,8 @@ import {
   HelpCircle,
   FileJson,
   Loader2,
+  PanelRightClose,
+  PanelRightOpen,
   Palette,
   Pencil,
   RotateCcw,
@@ -146,7 +148,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [isEditorCollapsed, setIsEditorCollapsed] = useState(false);
+  const [isEditorDocked, setIsEditorDocked] = useState(false);
   const [isEditingCharacter, setIsEditingCharacter] = useState(false);
   const [draft, setDraft] = useState<CharacterProfileCustomizationInput | null>(null);
   const [otherShapeDraft, setOtherShapeDraft] = useState<CharacterProfileCustomizationInput | null>(null);
@@ -292,7 +294,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     setChangeShapeEnabled(Boolean(character.profileChangeShapeEnabled));
     setEditorMessage('');
     setShowDynamicPortraitTutorial(false);
-    setIsEditorCollapsed(false);
+    setIsEditorDocked(false);
     setIsEditingProfile(true);
   };
 
@@ -301,7 +303,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     setOtherShapeDraft(null);
     setEditorMessage('');
     setShowDynamicPortraitTutorial(false);
-    setIsEditorCollapsed(false);
+    setIsEditorDocked(false);
     setIsEditingProfile(false);
   };
 
@@ -420,7 +422,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   } as CSSProperties;
 
   return (
-    <main ref={pageRef} className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}${displayCharacter.status === 'dead' ? ' is-dead' : ''}`} data-theme={displayCharacter.profileThemeMode} style={profileStyle}>
+    <main ref={pageRef} className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}${displayCharacter.status === 'dead' ? ' is-dead' : ''}${isEditingProfile && isEditorDocked ? ' has-docked-editor' : ''}`} data-theme={displayCharacter.profileThemeMode} style={profileStyle}>
       <div className="character-profile-atmosphere" aria-hidden="true">
         {displayCharacter.profileAtmosphereImageUrl && <img className={`character-profile-layer-image${displayCharacter.profileAtmosphereParallax ? ' is-parallax' : ''}`} src={displayCharacter.profileAtmosphereImageUrl} alt="" draggable={false} style={profileLayerImageStyle(displayCharacter.profileAtmospherePositionX, displayCharacter.profileAtmospherePositionY, displayCharacter.profileAtmosphereSize, displayCharacter.profileAtmosphereOpacity)} />}
       </div>
@@ -453,19 +455,16 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
         </Suspense>
       </div>
 
-      {isEditingProfile && draft && isEditorCollapsed && (
-        <button type="button" className="character-editor-reopen" onClick={() => setIsEditorCollapsed(false)} aria-label="Show customization editor">
-          <Palette size={18} /> Show editor
-        </button>
-      )}
-
-      {isEditingProfile && draft && !isEditorCollapsed && (
-        <div className="character-editor-backdrop">
+      {isEditingProfile && draft && (
+        <div className={`character-editor-backdrop${isEditorDocked ? ' is-docked' : ''}`}>
           <aside className="character-editor" aria-label="Customize character page">
             <div className="character-editor-heading">
               <div><p><Pencil size={14} /> Live preview</p><h2>Customize character page</h2></div>
               <div className="character-editor-heading-actions">
-                <button type="button" onClick={() => setIsEditorCollapsed(true)} aria-label="Hide editor to preview the full page"><Eye size={17} /><span>Preview</span></button>
+                <button type="button" className="character-editor-dock-toggle" onClick={() => setIsEditorDocked(current => !current)} aria-pressed={isEditorDocked} aria-label={isEditorDocked ? 'Overlay editor on the page' : 'Dock editor beside the page'} title={isEditorDocked ? 'Overlay editor' : 'Dock editor beside page'}>
+                  {isEditorDocked ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
+                  <span>{isEditorDocked ? 'Overlay' : 'Dock'}</span>
+                </button>
                 <button type="button" onClick={closeEditor} aria-label="Close editor"><X size={20} /></button>
               </div>
             </div>
