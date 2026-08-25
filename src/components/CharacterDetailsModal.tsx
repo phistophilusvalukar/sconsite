@@ -446,7 +446,9 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
           } : undefined}
         >
           <div>
-            <p className={pageMode ? 'character-profile-kicker' : 'text-sm uppercase tracking-[0.14em] text-yellow-300'}>{'Character Profile'}</p>
+            <p className={pageMode ? 'character-profile-kicker' : 'text-sm uppercase tracking-[0.14em] text-yellow-300'}>
+              {pageMode && character.profileLayoutStyle === 'nostalgia' ? 'Posted Adventurer Notice' : 'Character Profile'}
+            </p>
             <h2 className={pageMode ? '' : 'font-fantasy text-2xl font-bold text-white'}>{character.name}{character.status === 'dead' && <Skull className="character-profile-skull" aria-label="Deceased" />}</h2>
             {pageMode && <p className="character-profile-subtitle">{character.profileSubtitle || 'An adventurer of the Shattered Convergence'}</p>}
           </div>
