@@ -48,15 +48,12 @@ export async function listMyShopCharacters(): Promise<ShopCharacterOption[]> {
 export async function saveShop(shop: Omit<PlayerShop, 'id' | 'ownerId' | 'ownerName' | 'ownerAvatar' | 'characterName' | 'characterAvatar' | 'updatedAt'> & { id?: string }): Promise<string> {
   const { data, error } = await supabase.rpc('upsert_player_shop_v2_command', { p_shop: shop });
   if (error) throw error;
-  const shopId = z.string().parse(data);
-  const { error: preferenceError } = await supabase.rpc('set_shop_discord_preferences_command', { p_shop_id: shopId, p_enabled: shop.discordPingsEnabled, p_discord_user_id: shop.discordUserId || null });
-  if (preferenceError) throw new Error(preferenceError.message);
-  return shopId;
+  return z.string().parse(data);
 }
 
 export async function submitCommission(draft: CommissionDraft): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('marketplace-commission', { body: draft });
-  if (error) throw error;
+  const { data, error } = await supabase.rpc('create_shop_commission_command', { p_commission: draft });
+  if (error) throw new Error(error.message);
   return z.object({ commissionId: z.string() }).parse(data).commissionId;
 }
 
