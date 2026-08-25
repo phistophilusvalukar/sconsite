@@ -1,4 +1,5 @@
 export type ShopKind = 'crafting' | 'ritual';
+export type ShopPageTheme = 'forge' | 'arcane' | 'parchment';
 export type ProficiencyRank = 'untrained' | 'trained' | 'expert' | 'master' | 'legendary';
 
 export interface BonusBreakdown {
@@ -52,6 +53,10 @@ export interface PlayerShop {
   title: string;
   description: string;
   imageUrl?: string;
+  pageTheme: ShopPageTheme;
+  pageAccentColor: string;
+  pageBackgroundImageUrl?: string;
+  pageTagline: string;
   tags: string[];
   specialty?: string;
   tier: number;
@@ -67,7 +72,25 @@ export interface PlayerShop {
   updatedAt: string;
 }
 
-export type CommissionStatus = 'requested' | 'accepted' | 'declined' | 'completed' | 'cancelled';
+export type CommissionStatus = 'requested' | 'in_progress' | 'waiting_for_payment' | 'completed' | 'declined' | 'cancelled';
+export type CommissionPerspective = 'owner' | 'requester';
+export const commissionWorkflow: CommissionStatus[] = ['requested', 'in_progress', 'waiting_for_payment', 'completed'];
+export const commissionTransitions: Record<CommissionPerspective, Partial<Record<CommissionStatus, CommissionStatus[]>>> = {
+  owner: { requested: ['in_progress', 'declined'], in_progress: ['waiting_for_payment'], waiting_for_payment: ['in_progress'] },
+  requester: { requested: ['cancelled'], in_progress: ['cancelled'], waiting_for_payment: ['completed'] }
+};
+export const canTransitionCommission = (perspective: CommissionPerspective, from: CommissionStatus, to: CommissionStatus) =>
+  commissionTransitions[perspective][from]?.includes(to) ?? false;
+export interface ShopCommissionEvent {
+  id: string;
+  source: 'web' | 'discord' | 'system';
+  fromStatus?: CommissionStatus;
+  toStatus: CommissionStatus;
+  note?: string;
+  externalActorId?: string;
+  actorName?: string;
+  createdAt: string;
+}
 export interface ShopCommission {
   id: string;
   shopId: string;
@@ -85,7 +108,8 @@ export interface ShopCommission {
   status: CommissionStatus;
   createdAt: string;
   updatedAt: string;
-  perspective: 'owner' | 'requester';
+  perspective: CommissionPerspective;
+  events?: ShopCommissionEvent[];
 }
 
 export interface CommissionDraft {

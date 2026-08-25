@@ -40,6 +40,7 @@ const HellknightAutobattlerPage = lazy(() => import('./features/hellknight-autob
 const TacticalPuzzlesPage = lazy(() => import('./features/tactical-puzzles/routes/TacticalPuzzlesPage'));
 const DbAdminPage = lazy(() => import('./pages/DbAdminPage'));
 const MarketplacePage = lazy(() => import('./features/marketplace/MarketplacePage'));
+const ShopPage = lazy(() => import('./features/marketplace/ShopPage'));
 
 function RouteFallback() {
   return (
@@ -82,6 +83,7 @@ function AppRoutes() {
         <Route path="/schedule/:pollId" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/games" element={<PageGate pageKey="games"><GamesPage /></PageGate>} />
         <Route path="/marketplace" element={<MemberPageGate pageKey="marketplace"><MarketplacePage /></MemberPageGate>} />
+        <Route path="/marketplace/:shopId" element={<MemberPageGate pageKey="marketplace"><ShopPage /></MemberPageGate>} />
         <Route path="/ticket-log" element={<TicketLogsPage />} />
         <Route path="/ticket-logs" element={<Navigate to="/ticket-log" replace />} />
         <Route path="/arcana" element={<PageGate pageKey="arcana"><CardGamePage /></PageGate>} />
