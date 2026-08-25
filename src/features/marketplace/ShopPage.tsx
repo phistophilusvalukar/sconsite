@@ -50,7 +50,7 @@ export default function ShopPage() {
   } as CSSProperties;
 
   return <main className="shop-page" data-theme={shop.pageTheme} style={pageStyle}>
-    <nav className="shop-page-nav"><Link to="/marketplace"><ArrowLeft /> Marketplace</Link><div>{isOwner && <button onClick={() => setEditing(true)}><Palette /> Customize shop</button>}{shop.acceptsCommissions && <button className="is-primary" onClick={() => setCommissioning(current => !current)}>{commissioning ? 'Close request' : 'Request commission'}</button>}</div></nav>
+    <nav className="shop-page-nav"><Link to="/marketplace"><ArrowLeft /> Marketplace</Link><div>{isOwner && <button onClick={() => setEditing(true)}><Palette /> Customize shop</button>}</div></nav>
 
     <header className="shop-page-hero" style={shop.imageUrl ? { backgroundImage: `linear-gradient(90deg, rgb(7 10 9 / .94), rgb(7 10 9 / .35)), url(${JSON.stringify(shop.imageUrl)})` } : undefined}>
       <div><p className="shop-page-kicker">{shop.kind === 'crafting' ? <Hammer /> : <Sparkles />} {shop.kind} shop · Tier {shop.tier}</p><h1>{shop.title}</h1>{shop.pageTagline && <p className="shop-page-tagline">{shop.pageTagline}</p>}<p>Operated by <b>{shop.characterName}</b> · {shop.ownerName}</p><div className="shop-tags">{shop.tags.map(tag => <span key={tag}>{tag}</span>)}</div></div>
@@ -66,7 +66,10 @@ export default function ShopPage() {
           <section><p className="shop-page-section-label">The catalogue</p><h2>Available rituals</h2><div className="listing-table">{shop.rituals.map((ritual, index) => <div key={`${ritual.name}-${index}`}><a href={ritual.aonUrl} target="_blank" rel="noreferrer"><b>{ritual.name}</b></a><span>Tier {ritual.tier} · {ritual.bypassesSecondaries ? 'No secondary checks required' : `Secondaries: ${ritual.secondarySkills.join(', ')}`}</span></div>)}</div></section>
           {shop.contributors.length > 0 && <section><p className="shop-page-section-label">Additional hands</p><h2>Contributors</h2><div className="listing-table">{shop.contributors.map((person, index) => <div key={`${person.name}-${index}`}><b>{person.name}</b><span>{person.skills.join(', ')}</span><strong>+{person.bonus}</strong></div>)}</div></section>}
         </>}
-        {commissioning && <section className="shop-page-request"><CommissionForm shop={shop} onClose={() => setCommissioning(false)} onSubmitted={() => void refresh()} /></section>}
+        {shop.acceptsCommissions && <section className="shop-page-request">
+          {!commissioning && <div className="shop-page-request-cta"><div><p className="shop-page-section-label">Place an order</p><h2>Commission this shop</h2><p>Send the shopkeeper your requirements, budget, and desired deadline.</p></div><button className="marketplace-primary" onClick={() => setCommissioning(true)}>Request a commission</button></div>}
+          {commissioning && <CommissionForm shop={shop} onClose={() => setCommissioning(false)} onSubmitted={() => void refresh()} />}
+        </section>}
       </article>
 
       <aside className="shop-commission-log">

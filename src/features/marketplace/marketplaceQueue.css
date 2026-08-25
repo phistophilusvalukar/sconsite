@@ -1,3 +1,4 @@
+.marketplace-modal { z-index: 90; }
 .marketplace-hero-actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1.4rem; }
 .marketplace-hero-actions .marketplace-primary { margin-top: 0; }
 .marketplace-secondary { background: transparent; color: #e7e9e6; border: 1px solid #67716c; border-radius: .7rem; padding: .85rem 1.15rem; font-weight: 800; cursor: pointer; }

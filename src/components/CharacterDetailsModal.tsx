@@ -443,7 +443,7 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     : <DynamicCharacterPortrait character={character} fallbackSrc={characterPortrait} alt={character.name} className={pageMode ? 'character-profile-portrait' : 'h-[420px] w-full rounded-lg object-cover'} motion={pageMode ? (character.profileLayoutStyle === 'cyberpunk' ? 'zoom' : 'parallax') : 'hover'} allowDynamic={pageMode} hideBackground={pageMode && character.profileLayoutStyle === 'cyberpunk' && character.profileSplashHidePortraitBackground} />;
 
   return (
-    <div className={pageMode ? 'character-profile-view' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4'}>
+    <div className={pageMode ? 'character-profile-view' : 'fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4'}>
       <div
         className={pageMode
           ? 'character-profile-document'

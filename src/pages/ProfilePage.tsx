@@ -419,7 +419,7 @@ const RoleBadge: React.FC<{ icon: React.ComponentType<{ className?: string }>; l
 );
 
 const ScheduleGameModal: React.FC<{ game: GameListing; userId: string; onClose: () => void }> = ({ game, userId, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+  <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4">
     <div className="w-full max-w-2xl rounded-xl border border-fantasy-700/40 bg-midnight-950 p-6 shadow-2xl">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>

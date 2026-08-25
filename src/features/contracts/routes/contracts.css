@@ -387,7 +387,7 @@ input:focus-visible {
 .decision-drawer,
 .confirmation-modal {
   position: fixed;
-  z-index: 70;
+  z-index: 90;
   inset: 0;
   overflow: auto;
   background: rgba(2, 6, 23, 0.78);

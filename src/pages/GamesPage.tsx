@@ -743,7 +743,7 @@ const GamesPage: React.FC = () => {
         )}
 
         {showCreateGame && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[90] p-4">
             <form onSubmit={handleCreateGame} className="bg-fantasy-900 border border-fantasy-700 rounded-xl p-6 max-w-5xl w-full max-h-[92vh] overflow-y-auto">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
                 <div className="space-y-4">
@@ -1213,7 +1213,7 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
   }, [game]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4">
       <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-xl border border-fantasy-700/40 bg-midnight-950 shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-fantasy-700/30 p-5">
           <div>
@@ -1437,7 +1437,7 @@ const GameApplicationModal: React.FC<GameApplicationModalProps> = ({
   const actionLabel = getApplicationActionLabel(ownApplication);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/75 p-4">
       <div className="w-full max-w-lg rounded-xl border border-fantasy-700/40 bg-midnight-950 shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-fantasy-700/30 p-5">
           <div>
