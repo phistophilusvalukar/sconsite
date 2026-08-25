@@ -1,6 +1,6 @@
 .character-profile-page {
   --character-base: #111615;
-  --character-panel: #1d2321;
+  --character-panel: color-mix(in srgb, var(--character-base) 88%, var(--character-depth));
   --character-accent: #a09482;
   --character-ink: #f0ede7;
   --character-title-font: Cinzel, Georgia, serif;
