@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import {
   ArrowLeft,
@@ -28,6 +28,7 @@ import {
   characterLayoutOptions,
   customizationFromCharacter,
   defaultCharacterProfilePalette,
+  defaultCharacterProfileLayers,
   defaultDynamicPortraitPlacement,
   getCharacterFontStack,
   resolveCharacterAlternateProfile
@@ -72,6 +73,18 @@ const applyProfileCustomization = (character: Character, profile: CharacterProfi
   profilePortraitImageUrl: profile.portraitImageUrl || undefined,
   profileDynamicPortraitEnabled: profile.dynamicPortraitEnabled,
   profileSplashHidePortraitBackground: profile.splashHideDynamicPortraitBackground,
+  profileAtmosphereImageUrl: profile.atmosphereImageUrl || undefined,
+  profileAtmospherePositionX: profile.atmospherePositionX,
+  profileAtmospherePositionY: profile.atmospherePositionY,
+  profileAtmosphereSize: profile.atmosphereSize,
+  profileAtmosphereOpacity: profile.atmosphereOpacity,
+  profileAtmosphereParallax: profile.atmosphereParallax,
+  profileForegroundImageUrl: profile.foregroundImageUrl || undefined,
+  profileForegroundPositionX: profile.foregroundPositionX,
+  profileForegroundPositionY: profile.foregroundPositionY,
+  profileForegroundSize: profile.foregroundSize,
+  profileForegroundOpacity: profile.foregroundOpacity,
+  profileForegroundParallax: profile.foregroundParallax,
   profilePortraitBackgroundImageUrl: profile.portraitBackgroundImageUrl || undefined,
   profilePortraitCutoutImageUrl: profile.portraitCutoutImageUrl || undefined,
   profilePortraitBackgroundScale: profile.portraitBackgroundScale,
@@ -90,6 +103,18 @@ const DYNAMIC_PORTRAIT_TUTORIAL_IMAGES = {
   top: 'https://assets.forge-vtt.com/63bf21c87e2f5e785340cb33/tokenizer/pc-images/placeholderImage/placeholder.top.webp',
   bottom: 'https://assets.forge-vtt.com/63bf21c87e2f5e785340cb33/tokenizer/pc-images/placeholderImage/placeholder.background.png'
 } as const;
+
+const profileLayerImageStyle = (
+  positionX: number,
+  positionY: number,
+  size: number,
+  opacity: number
+): CSSProperties => ({
+  left: `${positionX}%`,
+  top: `${positionY}%`,
+  width: `${size}vw`,
+  opacity: opacity / 100
+});
 
 const SECTION_OPTIONS: Array<{
   key: keyof Character['profileSectionVisibility'];
@@ -131,6 +156,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   const [editorMessage, setEditorMessage] = useState('');
   const [linkMessage, setLinkMessage] = useState('');
   const [showDynamicPortraitTutorial, setShowDynamicPortraitTutorial] = useState(false);
+  const pageRef = useRef<HTMLElement>(null);
 
   const loadProfile = useCallback(async (showLoading = false) => {
     if (!characterId) {
@@ -228,6 +254,31 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
     }
     return character;
   }, [activeShape, character, draft, isEditingProfile]);
+
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page) return;
+
+    let animationFrame = 0;
+    const updateLayerParallax = () => {
+      if (animationFrame) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = 0;
+        const scrollY = window.scrollY;
+        page.style.setProperty('--character-atmosphere-parallax-y', `${scrollY * -.08}px`);
+        page.style.setProperty('--character-foreground-parallax-y', `${scrollY * -.16}px`);
+      });
+    };
+
+    updateLayerParallax();
+    if (displayCharacter?.profileAtmosphereParallax || displayCharacter?.profileForegroundParallax) {
+      window.addEventListener('scroll', updateLayerParallax, { passive: true });
+    }
+    return () => {
+      window.removeEventListener('scroll', updateLayerParallax);
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+    };
+  }, [displayCharacter?.profileAtmosphereParallax, displayCharacter?.profileForegroundParallax]);
 
   const openEditor = () => {
     if (!character) return;
@@ -365,8 +416,10 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
   } as CSSProperties;
 
   return (
-    <main className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}${displayCharacter.status === 'dead' ? ' is-dead' : ''}`} data-theme={displayCharacter.profileThemeMode} style={profileStyle}>
-      <div className="character-profile-atmosphere" aria-hidden="true" />
+    <main ref={pageRef} className={`character-profile-page${isShapeChanging ? ' is-shape-changing' : ''}${displayCharacter.status === 'dead' ? ' is-dead' : ''}`} data-theme={displayCharacter.profileThemeMode} style={profileStyle}>
+      <div className="character-profile-atmosphere" aria-hidden="true">
+        {displayCharacter.profileAtmosphereImageUrl && <img className={`character-profile-layer-image${displayCharacter.profileAtmosphereParallax ? ' is-parallax' : ''}`} src={displayCharacter.profileAtmosphereImageUrl} alt="" draggable={false} style={profileLayerImageStyle(displayCharacter.profileAtmospherePositionX, displayCharacter.profileAtmospherePositionY, displayCharacter.profileAtmosphereSize, displayCharacter.profileAtmosphereOpacity)} />}
+      </div>
       <div className={`character-profile-shell character-profile-shell-${displayCharacter.profileLayoutStyle}`}>
         <nav className="character-profile-nav" aria-label="Character profile controls">
           {publicView
@@ -395,6 +448,8 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
           />
         </Suspense>
       </div>
+
+      {displayCharacter.profileForegroundImageUrl && <div className="character-profile-foreground" aria-hidden="true"><img className={`character-profile-layer-image${displayCharacter.profileForegroundParallax ? ' is-parallax' : ''}`} src={displayCharacter.profileForegroundImageUrl} alt="" draggable={false} style={profileLayerImageStyle(displayCharacter.profileForegroundPositionX, displayCharacter.profileForegroundPositionY, displayCharacter.profileForegroundSize, displayCharacter.profileForegroundOpacity)} /></div>}
 
       {isEditingProfile && draft && (
         <div className="character-editor-backdrop">
@@ -475,6 +530,39 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
               <p>Use a direct HTTPS image link as the banner behind the character name.</p>
               <label className="character-field"><span>Banner image URL</span><input type="url" value={draft.bannerImageUrl} onChange={event => updateDraft('bannerImageUrl', event.target.value)} placeholder="https://example.com/character-banner.webp" /><small>Wide images work best. A dark veil is added automatically for readable text.</small></label>
               {draft.bannerImageUrl && <div className="character-banner-preview"><img src={draft.bannerImageUrl} alt="Character banner preview" /><span>Banner preview</span></div>}
+            </div>
+
+            <div className="character-editor-section">
+              <div className="character-editor-section-heading"><h3>Decorative image layers</h3><button type="button" onClick={() => setDraft(current => current ? { ...current, ...defaultCharacterProfileLayers } : current)}><RotateCcw size={14} /> Reset layers</button></div>
+              <p>Add transparent artwork behind the profile or above it. Position values use the browser window, so artwork can peek around the profile edges.</p>
+              <div className="character-decoration-controls">
+                <fieldset>
+                  <legend>Atmosphere · behind profile</legend>
+                  <label className="character-field"><span>Image URL</span><input type="url" value={draft.atmosphereImageUrl} onChange={event => updateDraft('atmosphereImageUrl', event.target.value)} placeholder="https://example.com/bat-shadows.png" /><small>Transparent PNG or WebP artwork works best.</small></label>
+                  {draft.atmosphereImageUrl && <>
+                    <div className="character-decoration-sliders">
+                      <label><span>Horizontal position</span><output>{draft.atmospherePositionX}%</output><input type="range" min="0" max="100" value={draft.atmospherePositionX} onChange={event => updateDraft('atmospherePositionX', Number(event.target.value))} /></label>
+                      <label><span>Vertical position</span><output>{draft.atmospherePositionY}%</output><input type="range" min="0" max="100" value={draft.atmospherePositionY} onChange={event => updateDraft('atmospherePositionY', Number(event.target.value))} /></label>
+                      <label><span>Size</span><output>{draft.atmosphereSize}%</output><input type="range" min="5" max="200" value={draft.atmosphereSize} onChange={event => updateDraft('atmosphereSize', Number(event.target.value))} /></label>
+                      <label><span>Opacity</span><output>{draft.atmosphereOpacity}%</output><input type="range" min="0" max="100" value={draft.atmosphereOpacity} onChange={event => updateDraft('atmosphereOpacity', Number(event.target.value))} /></label>
+                    </div>
+                    <label className="character-dynamic-toggle"><input type="checkbox" checked={draft.atmosphereParallax} onChange={event => updateDraft('atmosphereParallax', event.target.checked)} /><span><strong>Parallax scrolling</strong><small>Move this layer gently as the profile scrolls.</small></span></label>
+                  </>}
+                </fieldset>
+                <fieldset>
+                  <legend>Foreground · above profile</legend>
+                  <label className="character-field"><span>Image URL</span><input type="url" value={draft.foregroundImageUrl} onChange={event => updateDraft('foregroundImageUrl', event.target.value)} placeholder="https://example.com/infernal-seal.png" /><small>This layer never blocks profile controls or links.</small></label>
+                  {draft.foregroundImageUrl && <>
+                    <div className="character-decoration-sliders">
+                      <label><span>Horizontal position</span><output>{draft.foregroundPositionX}%</output><input type="range" min="0" max="100" value={draft.foregroundPositionX} onChange={event => updateDraft('foregroundPositionX', Number(event.target.value))} /></label>
+                      <label><span>Vertical position</span><output>{draft.foregroundPositionY}%</output><input type="range" min="0" max="100" value={draft.foregroundPositionY} onChange={event => updateDraft('foregroundPositionY', Number(event.target.value))} /></label>
+                      <label><span>Size</span><output>{draft.foregroundSize}%</output><input type="range" min="5" max="200" value={draft.foregroundSize} onChange={event => updateDraft('foregroundSize', Number(event.target.value))} /></label>
+                      <label><span>Opacity</span><output>{draft.foregroundOpacity}%</output><input type="range" min="0" max="100" value={draft.foregroundOpacity} onChange={event => updateDraft('foregroundOpacity', Number(event.target.value))} /></label>
+                    </div>
+                    <label className="character-dynamic-toggle"><input type="checkbox" checked={draft.foregroundParallax} onChange={event => updateDraft('foregroundParallax', event.target.checked)} /><span><strong>Parallax scrolling</strong><small>Move this overlay faster to create depth.</small></span></label>
+                  </>}
+                </fieldset>
+              </div>
             </div>
 
             <div className="character-editor-section">

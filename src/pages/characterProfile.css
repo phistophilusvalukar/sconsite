@@ -28,6 +28,7 @@
 }
 
 .character-profile-page.is-dead .character-profile-atmosphere,
+.character-profile-page.is-dead .character-profile-foreground,
 .character-profile-page.is-dead .character-profile-document {
   filter: grayscale(1);
 }
@@ -46,13 +47,50 @@
 
 .character-profile-atmosphere {
   position: fixed;
+  z-index: 0;
   inset: 0;
+  overflow: hidden;
   pointer-events: none;
+}
+
+.character-profile-atmosphere::before {
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--character-accent) 22%, transparent), transparent 34rem),
     radial-gradient(circle at 90% 32%, color-mix(in srgb, var(--character-accent) 10%, transparent), transparent 30rem),
     linear-gradient(115deg, transparent 0 48%, color-mix(in srgb, var(--character-ink) 3%, transparent) 48% 49%, transparent 49% 100%);
+  content: '';
   opacity: .86;
+}
+
+.character-profile-foreground {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.character-profile-layer-image {
+  position: absolute;
+  display: block;
+  max-width: none;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  will-change: transform;
+}
+
+.character-profile-atmosphere .character-profile-layer-image.is-parallax {
+  transform: translate(-50%, -50%) translate3d(0, var(--character-atmosphere-parallax-y, 0px), 0);
+}
+
+.character-profile-foreground .character-profile-layer-image.is-parallax {
+  transform: translate(-50%, -50%) translate3d(0, var(--character-foreground-parallax-y, 0px), 0);
 }
 
 .character-profile-shell {
@@ -311,7 +349,8 @@
 }
 .character-profile-page .character-profile-document { transition: opacity .25s ease, filter .3s ease, transform .3s ease; }
 .character-profile-page.is-shape-changing .character-profile-document { opacity: .08; filter: blur(12px) saturate(1.8); transform: scale(.985); }
-.character-profile-page.is-shape-changing .character-profile-atmosphere { animation: character-shape-flare .7s ease both; }
+.character-profile-page.is-shape-changing .character-profile-atmosphere,
+.character-profile-page.is-shape-changing .character-profile-foreground { animation: character-shape-flare .7s ease both; }
 @keyframes character-shape-flare {
   0%, 100% { opacity: .45; filter: hue-rotate(0deg); }
   50% { opacity: 1; filter: hue-rotate(45deg) brightness(1.7); }
@@ -984,6 +1023,14 @@
 .character-editor-section-heading h3 { margin: 0; }
 .character-editor-section-heading button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #4a554f; border-radius: 999px; padding: 7px 10px; color: #d9ddd9; background: #1a211e; font-size: 11px; font-weight: 750; }
 .character-editor-section > p { margin: -6px 0 15px; color: #919b95; font-size: 12px; line-height: 1.55; }
+.character-decoration-controls { display: grid; gap: 12px; }
+.character-decoration-controls fieldset { display: grid; gap: 14px; margin: 0; border: 1px solid #38413c; border-radius: 10px; padding: 14px; background: #0e1311; }
+.character-decoration-controls legend { padding: 0 6px; color: #d9bf8b; font-size: 10px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.character-decoration-sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.character-decoration-sliders label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; border: 1px solid #303934; border-radius: 8px; padding: 10px; background: #0a0e0c; }
+.character-decoration-sliders span { color: #c7cdc9; font-size: 10px; font-weight: 750; }
+.character-decoration-sliders output { color: #d8bd89; font-size: 10px; font-weight: 800; }
+.character-decoration-sliders input { grid-column: 1 / -1; width: 100%; accent-color: #b99a60; }
 .character-field { display: grid; gap: 7px; }
 .character-field > span,
 .character-color-grid > label > span { color: #c7cdc9; font-size: 12px; font-weight: 700; }
@@ -1224,6 +1271,7 @@
   .character-color-grid,
   .character-layout-options,
   .character-layer-placement,
+  .character-decoration-sliders,
   .character-focus-controls { grid-template-columns: 1fr; }
   .character-placement-heading { align-items: flex-start; flex-direction: column; }
   .character-editor { padding: 20px; }

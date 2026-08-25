@@ -78,6 +78,21 @@ export const defaultDynamicPortraitPlacement = {
   portraitCutoutPositionY: 0
 } as const;
 
+export const defaultCharacterProfileLayers = {
+  atmosphereImageUrl: '',
+  atmospherePositionX: 50,
+  atmospherePositionY: 35,
+  atmosphereSize: 60,
+  atmosphereOpacity: 35,
+  atmosphereParallax: false,
+  foregroundImageUrl: '',
+  foregroundPositionX: 50,
+  foregroundPositionY: 50,
+  foregroundSize: 50,
+  foregroundOpacity: 60,
+  foregroundParallax: false
+} as const;
+
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Choose a valid six-digit color.');
 export const isSafeCharacterBannerImageUrl = (value: string) => {
   if (!value) return true;
@@ -117,6 +132,18 @@ export const characterProfileCustomizationSchema = z.object({
   portraitImageUrl: externalImageUrl,
   dynamicPortraitEnabled: z.boolean(),
   splashHideDynamicPortraitBackground: z.boolean(),
+  atmosphereImageUrl: externalImageUrl,
+  atmospherePositionX: z.number().int().min(0).max(100),
+  atmospherePositionY: z.number().int().min(0).max(100),
+  atmosphereSize: z.number().int().min(5).max(200),
+  atmosphereOpacity: z.number().int().min(0).max(100),
+  atmosphereParallax: z.boolean(),
+  foregroundImageUrl: externalImageUrl,
+  foregroundPositionX: z.number().int().min(0).max(100),
+  foregroundPositionY: z.number().int().min(0).max(100),
+  foregroundSize: z.number().int().min(5).max(200),
+  foregroundOpacity: z.number().int().min(0).max(100),
+  foregroundParallax: z.boolean(),
   portraitBackgroundImageUrl: externalImageUrl,
   portraitCutoutImageUrl: externalImageUrl,
   portraitBackgroundScale: z.number().int().min(50).max(250),
@@ -180,6 +207,18 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   portraitImageUrl: character.profilePortraitImageUrl || '',
   dynamicPortraitEnabled: character.profileDynamicPortraitEnabled ?? false,
   splashHideDynamicPortraitBackground: character.profileSplashHidePortraitBackground ?? false,
+  atmosphereImageUrl: character.profileAtmosphereImageUrl || '',
+  atmospherePositionX: character.profileAtmospherePositionX ?? defaultCharacterProfileLayers.atmospherePositionX,
+  atmospherePositionY: character.profileAtmospherePositionY ?? defaultCharacterProfileLayers.atmospherePositionY,
+  atmosphereSize: character.profileAtmosphereSize ?? defaultCharacterProfileLayers.atmosphereSize,
+  atmosphereOpacity: character.profileAtmosphereOpacity ?? defaultCharacterProfileLayers.atmosphereOpacity,
+  atmosphereParallax: character.profileAtmosphereParallax ?? defaultCharacterProfileLayers.atmosphereParallax,
+  foregroundImageUrl: character.profileForegroundImageUrl || '',
+  foregroundPositionX: character.profileForegroundPositionX ?? defaultCharacterProfileLayers.foregroundPositionX,
+  foregroundPositionY: character.profileForegroundPositionY ?? defaultCharacterProfileLayers.foregroundPositionY,
+  foregroundSize: character.profileForegroundSize ?? defaultCharacterProfileLayers.foregroundSize,
+  foregroundOpacity: character.profileForegroundOpacity ?? defaultCharacterProfileLayers.foregroundOpacity,
+  foregroundParallax: character.profileForegroundParallax ?? defaultCharacterProfileLayers.foregroundParallax,
   portraitBackgroundImageUrl: character.profilePortraitBackgroundImageUrl || '',
   portraitCutoutImageUrl: character.profilePortraitCutoutImageUrl || '',
   portraitBackgroundScale: character.profilePortraitBackgroundScale ?? defaultDynamicPortraitPlacement.portraitBackgroundScale,

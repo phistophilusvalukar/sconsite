@@ -124,6 +124,18 @@ export interface Character {
   profilePortraitImageUrl?: string;
   profileDynamicPortraitEnabled?: boolean;
   profileSplashHidePortraitBackground?: boolean;
+  profileAtmosphereImageUrl?: string;
+  profileAtmospherePositionX: number;
+  profileAtmospherePositionY: number;
+  profileAtmosphereSize: number;
+  profileAtmosphereOpacity: number;
+  profileAtmosphereParallax: boolean;
+  profileForegroundImageUrl?: string;
+  profileForegroundPositionX: number;
+  profileForegroundPositionY: number;
+  profileForegroundSize: number;
+  profileForegroundOpacity: number;
+  profileForegroundParallax: boolean;
   profilePortraitBackgroundImageUrl?: string;
   profilePortraitCutoutImageUrl?: string;
   profilePortraitBackgroundScale: number;

@@ -226,6 +226,18 @@ interface CharacterRow {
   profile_portrait_image_url?: string | null;
   profile_dynamic_portrait_enabled?: boolean | null;
   profile_splash_hide_portrait_background?: boolean | null;
+  profile_atmosphere_image_url?: string | null;
+  profile_atmosphere_position_x?: number | null;
+  profile_atmosphere_position_y?: number | null;
+  profile_atmosphere_size?: number | null;
+  profile_atmosphere_opacity?: number | null;
+  profile_atmosphere_parallax?: boolean | null;
+  profile_foreground_image_url?: string | null;
+  profile_foreground_position_x?: number | null;
+  profile_foreground_position_y?: number | null;
+  profile_foreground_size?: number | null;
+  profile_foreground_opacity?: number | null;
+  profile_foreground_parallax?: boolean | null;
   profile_portrait_background_url?: string | null;
   profile_portrait_cutout_url?: string | null;
   profile_portrait_background_scale?: number | null;
@@ -717,7 +729,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v10_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v11_command', {
         p_character_id: characterId,
         p_profile: parsed.data,
         p_change_shape_enabled: shape?.enabled ?? false,
@@ -1448,6 +1460,22 @@ export class CharacterService {
         : undefined,
       profileDynamicPortraitEnabled: Boolean(dbCharacter.profile_dynamic_portrait_enabled),
       profileSplashHidePortraitBackground: Boolean(dbCharacter.profile_splash_hide_portrait_background),
+      profileAtmosphereImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_atmosphere_image_url || '')
+        ? dbCharacter.profile_atmosphere_image_url || undefined
+        : undefined,
+      profileAtmospherePositionX: dbCharacter.profile_atmosphere_position_x ?? 50,
+      profileAtmospherePositionY: dbCharacter.profile_atmosphere_position_y ?? 35,
+      profileAtmosphereSize: dbCharacter.profile_atmosphere_size ?? 60,
+      profileAtmosphereOpacity: dbCharacter.profile_atmosphere_opacity ?? 35,
+      profileAtmosphereParallax: Boolean(dbCharacter.profile_atmosphere_parallax),
+      profileForegroundImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_foreground_image_url || '')
+        ? dbCharacter.profile_foreground_image_url || undefined
+        : undefined,
+      profileForegroundPositionX: dbCharacter.profile_foreground_position_x ?? 50,
+      profileForegroundPositionY: dbCharacter.profile_foreground_position_y ?? 50,
+      profileForegroundSize: dbCharacter.profile_foreground_size ?? 50,
+      profileForegroundOpacity: dbCharacter.profile_foreground_opacity ?? 60,
+      profileForegroundParallax: Boolean(dbCharacter.profile_foreground_parallax),
       profilePortraitBackgroundImageUrl: isSafeCharacterBannerImageUrl(dbCharacter.profile_portrait_background_url || '')
         ? dbCharacter.profile_portrait_background_url || undefined
         : undefined,

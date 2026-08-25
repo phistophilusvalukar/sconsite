@@ -34,6 +34,18 @@ const validProfile = {
   portraitImageUrl: '',
   dynamicPortraitEnabled: false,
   splashHideDynamicPortraitBackground: false,
+  atmosphereImageUrl: '',
+  atmospherePositionX: 50,
+  atmospherePositionY: 35,
+  atmosphereSize: 60,
+  atmosphereOpacity: 35,
+  atmosphereParallax: false,
+  foregroundImageUrl: '',
+  foregroundPositionX: 50,
+  foregroundPositionY: 50,
+  foregroundSize: 50,
+  foregroundOpacity: 60,
+  foregroundParallax: false,
   portraitBackgroundImageUrl: '',
   portraitCutoutImageUrl: '',
   portraitBackgroundScale: 100,
@@ -191,6 +203,27 @@ describe('character profile customization', () => {
       portraitBackgroundImageUrl: 'https://images.example.com/ruins.webp',
       portraitCutoutImageUrl: 'https://images.example.com/ranger.png'
     }).success).toBe(true);
+  });
+
+  it('validates atmosphere and foreground decorative layers', () => {
+    expect(characterProfileCustomizationSchema.safeParse({
+      ...validProfile,
+      atmosphereImageUrl: 'https://images.example.com/bats.png',
+      atmospherePositionX: 12,
+      atmospherePositionY: 28,
+      atmosphereSize: 140,
+      atmosphereOpacity: 42,
+      atmosphereParallax: true,
+      foregroundImageUrl: 'https://images.example.com/infernal-seal.webp',
+      foregroundPositionX: 82,
+      foregroundPositionY: 64,
+      foregroundSize: 35,
+      foregroundOpacity: 70,
+      foregroundParallax: true
+    }).success).toBe(true);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, atmosphereSize: 201 }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, foregroundOpacity: -1 }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, foregroundImageUrl: 'javascript:alert(1)' }).success).toBe(false);
   });
 
   it('validates independent Dynamic Portrait layer placement', () => {
