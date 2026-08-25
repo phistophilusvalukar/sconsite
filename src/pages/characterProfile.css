@@ -1,5 +1,6 @@
 .character-profile-page {
   --character-base: #111615;
+  --character-panel: #1d2321;
   --character-accent: #a09482;
   --character-ink: #f0ede7;
   --character-title-font: Cinzel, Georgia, serif;
@@ -122,7 +123,7 @@
   padding: clamp(36px, 6vw, 76px);
   border-bottom: 1px solid color-mix(in srgb, var(--character-accent) 30%, transparent);
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--character-base) 95%, transparent), color-mix(in srgb, var(--character-base) 62%, transparent)),
+    linear-gradient(90deg, color-mix(in srgb, var(--character-panel) 95%, transparent), color-mix(in srgb, var(--character-panel) 62%, transparent)),
     repeating-linear-gradient(90deg, transparent 0 54px, color-mix(in srgb, var(--character-accent) 8%, transparent) 54px 55px);
   background-position: center;
   background-size: cover;
@@ -364,7 +365,7 @@
 .character-profile-page .character-profile-facts > div,
 .character-profile-page .character-profile-identity .rounded-lg.bg-fantasy-900\/30 {
   border: 1px solid color-mix(in srgb, var(--character-ink) 10%, transparent);
-  background: color-mix(in srgb, var(--character-ink) 4%, transparent);
+  background: color-mix(in srgb, var(--character-panel) 94%, transparent);
 }
 .character-profile-page .character-profile-facts p:first-child,
 .character-profile-page .character-profile-identity h4 { color: color-mix(in srgb, var(--character-ink) 55%, transparent); }
@@ -375,12 +376,12 @@
   padding: 16px;
   border: 1px solid color-mix(in srgb, var(--character-accent) 24%, transparent);
   border-radius: 2px 2px 18px 2px;
-  background: color-mix(in srgb, var(--character-ink) 3%, transparent);
+  background: color-mix(in srgb, var(--character-panel) 94%, transparent);
 }
 .character-profile-ability h4 { color: var(--character-ink) !important; }
 .character-profile-ability > div span { color: var(--character-ink); }
 
-.character-profile-records { min-width: 0; background: color-mix(in srgb, var(--character-base) 83%, var(--character-depth)); }
+.character-profile-records { min-width: 0; background: color-mix(in srgb, var(--character-panel) 92%, var(--character-depth)); }
 .character-profile-identity p,
 .character-profile-identity li,
 .character-profile-records p,
@@ -503,14 +504,14 @@
 .character-profile-document[data-layout='dossier'] .character-profile-facts > div {
   position: relative;
   border-radius: 0;
-  background: color-mix(in srgb, var(--character-ink) 6%, var(--character-base));
+  background: color-mix(in srgb, var(--character-ink) 6%, var(--character-panel));
   box-shadow: inset 3px 0 color-mix(in srgb, var(--character-accent) 42%, transparent);
 }
 .character-profile-document[data-layout='dossier'] .character-profile-facts p:first-child { letter-spacing: .1em; }
 .character-profile-document[data-layout='dossier'] .character-profile-records {
   background:
     repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in srgb, var(--character-accent) 8%, transparent) 32px 33px),
-    color-mix(in srgb, var(--character-base) 76%, #050505);
+    color-mix(in srgb, var(--character-panel) 86%, #050505);
   box-shadow: inset 18px 0 28px rgb(0 0 0 / .28);
 }
 .character-profile-document[data-layout='dossier'] .character-profile-records > div:first-child { background: rgb(0 0 0 / .34); }
@@ -649,7 +650,7 @@
   position: relative;
   border: 1px solid color-mix(in srgb, var(--character-accent) 42%, transparent);
   padding: clamp(34px, 5vw, 68px);
-  background: color-mix(in srgb, var(--character-base) 82%, #130808);
+  background: color-mix(in srgb, var(--character-panel) 88%, #130808);
   box-shadow: 14px 14px 0 color-mix(in srgb, var(--character-accent) 9%, transparent), inset 0 0 42px rgb(0 0 0 / .22);
 }
 .character-profile-document[data-layout='spotlight'] .character-profile-rankline { display: block; border-bottom: 3px double color-mix(in srgb, var(--character-accent) 44%, transparent); text-align: center; }
@@ -667,7 +668,7 @@
   border: 1px solid color-mix(in srgb, var(--character-accent) 38%, transparent);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--character-accent) 5%, transparent), transparent 45%),
-    color-mix(in srgb, var(--character-base) 86%, #090303);
+    color-mix(in srgb, var(--character-panel) 91%, #090303);
   box-shadow: 0 22px 52px rgb(0 0 0 / .42);
 }
 .character-profile-document[data-layout='spotlight'] .character-profile-records > div:first-child {
@@ -798,8 +799,8 @@
 .character-profile-document[data-layout='cyberpunk'] .character-profile-identity.has-no-ability > div:last-child { grid-column: 1 / -1; max-width: 1040px; margin-inline: auto; }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-rankline { align-items: flex-end; justify-content: space-between; gap: 24px; }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-rankline strong { font-size: clamp(2rem, 5vw, var(--character-section-title-size)); text-align: right; }
-.character-profile-document[data-layout='cyberpunk'] .character-profile-main-backstory { min-height: 0; border: 0; padding: clamp(28px, 5vw, 64px) 0 !important; background: transparent; box-shadow: none; font-size: calc(var(--character-text-size) * 1.08); }
-.character-profile-document[data-layout='cyberpunk'] .character-profile-records { min-height: 680px; margin: 0 clamp(24px, 6vw, 96px) clamp(24px, 6vw, 96px); border: 1px solid color-mix(in srgb, var(--character-accent) 28%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--character-base) 88%, var(--character-depth)); }
+.character-profile-document[data-layout='cyberpunk'] .character-profile-main-backstory { min-height: 0; border: 1px solid color-mix(in srgb, var(--character-accent) 18%, transparent); border-radius: 18px; padding: clamp(28px, 5vw, 64px) !important; background: color-mix(in srgb, var(--character-panel) 90%, transparent); box-shadow: none; font-size: calc(var(--character-text-size) * 1.08); }
+.character-profile-document[data-layout='cyberpunk'] .character-profile-records { min-height: 680px; margin: 0 clamp(24px, 6vw, 96px) clamp(24px, 6vw, 96px); border: 1px solid color-mix(in srgb, var(--character-accent) 28%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--character-panel) 92%, var(--character-depth)); }
 .character-profile-document[data-layout='cyberpunk'] .character-profile-records > div:first-child { background: color-mix(in srgb, var(--character-accent) 7%, transparent); }
 
 /* Quest: a hand-built notice board, colored exclusively from the user's palette.
@@ -818,7 +819,10 @@
   margin: clamp(24px, 4vw, 56px);
   border: 1px solid color-mix(in srgb, var(--character-accent) 38%, transparent);
   border-radius: 2px;
-  background-color: color-mix(in srgb, var(--character-base) 88%, var(--character-ink));
+  background:
+    radial-gradient(ellipse at 24% 18%, color-mix(in srgb, var(--character-ink) 8%, transparent), transparent 34%),
+    repeating-linear-gradient(7deg, transparent 0 9px, color-mix(in srgb, var(--character-ink) 3%, transparent) 10px 11px),
+    linear-gradient(105deg, color-mix(in srgb, var(--character-panel) 96%, var(--character-accent)), var(--character-panel));
   box-shadow: 8px 12px 28px var(--character-drop-shadow);
   transform: rotate(-.7deg);
 }
@@ -842,13 +846,22 @@
 .character-profile-document[data-layout='nostalgia'] .character-profile-shape-button { border-radius: 3px; }
 .character-profile-document[data-layout='nostalgia'] .character-profile-facts > div,
 .character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory,
+.character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory-empty,
 .character-profile-document[data-layout='nostalgia'] .character-profile-records,
 .character-profile-document[data-layout='nostalgia'] .character-profile-ability,
-.character-profile-document[data-layout='nostalgia'] .character-profile-companion-features { border: 1px solid color-mix(in srgb, var(--character-accent) 30%, transparent); border-radius: 2px; background: color-mix(in srgb, var(--character-base) 88%, var(--character-ink)); box-shadow: 6px 9px 22px var(--character-drop-shadow); }
+.character-profile-document[data-layout='nostalgia'] .character-profile-companion-features {
+  border: 1px solid color-mix(in srgb, var(--character-accent) 30%, transparent);
+  border-radius: 2px;
+  background:
+    radial-gradient(ellipse at 16% 12%, color-mix(in srgb, var(--character-ink) 7%, transparent), transparent 32%),
+    repeating-linear-gradient(4deg, transparent 0 8px, color-mix(in srgb, var(--character-ink) 2.5%, transparent) 9px 10px),
+    linear-gradient(112deg, color-mix(in srgb, var(--character-panel) 96%, var(--character-accent)), var(--character-panel));
+  box-shadow: 6px 9px 22px var(--character-drop-shadow), inset 0 0 34px color-mix(in srgb, var(--character-accent) 7%, transparent);
+}
 .character-profile-document[data-layout='nostalgia'] .character-profile-main-backstory { transform: rotate(-.45deg); }
 .character-profile-document[data-layout='nostalgia'] .character-profile-ability { transform: rotate(.7deg); }
 .character-profile-document[data-layout='nostalgia'] .character-profile-records { margin: 18px; transform: rotate(-.35deg); }
-.character-profile-document[data-layout='nostalgia'] .character-profile-records > div:first-child { background: color-mix(in srgb, var(--character-accent) 7%, var(--character-base)); }
+.character-profile-document[data-layout='nostalgia'] .character-profile-records > div:first-child { background: color-mix(in srgb, var(--character-accent) 7%, var(--character-panel)); }
 
 .character-profile-state,
 .character-profile-loading {
@@ -875,7 +888,7 @@
   text-shadow: 0 3px 18px var(--character-title-shadow) !important;
 }
 .character-profile-page[data-theme='light'] :is(.character-profile-ability, .character-profile-main-backstory, .character-profile-main-backstory-empty) {
-  background: color-mix(in srgb, var(--character-base) 91%, var(--character-depth));
+  background: color-mix(in srgb, var(--character-panel) 91%, var(--character-depth));
   box-shadow: 0 12px 28px var(--character-drop-shadow);
 }
 

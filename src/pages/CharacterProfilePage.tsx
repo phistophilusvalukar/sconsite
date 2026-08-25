@@ -62,6 +62,7 @@ const applyProfileCustomization = (character: Character, profile: CharacterProfi
   profileBackgroundColorSource: profile.backgroundColorSource,
   profileFontColor: profile.fontColor,
   profileBaseColor: profile.baseColor,
+  profileSectionColor: profile.sectionColor,
   profileAccentColor: profile.accentColor,
   profileButtonTextColor: profile.buttonTextColor,
   profileBackgroundMode: profile.backgroundMode,
@@ -336,6 +337,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
 
   const profileStyle = {
     '--character-base': displayCharacter.profileBaseColor,
+    '--character-panel': displayCharacter.profileSectionColor,
     '--character-accent': displayCharacter.profileAccentColor,
     '--character-button-ink': displayCharacter.profileButtonTextColor,
     '--character-ink': displayCharacter.profileFontColor,
@@ -448,7 +450,7 @@ const CharacterProfilePage: React.FC<CharacterProfilePageProps> = ({ publicView 
                 <button type="button" className={draft.themeMode === 'light' ? 'is-selected' : ''} aria-pressed={draft.themeMode === 'light'} onClick={() => updateDraft('themeMode', 'light')}>Light theme</button>
               </div>
               <div className="character-color-grid">
-                {([['baseColor', draft.backgroundMode === 'gradient' ? 'Background one' : 'Page'], ...(draft.backgroundMode === 'gradient' ? [['gradientColor', 'Background two']] as const : []), ['fontColor', 'Text'], ['accentColor', 'Buttons'], ['buttonTextColor', 'Button text']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
+                {([['baseColor', draft.backgroundMode === 'gradient' ? 'Background one' : 'Page'], ...(draft.backgroundMode === 'gradient' ? [['gradientColor', 'Background two']] as const : []), ['sectionColor', 'Sections'], ['fontColor', 'Text'], ['accentColor', 'Buttons'], ['buttonTextColor', 'Button text']] as const).map(([key, label]) => <label key={key}><span>{label}</span><div><input type="color" value={draft[key]} onChange={event => updateDraft(key, event.target.value)} /><code>{draft[key]}</code></div></label>)}
               </div>
               {draft.backgroundMode === 'gradient' && (
                 <div className="character-gradient-controls">

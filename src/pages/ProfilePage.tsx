@@ -7,9 +7,8 @@ import GameService from '../services/gameService';
 import { UserService } from '../services/userService';
 import { GameListing } from '../types/database';
 
-// The schedule implementation is intentionally retained while the unfinished
-// profile surface is hidden. Flip this flag when it is ready to return.
-const SHOW_PROFILE_SCHEDULE = false;
+// Keep the schedule implementation available while it is out of the profile UI.
+const PROFILE_SCHEDULE_ENABLED = false;
 
 const ProfilePage: React.FC = () => {
   const { user, logout, isAuthenticated, refreshUserProfile } = useAuth();
@@ -22,15 +21,27 @@ const ProfilePage: React.FC = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [settingsState, setSettingsState] = useState({
+    allowWallPosts: true,
+    showOnlineStatus: true,
+    profilePrivate: false,
+    notifications: {
+      guildAnnouncements: true,
+      friendRequests: true,
+      eventReminders: false,
+    }
+  });
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
 
   useEffect(() => {
     if (user?.profile) {
       setProfileName(user.profile.username);
+      setSettingsState(user.profile.settings);
     }
   }, [user?.profile]);
 
   const loadGames = useCallback(async (showLoading = false) => {
-    if (!SHOW_PROFILE_SCHEDULE || !user?.id) {
+    if (!PROFILE_SCHEDULE_ENABLED || !user?.id) {
       setIsLoadingGames(false);
       return;
     }
@@ -66,7 +77,7 @@ const ProfilePage: React.FC = () => {
       DATABASE_TABLES.CHARACTERS
     ],
     onChange: loadGames,
-    enabled: SHOW_PROFILE_SCHEDULE && isAuthenticated
+    enabled: PROFILE_SCHEDULE_ENABLED && isAuthenticated
   });
 
   useEffect(() => {
@@ -137,6 +148,25 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleSavePrivacy = async () => {
+    if (!user.id) return;
+
+    setIsSavingPrivacy(true);
+    try {
+      const response = await userService.updateUser(user.id, { settings: settingsState });
+      if (response.success) {
+        await refreshUserProfile();
+      } else {
+        alert(response.error || 'Failed to save privacy settings');
+      }
+    } catch (error) {
+      console.error('Error updating privacy settings:', error);
+      alert('Failed to save privacy settings');
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -152,7 +182,7 @@ const ProfilePage: React.FC = () => {
                 <div>
                   <h1 className="font-fantasy text-3xl font-bold text-white mb-2">{user.username}</h1>
                   {(user.profile?.isAdmin || user.profile?.isLoremaster) && (
-                    <div className="mb-2 flex flex-wrap gap-2" aria-label="Site roles">
+                    <div className="mb-3 flex flex-wrap gap-2" aria-label="Account roles">
                       {user.profile.isAdmin && <RoleBadge icon={ShieldCheck} label="Admin" />}
                       {user.profile.isLoremaster && <RoleBadge icon={BookOpen} label="Loremaster" />}
                     </div>
@@ -175,7 +205,7 @@ const ProfilePage: React.FC = () => {
         </div>
 
         <div className="bg-fantasy-900/30 border border-fantasy-700/30 rounded-xl p-6">
-          {SHOW_PROFILE_SCHEDULE && (
+          {PROFILE_SCHEDULE_ENABLED && (
             <section>
               <div className="flex items-center gap-2 mb-6">
                 <Calendar className="w-5 h-5 text-yellow-400" />
@@ -194,7 +224,10 @@ const ProfilePage: React.FC = () => {
 
           <SettingsPanel
             username={profileName}
+            allowWallPosts={settingsState.allowWallPosts}
+            profilePrivate={settingsState.profilePrivate}
             isSavingProfile={isSavingProfile}
+            isSavingPrivacy={isSavingPrivacy}
             profileMessage={profileMessage}
             profileError={profileError}
             onUsernameChange={(value) => {
@@ -203,11 +236,14 @@ const ProfilePage: React.FC = () => {
               setProfileError(null);
             }}
             onSaveProfile={handleSaveProfile}
+            onAllowWallPostsChange={(allowWallPosts) => setSettingsState(previous => ({ ...previous, allowWallPosts }))}
+            onProfilePrivateChange={(profilePrivate) => setSettingsState(previous => ({ ...previous, profilePrivate }))}
+            onSavePrivacy={() => void handleSavePrivacy()}
           />
         </div>
       </div>
 
-      {selectedGame && <ScheduleGameModal game={selectedGame} userId={user.id} onClose={() => setSelectedGame(null)} />}
+      {PROFILE_SCHEDULE_ENABLED && selectedGame && <ScheduleGameModal game={selectedGame} userId={user.id} onClose={() => setSelectedGame(null)} />}
     </div>
   );
 };
@@ -268,21 +304,36 @@ const TimelineCard: React.FC<{
 
 const SettingsPanel: React.FC<{
   username: string;
+  allowWallPosts: boolean;
+  profilePrivate: boolean;
   isSavingProfile: boolean;
+  isSavingPrivacy: boolean;
   profileMessage: string | null;
   profileError: string | null;
   onUsernameChange: (value: string) => void;
   onSaveProfile: (event: React.FormEvent<HTMLFormElement>) => void;
+  onAllowWallPostsChange: (checked: boolean) => void;
+  onProfilePrivateChange: (checked: boolean) => void;
+  onSavePrivacy: () => void;
 }> = ({
   username,
+  allowWallPosts,
+  profilePrivate,
   isSavingProfile,
+  isSavingPrivacy,
   profileMessage,
   profileError,
   onUsernameChange,
-  onSaveProfile
+  onSaveProfile,
+  onAllowWallPostsChange,
+  onProfilePrivateChange,
+  onSavePrivacy
 }) => (
   <div className="space-y-6">
-    <div><h2 className="text-2xl font-bold text-white">Display name</h2><p className="mt-1 text-sm text-gray-400">This is the name other members see across the site.</p></div>
+    <div>
+      <h2 className="text-2xl font-bold text-white">Profile settings</h2>
+      <p className="mt-2 text-sm text-gray-400">Manage the settings that currently affect how your profile works.</p>
+    </div>
     <form onSubmit={onSaveProfile}>
       <label htmlFor="profile-display-name" className="mb-2 block text-lg font-semibold text-white">
         Display name
@@ -310,7 +361,61 @@ const SettingsPanel: React.FC<{
       {profileError && <p className="mt-2 text-sm text-red-300">{profileError}</p>}
       {profileMessage && <p className="mt-2 text-sm text-emerald-300">{profileMessage}</p>}
     </form>
+    <div className="border-t border-fantasy-700/30 pt-6">
+      <h3 className="text-lg font-semibold text-white">Privacy</h3>
+      <p className="mt-1 text-sm text-gray-400">These choices are enforced when other members access your profile.</p>
+      <div className="mt-4 space-y-4">
+        <SettingCheckbox
+          label="Private profile"
+          description="Only you can access your user profile."
+          checked={profilePrivate}
+          onChange={onProfilePrivateChange}
+        />
+        <SettingCheckbox
+          label="Allow profile posts"
+          description="Other signed-in members can post on your profile when it is visible to them."
+          checked={allowWallPosts}
+          onChange={onAllowWallPostsChange}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onSavePrivacy}
+        disabled={isSavingPrivacy}
+        className="mt-5 flex items-center gap-2 rounded-lg bg-yellow-500 px-5 py-3 font-bold text-midnight-900 transition-colors hover:bg-yellow-400 disabled:bg-gray-600"
+      >
+        {isSavingPrivacy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+        <span>{isSavingPrivacy ? 'Saving...' : 'Save Privacy'}</span>
+      </button>
+    </div>
   </div>
+);
+
+const SettingCheckbox: React.FC<{
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}> = ({ label, description, checked, onChange }) => (
+  <label className="flex items-start gap-3">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      className="form-checkbox mt-1 h-4 w-4 rounded border-fantasy-600 bg-fantasy-800 text-yellow-500 focus:ring-yellow-400"
+    />
+    <span>
+      <span className="block font-medium text-gray-200">{label}</span>
+      <span className="mt-0.5 block text-sm text-gray-400">{description}</span>
+    </span>
+  </label>
+);
+
+const RoleBadge: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string }> = ({ icon: Icon, label }) => (
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/35 bg-yellow-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-yellow-200">
+    <Icon className="h-3.5 w-3.5" />
+    {label}
+  </span>
 );
 
 const ScheduleGameModal: React.FC<{ game: GameListing; userId: string; onClose: () => void }> = ({ game, userId, onClose }) => (
@@ -347,13 +452,6 @@ const ScheduleGameModal: React.FC<{ game: GameListing; userId: string; onClose: 
       </div>
     </div>
   </div>
-);
-
-const RoleBadge: React.FC<{ icon: React.ComponentType<{ className?: string }>; label: string }> = ({ icon: Icon, label }) => (
-  <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-yellow-200">
-    <Icon className="h-3.5 w-3.5" />
-    {label}
-  </span>
 );
 
 const isUserGame = (game: GameListing, userId: string) =>

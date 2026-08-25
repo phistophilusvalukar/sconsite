@@ -51,6 +51,7 @@ export const defaultCharacterProfileSectionVisibility = {
 
 export const defaultCharacterProfilePalette = {
   baseColor: '#111615',
+  sectionColor: '#1d2321',
   fontColor: '#f0ede7',
   accentColor: '#a09482',
   buttonTextColor: '#111615',
@@ -107,6 +108,7 @@ export const characterProfileCustomizationSchema = z.object({
   backgroundColorSource: z.enum(['base', 'accent']),
   fontColor: hexColor,
   baseColor: hexColor,
+  sectionColor: hexColor,
   accentColor: hexColor,
   buttonTextColor: hexColor,
   backgroundMode: z.enum(profileBackgroundModeValues),
@@ -169,6 +171,7 @@ export const customizationFromCharacter = (character: Character): CharacterProfi
   backgroundColorSource: character.profileBackgroundColorSource || defaultProfileDecorations.backgroundColorSource,
   fontColor: character.profileFontColor,
   baseColor: character.profileBaseColor,
+  sectionColor: character.profileSectionColor || defaultCharacterProfilePalette.sectionColor,
   accentColor: character.profileAccentColor,
   buttonTextColor: character.profileButtonTextColor || defaultCharacterProfilePalette.buttonTextColor,
   backgroundMode: character.profileBackgroundMode,

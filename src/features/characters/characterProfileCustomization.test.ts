@@ -23,6 +23,7 @@ const validProfile = {
   backgroundColorSource: 'base' as const,
   fontColor: '#f4efe6',
   baseColor: '#18201f',
+  sectionColor: '#2a3431',
   accentColor: '#c9954a',
   buttonTextColor: '#111615',
   backgroundMode: 'solid' as const,
@@ -84,6 +85,7 @@ describe('character profile customization', () => {
       portraitImageUrl: legacyAlternate.portraitImageUrl,
       accentFontFamily: validProfile.accentFontFamily,
       themeMode: validProfile.themeMode,
+      sectionColor: validProfile.sectionColor,
       sectionVisibility: {
         portrait: true,
         details: false,
@@ -101,6 +103,7 @@ describe('character profile customization', () => {
 
   it('rejects unsafe colors and incomplete visibility settings', () => {
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, baseColor: 'red' }).success).toBe(false);
+    expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, sectionColor: 'parchment' }).success).toBe(false);
     expect(characterProfileCustomizationSchema.safeParse({ ...validProfile, buttonTextColor: 'white' }).success).toBe(false);
     expect(characterProfileCustomizationSchema.safeParse({
       ...validProfile,

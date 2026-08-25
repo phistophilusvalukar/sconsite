@@ -114,6 +114,7 @@ export interface Character {
   profileBackgroundColorSource: ProfileDecorationColorSource;
   profileFontColor: string;
   profileBaseColor: string;
+  profileSectionColor: string;
   profileAccentColor: string;
   profileButtonTextColor: string;
   profileBackgroundMode: 'solid' | 'gradient';

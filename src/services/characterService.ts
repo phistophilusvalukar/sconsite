@@ -111,6 +111,7 @@ type CharacterCreateInput = Omit<
   | 'profileBackgroundColorSource'
   | 'profileFontColor'
   | 'profileBaseColor'
+  | 'profileSectionColor'
   | 'profileAccentColor'
   | 'profileButtonTextColor'
   | 'profileBackgroundMode'
@@ -151,6 +152,7 @@ type CharacterCreateInput = Omit<
   | 'profileBackgroundColorSource'
   | 'profileFontColor'
   | 'profileBaseColor'
+  | 'profileSectionColor'
   | 'profileAccentColor'
   | 'profileButtonTextColor'
   | 'profileBackgroundMode'
@@ -214,6 +216,7 @@ interface CharacterRow {
   profile_background_color_source?: Character['profileBackgroundColorSource'] | null;
   profile_font_color?: string | null;
   profile_base_color?: string | null;
+  profile_section_color?: string | null;
   profile_accent_color?: string | null;
   profile_button_text_color?: string | null;
   profile_change_shape_enabled?: boolean | null;
@@ -460,6 +463,7 @@ export class CharacterService {
         profile_background_color_source: characterData.profileBackgroundColorSource || 'base',
         profile_font_color: characterData.profileFontColor || defaultCharacterProfilePalette.fontColor,
         profile_base_color: characterData.profileBaseColor || defaultCharacterProfilePalette.baseColor,
+        profile_section_color: characterData.profileSectionColor || defaultCharacterProfilePalette.sectionColor,
         profile_accent_color: characterData.profileAccentColor || defaultCharacterProfilePalette.accentColor,
         profile_button_text_color: characterData.profileButtonTextColor || defaultCharacterProfilePalette.buttonTextColor,
         profile_background_mode: characterData.profileBackgroundMode || defaultCharacterProfilePalette.backgroundMode,
@@ -716,7 +720,7 @@ export class CharacterService {
         return { success: false, error: 'Only the character owner can customize this page.' };
       }
 
-      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v9_command', {
+      const { data, error } = await this.dbService.getClient().rpc('update_character_profile_v10_command', {
         p_character_id: characterId,
         p_profile: parsed.data,
         p_change_shape_enabled: shape?.enabled ?? false,
@@ -1431,6 +1435,7 @@ export class CharacterService {
       profileBackgroundColorSource: dbCharacter.profile_background_color_source || 'base',
       profileFontColor: dbCharacter.profile_font_color || defaultCharacterProfilePalette.fontColor,
       profileBaseColor: dbCharacter.profile_base_color || defaultCharacterProfilePalette.baseColor,
+      profileSectionColor: dbCharacter.profile_section_color || defaultCharacterProfilePalette.sectionColor,
       profileAccentColor: dbCharacter.profile_accent_color || defaultCharacterProfilePalette.accentColor,
       profileButtonTextColor: dbCharacter.profile_button_text_color || defaultCharacterProfilePalette.buttonTextColor,
       profileChangeShapeEnabled: Boolean(dbCharacter.profile_change_shape_enabled),
