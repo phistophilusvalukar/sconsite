@@ -52,7 +52,7 @@ export async function listMyShopCharacters(): Promise<ShopCharacterOption[]> {
 }
 
 export async function saveShop(shop: Omit<PlayerShop, 'id' | 'ownerId' | 'ownerName' | 'ownerAvatar' | 'characterName' | 'characterAvatar' | 'updatedAt'> & { id?: string }): Promise<string> {
-  const { data, error } = await supabase.rpc('upsert_player_shop_v3_command', { p_shop: shop });
+  const { data, error } = await supabase.rpc('upsert_player_shop_v2_command', { p_shop: shop });
   if (error) throw new Error(`Unable to save shop: ${error.message}`);
   return z.string().parse(data);
 }
