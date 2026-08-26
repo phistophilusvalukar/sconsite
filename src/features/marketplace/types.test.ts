@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assuranceDc, canTransitionCommission, commissionWorkflow, emptyBonus, totalBonus } from './types';
+import { assuranceDc, calculateCommissionPrice, canTransitionCommission, commissionWorkflow, emptyBonus, totalBonus } from './types';
 
 describe('marketplace skill modifiers', () => {
   it('combines the Foundry level, selected proficiency, and disclosed modifiers', () => {
@@ -26,5 +26,28 @@ describe('commission workflow contract', () => {
     expect(canTransitionCommission('requester', 'waiting_for_payment', 'completed')).toBe(true);
     expect(canTransitionCommission('requester', 'requested', 'completed')).toBe(false);
     expect(canTransitionCommission('owner', 'waiting_for_payment', 'completed')).toBe(false);
+  });
+
+  it('allows customers to cancel before payment and owners to cancel any active order', () => {
+    expect(canTransitionCommission('requester', 'requested', 'cancelled')).toBe(true);
+    expect(canTransitionCommission('requester', 'in_progress', 'cancelled')).toBe(true);
+    expect(canTransitionCommission('requester', 'waiting_for_payment', 'cancelled')).toBe(true);
+    expect(canTransitionCommission('owner', 'requested', 'cancelled')).toBe(true);
+    expect(canTransitionCommission('owner', 'in_progress', 'cancelled')).toBe(true);
+    expect(canTransitionCommission('owner', 'waiting_for_payment', 'cancelled')).toBe(true);
+    expect(canTransitionCommission('owner', 'completed', 'cancelled')).toBe(false);
+  });
+
+  it('uses payment-first transitions for self-crafts', () => {
+    expect(canTransitionCommission('requester', 'waiting_for_payment', 'in_progress', true)).toBe(true);
+    expect(canTransitionCommission('owner', 'in_progress', 'completed', true)).toBe(true);
+    expect(canTransitionCommission('owner', 'waiting_for_payment', 'cancelled', true)).toBe(true);
+    expect(canTransitionCommission('owner', 'in_progress', 'cancelled', true)).toBe(true);
+    expect(canTransitionCommission('requester', 'waiting_for_payment', 'completed', true)).toBe(false);
+  });
+
+  it('applies the selected discount to the base GP price', () => {
+    expect(calculateCommissionPrice(125, 20)).toBe(100);
+    expect(calculateCommissionPrice(12.35, 15)).toBe(10.5);
   });
 });

@@ -76,11 +76,17 @@ export type CommissionStatus = 'requested' | 'in_progress' | 'waiting_for_paymen
 export type CommissionPerspective = 'owner' | 'requester';
 export const commissionWorkflow: CommissionStatus[] = ['requested', 'in_progress', 'waiting_for_payment', 'completed'];
 export const commissionTransitions: Record<CommissionPerspective, Partial<Record<CommissionStatus, CommissionStatus[]>>> = {
-  owner: { requested: ['in_progress', 'declined'], in_progress: ['waiting_for_payment'], waiting_for_payment: ['in_progress'] },
-  requester: { requested: ['cancelled'], in_progress: ['cancelled'], waiting_for_payment: ['completed'] }
+  owner: { requested: ['in_progress', 'declined', 'cancelled'], in_progress: ['waiting_for_payment', 'cancelled'], waiting_for_payment: ['in_progress', 'cancelled'] },
+  requester: { requested: ['cancelled'], in_progress: ['cancelled'], waiting_for_payment: ['completed', 'cancelled'] }
 };
-export const canTransitionCommission = (perspective: CommissionPerspective, from: CommissionStatus, to: CommissionStatus) =>
-  commissionTransitions[perspective][from]?.includes(to) ?? false;
+export const selfCraftTransitions: Record<CommissionPerspective, Partial<Record<CommissionStatus, CommissionStatus[]>>> = {
+  owner: { waiting_for_payment: ['cancelled'], in_progress: ['completed', 'cancelled'] },
+  requester: { waiting_for_payment: ['in_progress', 'cancelled'] }
+};
+export const canTransitionCommission = (perspective: CommissionPerspective, from: CommissionStatus, to: CommissionStatus, selfCraft = false) =>
+  (selfCraft ? selfCraftTransitions : commissionTransitions)[perspective][from]?.includes(to) ?? false;
+export const calculateCommissionPrice = (basePriceGp: number, discountPercent: number) =>
+  Math.round(basePriceGp * (100 - discountPercent)) / 100;
 export interface ShopCommissionEvent {
   id: string;
   source: 'web' | 'discord' | 'system';
@@ -97,6 +103,9 @@ export interface ShopCommission {
   shopTitle: string;
   characterName: string;
   requesterName: string;
+  requesterCharacterId?: string;
+  requesterCharacterName?: string;
+  requesterCharacterAvatar?: string;
   itemName: string;
   aonUrl: string;
   itemTier: number;
@@ -106,14 +115,22 @@ export interface ShopCommission {
   details: string;
   needsSecondaryHelp: boolean;
   status: CommissionStatus;
+  basePriceGp?: number;
+  discountPercent?: number;
+  finalPriceGp?: number;
+  isSelfCraft: boolean;
+  paidAt?: string;
   createdAt: string;
   updatedAt: string;
   perspective: CommissionPerspective;
+  isOwner: boolean;
+  isRequester: boolean;
   events?: ShopCommissionEvent[];
 }
 
 export interface CommissionDraft {
   shopId: string;
+  characterId: string;
   itemName: string;
   aonUrl: string;
   itemTier: number;
@@ -122,6 +139,14 @@ export interface CommissionDraft {
   deadline?: string;
   details: string;
   needsSecondaryHelp: boolean;
+  selfCraft?: boolean;
+  basePriceGp?: number;
+  discountPercent?: number;
+}
+
+export interface CommissionPrice {
+  basePriceGp: number;
+  discountPercent: number;
 }
 
 export interface ShopCharacterOption { id: string; name: string; level: number; avatar?: string; }

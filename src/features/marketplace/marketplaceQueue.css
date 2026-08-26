@@ -26,3 +26,16 @@
 .secondary-help { display: block; color: #ddd6fe; margin: .6rem 0; }
 .queue-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
 .queue-actions button { background: #29312f; color: #fff; border: 1px solid #505955; border-radius: .5rem; padding: .55rem .8rem; cursor: pointer; }
+.queue-actions a { border: 1px solid #505955; border-radius: .5rem; padding: .55rem .8rem; color: #fff; background: #29312f; text-decoration: none; }
+.commission-form select { border: 1px solid #444541; border-radius: .5rem; padding: .7rem; color: #fff; background: #0c1211; }
+.commission-price-editor { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: .75rem; margin: 1rem 0; border: 1px solid #4d5853; border-radius: .75rem; padding: 1rem; background: #101614; }
+.commission-price-editor legend { padding: 0 .4rem; color: #e7e9e6; font-weight: 750; }
+.commission-price-editor label { position: relative; display: grid; gap: .35rem; color: #abb3ae; font-size: .78rem; }
+.commission-price-editor label span { position: absolute; right: .7rem; bottom: .7rem; }
+.commission-price-editor input { width: 100%; border: 1px solid #444541; border-radius: .5rem; padding: .65rem; color: #fff; background: #080d0c; }
+.commission-price-editor output { display: grid; min-width: 120px; gap: .2rem; border-left: 1px solid #3d4642; padding-left: .9rem; }
+.commission-price-editor output small { color: #858f89; }.commission-price-editor output strong { color: #fff; font-size: 1.15rem; }
+.commission-price-summary { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin: .85rem 0; border: 1px solid #4a554f; border-radius: .65rem; padding: .75rem; color: #aeb7b2; background: #0e1412; font-size: .73rem; }
+.commission-price-summary strong { margin-left: auto; color: #fff; font-size: .9rem; }.commission-price-summary b { border-radius: 999px; padding: .2rem .45rem; color: #bbf7d0; background: #14532d; }
+.shop-workflow.is-self-craft { grid-template-columns: repeat(3,1fr); }
+@media(max-width:700px){.commission-price-editor{grid-template-columns:1fr}.commission-price-editor output{border-top:1px solid #3d4642;border-left:0;padding-top:.7rem;padding-left:0}}

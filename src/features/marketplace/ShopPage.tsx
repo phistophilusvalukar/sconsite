@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { BonusPanel, CommissionForm, ShopEditor } from './MarketplacePage';
 import { listShopCommissionLog, listShops, updateCommissionStatus } from './marketplaceRepository';
-import { commissionWorkflow, type CommissionStatus, type PlayerShop, type ShopCommission } from './types';
+import { calculateCommissionPrice, commissionWorkflow, type CommissionStatus, type PlayerShop, type ShopCommission } from './types';
 import './marketplace.css';
 import './marketplaceQueue.css';
 import './shopPage.css';
@@ -76,7 +76,7 @@ export default function ShopPage() {
         <header><ScrollText /><div><p className="shop-page-section-label">Shared record</p><h2>Commission log</h2></div></header>
         <p className="shop-log-explainer">Requests and every status change appear here for the shop owner and the requesting customer.</p>
         {error && <p className="marketplace-error">{error}</p>}
-        {commissions.length === 0 ? <p className="shop-log-empty">No commissions involving you at this shop yet.</p> : commissions.map(commission => <CommissionLogCard key={commission.id} commission={commission} onChanged={refresh} />)}
+        {commissions.length === 0 ? <p className="shop-log-empty">No commissions involving you at this shop yet.</p> : commissions.map(commission => <CommissionLogCard key={commission.id} commission={commission} defaultDiscount={shop.overallDiscountPercent} onChanged={refresh} />)}
       </aside>
     </div>
 
@@ -84,25 +84,31 @@ export default function ShopPage() {
   </main>;
 }
 
-function CommissionLogCard({ commission, onChanged }: { commission: ShopCommission; onChanged: () => Promise<void> }) {
+function CommissionLogCard({ commission, defaultDiscount, onChanged }: { commission: ShopCommission; defaultDiscount: number; onChanged: () => Promise<void> }) {
   const [note, setNote] = useState('');
+  const [basePrice, setBasePrice] = useState(commission.basePriceGp?.toString() ?? '');
+  const [discount, setDiscount] = useState(commission.discountPercent ?? defaultDiscount);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const currentStep = commissionWorkflow.indexOf(commission.status);
+  const displayedWorkflow: CommissionStatus[] = commission.isSelfCraft ? ['waiting_for_payment', 'in_progress', 'completed'] : commissionWorkflow;
+  const currentStep = displayedWorkflow.indexOf(commission.status);
+  const calculatedPrice = calculateCommissionPrice(Number(basePrice || 0), discount);
 
-  const transition = async (status: CommissionStatus) => {
+  const transition = async (status: CommissionStatus, includePrice = false) => {
     setBusy(true); setError('');
-    try { await updateCommissionStatus(commission.id, status, note); setNote(''); await onChanged(); }
+    try { await updateCommissionStatus(commission.id, status, note, includePrice ? { basePriceGp: Number(basePrice), discountPercent: discount } : undefined); setNote(''); await onChanged(); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'The status could not be updated.'); }
     finally { setBusy(false); }
   };
 
   return <article className="shop-log-card">
-    <header><div><small>{commission.requesterName}</small><h3><a href={commission.aonUrl} target="_blank" rel="noreferrer">{commission.itemName}</a></h3></div><span className={`queue-status ${commission.status}`}>{statusLabel(commission.status)}</span></header>
-    <div className="shop-workflow" aria-label={`Commission status: ${statusLabel(commission.status)}`}>{commissionWorkflow.map((status, index) => <div key={status} className={index < currentStep ? 'is-complete' : index === currentStep ? 'is-current' : ''}><i /> <span>{statusLabel(status)}</span></div>)}</div>
+    <header><div><small>{commission.isSelfCraft ? 'Self-craft' : commission.requesterName}{commission.requesterCharacterName ? ` · For ${commission.requesterCharacterName}` : ''}</small><h3><a href={commission.aonUrl} target="_blank" rel="noreferrer">{commission.itemName}</a></h3></div><span className={`queue-status ${commission.status}`}>{statusLabel(commission.status)}</span></header>
+    <div className={`shop-workflow${commission.isSelfCraft ? ' is-self-craft' : ''}`} aria-label={`Commission status: ${statusLabel(commission.status)}`}>{displayedWorkflow.map((status, index) => <div key={status} className={index < currentStep ? 'is-complete' : index === currentStep ? 'is-current' : ''}><i /> <span>{statusLabel(status)}</span></div>)}</div>
     <p>{commission.details}</p><div className="queue-meta"><span>Tier {commission.itemTier}</span><span>Quantity {commission.quantity}</span>{commission.budget && <span>{commission.budget}</span>}{commission.deadline && <span>Due {new Date(`${commission.deadline}T00:00:00`).toLocaleDateString()}</span>}</div>
+    {commission.finalPriceGp !== undefined && <div className="commission-price-summary"><span>Base {commission.basePriceGp?.toFixed(2)} gp</span><span>{commission.discountPercent}% discount</span><strong>{commission.finalPriceGp.toFixed(2)} gp due</strong>{commission.paidAt && <b>Payment confirmed</b>}</div>}
     {commission.events && commission.events.length > 0 && <ol className="shop-event-list">{[...commission.events].reverse().map(event => <li key={event.id}><i /><div><b>{statusLabel(event.toStatus)}</b><span>{event.actorName || (event.source === 'discord' ? 'Discord' : 'System')} · {new Date(event.createdAt).toLocaleString()}</span>{event.note && <p>{event.note}</p>}</div><em>{event.source}</em></li>)}</ol>}
-    {['requested', 'in_progress', 'waiting_for_payment'].includes(commission.status) && <div className="shop-log-actions"><input value={note} maxLength={1000} onChange={event => setNote(event.target.value)} placeholder="Optional update for the log" />{commission.perspective === 'owner' && commission.status === 'requested' && <><button disabled={busy} onClick={() => void transition('in_progress')}>Start work</button><button disabled={busy} onClick={() => void transition('declined')}>Decline</button></>}{commission.perspective === 'owner' && commission.status === 'in_progress' && <button disabled={busy} onClick={() => void transition('waiting_for_payment')}>Request payment</button>}{commission.perspective === 'owner' && commission.status === 'waiting_for_payment' && <button disabled={busy} onClick={() => void transition('in_progress')}>Return to work</button>}{commission.perspective === 'requester' && ['requested', 'in_progress'].includes(commission.status) && <button disabled={busy} onClick={() => void transition('cancelled')}>Cancel</button>}{commission.perspective === 'requester' && commission.status === 'waiting_for_payment' && <button className="is-primary" disabled={busy} onClick={() => void transition('completed')}>Confirm payment</button>}</div>}
+    {!commission.isSelfCraft && commission.isOwner && commission.status === 'in_progress' && <fieldset className="commission-price-editor"><legend>Complete work and set price</legend><label>Base price (gp)<input type="number" min="0" step="0.01" value={basePrice} onChange={event => setBasePrice(event.target.value)} /></label><label>Discount<input type="number" min="0" max="100" value={discount} onChange={event => setDiscount(Number(event.target.value))} /><span>%</span></label><output><small>Final price</small><strong>{calculatedPrice.toFixed(2)} gp</strong></output></fieldset>}
+    {['requested', 'in_progress', 'waiting_for_payment'].includes(commission.status) && <div className="shop-log-actions"><input value={note} maxLength={1000} onChange={event => setNote(event.target.value)} placeholder="Optional update for the log" />{commission.isOwner && !commission.isSelfCraft && commission.status === 'requested' && <><button disabled={busy} onClick={() => void transition('in_progress')}>Start work</button><button disabled={busy} onClick={() => void transition('declined')}>Decline</button></>}{commission.isOwner && !commission.isSelfCraft && commission.status === 'in_progress' && <button className="is-primary" disabled={busy || basePrice === ''} onClick={() => void transition('waiting_for_payment', true)}>Work completed · request payment</button>}{commission.isOwner && !commission.isSelfCraft && commission.status === 'waiting_for_payment' && <button disabled={busy} onClick={() => void transition('in_progress')}>Return to work</button>}{commission.isRequester && !commission.isOwner && !commission.paidAt && <button disabled={busy} onClick={() => void transition('cancelled')}>Cancel order</button>}{commission.isRequester && !commission.isSelfCraft && commission.status === 'waiting_for_payment' && <button className="is-primary" disabled={busy} onClick={() => void transition('completed')}>Confirm payment</button>}{commission.isRequester && commission.isSelfCraft && commission.status === 'waiting_for_payment' && <button className="is-primary" disabled={busy} onClick={() => void transition('in_progress')}>Confirm upfront payment</button>}{commission.isOwner && commission.isSelfCraft && commission.status === 'in_progress' && <button className="is-primary" disabled={busy} onClick={() => void transition('completed')}>Mark self-craft completed</button>}{commission.isOwner && <button disabled={busy} onClick={() => void transition('cancelled')}>Cancel order</button>}</div>}
     {error && <p className="marketplace-error">{error}</p>}
   </article>;
 }

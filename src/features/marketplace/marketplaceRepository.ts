@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { supabase } from '../../config/database';
-import type { CommissionDraft, CommissionStatus, PlayerShop, ShopCharacterOption, ShopCommission, ShopCommissionEvent } from './types';
+import type { CommissionDraft, CommissionPrice, CommissionStatus, PlayerShop, ShopCharacterOption, ShopCommission, ShopCommissionEvent } from './types';
 
 const shopSchema = z.object({
   id: z.string(), owner_id: z.string(), owner_name: z.string(), owner_avatar: z.string().nullish(),
@@ -59,10 +59,13 @@ export async function submitCommission(draft: CommissionDraft): Promise<string> 
 
 const commissionSchema = z.object({
   id: z.string(), shop_id: z.string(), shop_title: z.string(), character_name: z.string(), requester_name: z.string(),
+  requester_character_id: z.string().nullish(), requester_character_name: z.string().nullish(), requester_character_avatar: z.string().nullish(),
   item_name: z.string(), aon_url: z.string(), item_tier: z.number(), quantity: z.number(), budget: z.string().nullish(),
   deadline: z.string().nullish(), details: z.string(), needs_secondary_help: z.boolean(),
+  base_price_gp: z.coerce.number().nullish(), discount_percent: z.number().nullish(), final_price_gp: z.coerce.number().nullish(),
+  is_self_craft: z.boolean().optional().default(false), paid_at: z.string().nullish(),
   status: z.enum(['requested', 'in_progress', 'waiting_for_payment', 'completed', 'declined', 'cancelled']), created_at: z.string(), updated_at: z.string(),
-  perspective: z.enum(['owner', 'requester']), events: z.array(z.object({
+  perspective: z.enum(['owner', 'requester']), is_owner: z.boolean().optional(), is_requester: z.boolean().optional(), events: z.array(z.object({
     id: z.string(), source: z.enum(['web', 'discord', 'system']), from_status: z.enum(['requested', 'in_progress', 'waiting_for_payment', 'completed', 'declined', 'cancelled']).nullish(),
     to_status: z.enum(['requested', 'in_progress', 'waiting_for_payment', 'completed', 'declined', 'cancelled']), note: z.string().nullish(),
     external_actor_id: z.string().nullish(), actor_name: z.string().nullish(), created_at: z.string()
@@ -71,10 +74,15 @@ const commissionSchema = z.object({
 
 const fromCommissionRow = (row: z.infer<typeof commissionSchema>): ShopCommission => ({
   id: row.id, shopId: row.shop_id, shopTitle: row.shop_title, characterName: row.character_name,
-  requesterName: row.requester_name, itemName: row.item_name, aonUrl: row.aon_url, itemTier: row.item_tier,
+  requesterName: row.requester_name, requesterCharacterId: row.requester_character_id ?? undefined,
+  requesterCharacterName: row.requester_character_name ?? undefined, requesterCharacterAvatar: row.requester_character_avatar ?? undefined,
+  itemName: row.item_name, aonUrl: row.aon_url, itemTier: row.item_tier,
   quantity: row.quantity, budget: row.budget ?? undefined, deadline: row.deadline ?? undefined,
   details: row.details, needsSecondaryHelp: row.needs_secondary_help, status: row.status,
-  createdAt: row.created_at, updatedAt: row.updated_at, perspective: row.perspective,
+  basePriceGp: row.base_price_gp ?? undefined, discountPercent: row.discount_percent ?? undefined,
+  finalPriceGp: row.final_price_gp ?? undefined, isSelfCraft: row.is_self_craft, paidAt: row.paid_at ?? undefined,
+  createdAt: row.created_at, updatedAt: row.updated_at,
+  perspective: row.perspective, isOwner: row.is_owner ?? row.perspective === 'owner', isRequester: row.is_requester ?? row.perspective === 'requester',
   events: row.events?.map((event): ShopCommissionEvent => ({
     id: event.id, source: event.source, fromStatus: event.from_status ?? undefined, toStatus: event.to_status,
     note: event.note ?? undefined, externalActorId: event.external_actor_id ?? undefined,
@@ -94,9 +102,10 @@ export async function listShopCommissionLog(shopId: string): Promise<ShopCommiss
   return z.array(commissionSchema).parse(data ?? []).map(fromCommissionRow);
 }
 
-export async function updateCommissionStatus(commissionId: string, status: CommissionStatus, note?: string): Promise<void> {
-  const { error } = await supabase.rpc('update_shop_commission_status_v2_command', {
-    p_commission_id: commissionId, p_status: status, p_note: note || null, p_source: 'web', p_external_actor_id: null, p_actor_role: null
+export async function updateCommissionStatus(commissionId: string, status: CommissionStatus, note?: string, price?: CommissionPrice): Promise<void> {
+  const { error } = await supabase.rpc('update_shop_commission_status_v3_command', {
+    p_commission_id: commissionId, p_status: status, p_note: note || null, p_source: 'web', p_external_actor_id: null, p_actor_role: null,
+    p_base_price_gp: price?.basePriceGp ?? null, p_discount_percent: price?.discountPercent ?? null
   });
   if (error) throw new Error(error.message);
 }
