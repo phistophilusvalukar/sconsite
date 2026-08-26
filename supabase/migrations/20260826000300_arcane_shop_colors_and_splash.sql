@@ -9,6 +9,7 @@ ALTER TABLE public.player_shops
 UPDATE public.player_shops SET page_theme = 'arcane' WHERE page_theme <> 'arcane';
 
 ALTER TABLE public.player_shops
+  ALTER COLUMN page_theme SET DEFAULT 'arcane',
   DROP CONSTRAINT IF EXISTS player_shops_page_theme_check,
   ADD CONSTRAINT player_shops_page_theme_check CHECK (page_theme = 'arcane'),
   DROP CONSTRAINT IF EXISTS player_shops_page_secondary_color_check,
