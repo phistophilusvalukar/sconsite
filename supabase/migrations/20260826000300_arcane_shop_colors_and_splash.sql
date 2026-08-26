@@ -53,7 +53,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.get_marketplace_shops_v2()
+CREATE OR REPLACE FUNCTION public.get_marketplace_shops()
 RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp SET row_security = off AS $$
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
     'id', s.id, 'owner_id', u.auth_user_id, 'owner_name', u.username, 'owner_avatar', u.avatar,
@@ -84,8 +84,8 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_
 $$;
 
 REVOKE ALL ON FUNCTION public.upsert_player_shop_v3_command(jsonb) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_marketplace_shops_v2() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_marketplace_shops() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.upsert_player_shop_v3_command(jsonb) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.get_marketplace_shops_v2() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_marketplace_shops() TO authenticated;
 
 NOTIFY pgrst, 'reload schema';

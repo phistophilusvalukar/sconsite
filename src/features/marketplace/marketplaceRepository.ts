@@ -36,8 +36,8 @@ function fromRow(value: unknown): PlayerShop {
 }
 
 export async function listShops(): Promise<PlayerShop[]> {
-  const { data, error } = await supabase.rpc('get_marketplace_shops_v2');
-  if (error) throw error;
+  const { data, error } = await supabase.rpc('get_marketplace_shops');
+  if (error) throw new Error(`Unable to load shops: ${error.message}`);
   return z.array(z.unknown()).parse(data ?? []).map(fromRow);
 }
 
@@ -53,7 +53,7 @@ export async function listMyShopCharacters(): Promise<ShopCharacterOption[]> {
 
 export async function saveShop(shop: Omit<PlayerShop, 'id' | 'ownerId' | 'ownerName' | 'ownerAvatar' | 'characterName' | 'characterAvatar' | 'updatedAt'> & { id?: string }): Promise<string> {
   const { data, error } = await supabase.rpc('upsert_player_shop_v3_command', { p_shop: shop });
-  if (error) throw error;
+  if (error) throw new Error(`Unable to save shop: ${error.message}`);
   return z.string().parse(data);
 }
 
