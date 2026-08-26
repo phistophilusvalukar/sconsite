@@ -6,7 +6,7 @@ import { UserService } from '../services/userService';
 import { UserProfile } from '../types/database';
 import { AuthContext, AuthUser } from './authContextCore';
 import { storeAuthReturnPath } from './authReturnPath';
-import { hasAuthIdentityChanged } from './authSessionIdentity';
+import { hasAuthIdentityChanged, supersedesInitialSessionLookup } from './authSessionIdentity';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -36,6 +36,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const sessionUserIdRef = useRef<string | null>(null);
+  const hasRestoredSessionRef = useRef(false);
   const userService = useMemo(() => UserService.getInstance(), []);
 
   const user = useMemo(() => {
@@ -56,23 +57,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     let isMounted = true;
+    let authStateChangedDuringRestore = false;
+    hasRestoredSessionRef.current = false;
 
-    supabase.auth.getSession().then(({ data, error: sessionError }) => {
-      if (!isMounted) return;
+    void supabase.auth.getSession()
+      .then(({ data, error: sessionError }) => {
+        if (!isMounted) return;
 
-      if (sessionError) {
+        if (sessionError) {
+          console.error('Failed to restore auth session:', sessionError);
+          setError(sessionError.message);
+        }
+
+        // INITIAL_SESSION can fire before getSession resolves. The explicit lookup
+        // remains authoritative unless a real sign-in/sign-out happened meanwhile.
+        if (!authStateChangedDuringRestore) {
+          sessionUserIdRef.current = data.session?.user.id ?? null;
+          setSession(data.session ?? null);
+          setIsProfileResolved(!data.session?.user);
+        }
+      })
+      .catch((sessionError: unknown) => {
+        if (!isMounted) return;
         console.error('Failed to restore auth session:', sessionError);
-        setError(sessionError.message);
-      }
+        setError(sessionError instanceof Error ? sessionError.message : 'Failed to restore auth session');
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        hasRestoredSessionRef.current = true;
+        setIsLoading(false);
+      });
 
-      sessionUserIdRef.current = data.session?.user.id ?? null;
-      setSession(data.session ?? null);
-      setIsProfileResolved(!data.session?.user);
-      setIsLoading(false);
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!isMounted) return;
+
+      if (supersedesInitialSessionLookup(event)) {
+        authStateChangedDuringRestore = true;
+      }
 
       const nextUserId = nextSession?.user.id ?? null;
       const identityChanged = hasAuthIdentityChanged(sessionUserIdRef.current, nextUserId);
@@ -83,7 +104,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsProfileResolved(!nextSession?.user);
       }
       setError(null);
-      setIsLoading(false);
+      if (hasRestoredSessionRef.current) {
+        setIsLoading(false);
+      }
     });
 
     return () => {
