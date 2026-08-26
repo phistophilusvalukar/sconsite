@@ -6,6 +6,9 @@
 .discord-settings legend { padding: 0 .4rem; color: #fff; }
 .discord-settings > label:not(.checkbox) { display: flex; flex-direction: column; gap: .4rem; }
 .discord-settings p { color: #858f89; font-size: .85rem; }
+.shop-page-settings { border: 1px solid #3d4642; border-radius: .7rem; padding: 1rem; margin: 1rem 0; }
+.shop-page-settings legend { padding: 0 .4rem; color: #fff; }
+.shop-color-grid input[type='color'] { width: 100%; min-height: 44px; padding: .25rem; cursor: pointer; }
 .commission-queue { position: relative; width: min(1000px, 100%); min-height: 420px; background: #111615; border: 1px solid #505955; border-radius: 1rem; padding: clamp(1.25rem,4vw,3rem); }
 .commission-queue h1 { font: 700 clamp(2rem,4vw,3.2rem) Cinzel,serif; margin: .4rem 0 1.2rem; }
 .queue-tabs { display: flex; gap: .5rem; border-bottom: 1px solid #3d4642; margin-bottom: 1.5rem; }

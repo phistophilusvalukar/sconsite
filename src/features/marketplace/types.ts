@@ -1,5 +1,5 @@
 export type ShopKind = 'crafting' | 'ritual';
-export type ShopPageTheme = 'forge' | 'arcane' | 'parchment';
+export type ShopPageTheme = 'arcane';
 export type ProficiencyRank = 'untrained' | 'trained' | 'expert' | 'master' | 'legendary';
 
 export interface BonusBreakdown {
@@ -55,6 +55,10 @@ export interface PlayerShop {
   imageUrl?: string;
   pageTheme: ShopPageTheme;
   pageAccentColor: string;
+  pageSecondaryColor: string;
+  pageBackgroundColor: string;
+  pageSurfaceColor: string;
+  pagePanelColor: string;
   pageBackgroundImageUrl?: string;
   pageTagline: string;
   tags: string[];

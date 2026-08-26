@@ -2,11 +2,15 @@ import { z } from 'zod';
 import { supabase } from '../../config/database';
 import type { CommissionDraft, CommissionPrice, CommissionStatus, PlayerShop, ShopCharacterOption, ShopCommission, ShopCommissionEvent } from './types';
 
+const hexColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
+
 const shopSchema = z.object({
   id: z.string(), owner_id: z.string(), owner_name: z.string(), owner_avatar: z.string().nullish(),
   discord_user_id: z.string().nullish(), discord_pings_enabled: z.boolean().optional().default(false), character_id: z.string(), character_name: z.string(), character_avatar: z.string().nullish(), kind: z.enum(['crafting', 'ritual']), title: z.string(),
-  description: z.string(), image_url: z.string().nullish(), page_theme: z.enum(['forge', 'arcane', 'parchment']).optional().default('forge'),
-  page_accent_color: z.string().optional().default('#d1cabf'), page_background_image_url: z.string().nullish(), page_tagline: z.string().optional().default(''),
+  description: z.string(), image_url: z.string().nullish(), page_theme: z.string().optional().default('arcane'),
+  page_accent_color: hexColorSchema.optional().default('#a78bfa'), page_secondary_color: hexColorSchema.optional().default('#38bdf8'),
+  page_background_color: hexColorSchema.optional().default('#0d0918'), page_surface_color: hexColorSchema.optional().default('#151022'),
+  page_panel_color: hexColorSchema.optional().default('#201831'), page_background_image_url: z.string().nullish(), page_tagline: z.string().optional().default(''),
   tags: z.array(z.string()), specialty: z.string().nullish(),
   tier: z.number(), overall_discount_percent: z.number(), feats: z.array(z.unknown()), crafting_bonus: z.record(z.string(), z.unknown()),
   crafting_assurance: z.boolean(), crafting_degree_boost: z.string(), ritual_skills: z.array(z.unknown()),
@@ -18,7 +22,9 @@ function fromRow(value: unknown): PlayerShop {
   return {
     id: row.id, ownerId: row.owner_id, ownerName: row.owner_name, ownerAvatar: row.owner_avatar ?? undefined,
     discordUserId: row.discord_user_id ?? undefined, discordPingsEnabled: row.discord_pings_enabled, characterId: row.character_id, characterName: row.character_name, characterAvatar: row.character_avatar ?? undefined, kind: row.kind, title: row.title, description: row.description,
-    imageUrl: row.image_url ?? undefined, pageTheme: row.page_theme, pageAccentColor: row.page_accent_color,
+    imageUrl: row.image_url ?? undefined, pageTheme: 'arcane', pageAccentColor: row.page_accent_color,
+    pageSecondaryColor: row.page_secondary_color, pageBackgroundColor: row.page_background_color,
+    pageSurfaceColor: row.page_surface_color, pagePanelColor: row.page_panel_color,
     pageBackgroundImageUrl: row.page_background_image_url ?? undefined, pageTagline: row.page_tagline,
     tags: row.tags, specialty: row.specialty ?? undefined, tier: row.tier,
     overallDiscountPercent: row.overall_discount_percent, feats: row.feats as PlayerShop['feats'],
@@ -30,7 +36,7 @@ function fromRow(value: unknown): PlayerShop {
 }
 
 export async function listShops(): Promise<PlayerShop[]> {
-  const { data, error } = await supabase.rpc('get_marketplace_shops');
+  const { data, error } = await supabase.rpc('get_marketplace_shops_v2');
   if (error) throw error;
   return z.array(z.unknown()).parse(data ?? []).map(fromRow);
 }
@@ -46,7 +52,7 @@ export async function listMyShopCharacters(): Promise<ShopCharacterOption[]> {
 }
 
 export async function saveShop(shop: Omit<PlayerShop, 'id' | 'ownerId' | 'ownerName' | 'ownerAvatar' | 'characterName' | 'characterAvatar' | 'updatedAt'> & { id?: string }): Promise<string> {
-  const { data, error } = await supabase.rpc('upsert_player_shop_v2_command', { p_shop: shop });
+  const { data, error } = await supabase.rpc('upsert_player_shop_v3_command', { p_shop: shop });
   if (error) throw error;
   return z.string().parse(data);
 }
