@@ -20,6 +20,7 @@ describe('multiplayer lobby contracts', () => {
       incomingInvitations: [],
       pendingInviteeIds: [],
       recentInvitationUpdates: [],
+      activeMatchId: null,
     });
 
     expect(state.team?.members[0].color).toBe('azure');
@@ -41,6 +42,7 @@ describe('multiplayer lobby contracts', () => {
       incomingInvitations: [],
       pendingInviteeIds: [],
       recentInvitationUpdates: [],
+      activeMatchId: null,
     });
     expect(result.success).toBe(false);
   });

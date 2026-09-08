@@ -15,8 +15,12 @@ async function runRpc<T>(name: string, args?: Record<string, unknown>): Promise<
 
 export const multiplayerLobbyService = {
   async getState(): Promise<MultiplayerLobbyState> {
-    const data = await runRpc<unknown>('get_multiplayer_lobby_state');
-    const result = multiplayerLobbyStateSchema.safeParse(data);
+    const [data, activeMatchId] = await Promise.all([
+      runRpc<unknown>('get_multiplayer_lobby_state'),
+      runRpc<string | null>('get_active_dungeon_relay_match'),
+    ]);
+    const payload = typeof data === 'object' && data !== null ? data : {};
+    const result = multiplayerLobbyStateSchema.safeParse({ ...payload, activeMatchId });
     if (!result.success) {
       console.error('Invalid multiplayer lobby response:', result.error);
       throw new Error('The lobby returned an invalid response.');
@@ -52,5 +56,9 @@ export const multiplayerLobbyService = {
 
   heartbeat() {
     return runRpc<null>('heartbeat_multiplayer_lobby');
+  },
+
+  startGame() {
+    return runRpc<string>('start_dungeon_relay_match');
   },
 };

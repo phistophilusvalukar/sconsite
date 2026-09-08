@@ -66,6 +66,7 @@ export const multiplayerLobbyStateSchema = z.object({
   incomingInvitations: z.array(incomingInvitationSchema),
   pendingInviteeIds: z.array(z.string().min(1)),
   recentInvitationUpdates: z.array(invitationUpdateSchema),
+  activeMatchId: z.string().uuid().nullable(),
 });
 
 export type MultiplayerLobbyState = z.infer<typeof multiplayerLobbyStateSchema>;
@@ -89,6 +90,9 @@ export function multiplayerErrorMessage(message: string) {
     invitation_not_found: 'That invitation is no longer available.',
     invitation_already_resolved: 'That invitation has already been answered.',
     team_not_found: 'That team is no longer available.',
+    team_leader_required: 'Only the team leader can start the game.',
+    at_least_two_players: 'Invite at least one other player before starting.',
+    too_many_players: 'Dungeon Relay supports no more than eight players.',
   };
 
   const key = Object.keys(knownErrors).find(error => message.includes(error));

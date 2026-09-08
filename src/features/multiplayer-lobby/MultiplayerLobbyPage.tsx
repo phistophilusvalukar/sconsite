@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   Check,
@@ -35,10 +36,12 @@ const EMPTY_STATE: MultiplayerLobbyState = {
   incomingInvitations: [],
   pendingInviteeIds: [],
   recentInvitationUpdates: [],
+  activeMatchId: null,
 };
 
 export default function MultiplayerLobbyPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [state, setState] = useState<MultiplayerLobbyState>(EMPTY_STATE);
   const [selectedColor, setSelectedColor] = useState<PlayerColor>('azure');
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +78,10 @@ export default function MultiplayerLobbyPage() {
   }, [loadState]);
 
   useEffect(() => {
+    if (state.activeMatchId) navigate(`/multiplayer/matches/${state.activeMatchId}`);
+  }, [navigate, state.activeMatchId]);
+
+  useEffect(() => {
     if (!state.self) return;
     const timer = window.setInterval(() => {
       void multiplayerLobbyService.heartbeat().catch(() => undefined);
@@ -95,6 +102,7 @@ export default function MultiplayerLobbyPage() {
       DATABASE_TABLES.MULTIPLAYER_TEAMS,
       DATABASE_TABLES.MULTIPLAYER_TEAM_MEMBERS,
       DATABASE_TABLES.MULTIPLAYER_TEAM_INVITATIONS,
+      DATABASE_TABLES.DUNGEON_RELAY_UPDATES,
     ],
     onChange: loadState,
     enabled: Boolean(user?.id),
@@ -180,6 +188,10 @@ export default function MultiplayerLobbyPage() {
             onColorChange={changeColor}
             onInvite={playerId => void mutate(`invite-${playerId}`, () => multiplayerLobbyService.invite(playerId), 'Invitation sent.')}
             onLeaveTeam={() => void mutate('leave-team', () => multiplayerLobbyService.enter('waiting', selectedColor))}
+            onStart={() => void mutate('start-game', async () => {
+              const matchId = await multiplayerLobbyService.startGame();
+              navigate(`/multiplayer/matches/${matchId}`);
+            })}
           />
         )}
       </section>
@@ -291,7 +303,7 @@ function SoloQueue({ color, activeAction, onColorChange, onEnter }: {
   );
 }
 
-function TeamBuilder({ state, currentUserId, color, activeAction, onColorChange, onInvite, onLeaveTeam }: {
+function TeamBuilder({ state, currentUserId, color, activeAction, onColorChange, onInvite, onLeaveTeam, onStart }: {
   state: MultiplayerLobbyState;
   currentUserId: string;
   color: PlayerColor;
@@ -299,6 +311,7 @@ function TeamBuilder({ state, currentUserId, color, activeAction, onColorChange,
   onColorChange: (color: PlayerColor) => void;
   onInvite: (playerId: string) => void;
   onLeaveTeam: () => void;
+  onStart: () => void;
 }) {
   const team = state.team;
   if (!team) return null;
@@ -307,6 +320,14 @@ function TeamBuilder({ state, currentUserId, color, activeAction, onColorChange,
   return (
     <div className="ml-team-layout">
       <section className="ml-panel ml-roster-panel">
+        <div className="ml-start-strip">
+          <div><p className="ml-eyebrow"><Sparkles /> Dungeon Relay prototype</p><strong>{team.members.length < 2 ? 'One more player needed' : 'Your party is ready'}</strong><small>Defeat ten chambers and the final boss together.</small></div>
+          {team.leaderId === currentUserId ? (
+            <button className="ml-primary-button" type="button" onClick={onStart} disabled={activeAction !== null || team.members.length < 2}>
+              {activeAction === 'start-game' ? <Loader2 className="ml-spin" /> : <Zap />} Start game
+            </button>
+          ) : <span className="ml-leader-wait"><Clock3 /> Waiting for leader</span>}
+        </div>
         <div className="ml-panel-heading">
           <div><p className="ml-eyebrow"><Users /> Your team</p><h2>{team.members.length} / 8 players</h2></div>
           <button className="ml-quiet-button" type="button" onClick={onLeaveTeam} disabled={activeAction !== null}><LogOut /> Leave team</button>

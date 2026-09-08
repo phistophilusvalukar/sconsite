@@ -78,6 +78,12 @@
 .ml-primary-button:disabled, .ml-secondary-button:disabled, .ml-quiet-button:disabled, .ml-choice:disabled, .ml-colors button:disabled, .ml-waiting-player button:disabled { cursor: not-allowed; opacity: .58; }
 .ml-inline-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.5rem; }
 .ml-roster-panel, .ml-invite-panel { padding: clamp(1.1rem, 3vw, 1.65rem); }
+.ml-start-strip { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: -.35rem -.35rem 1.35rem; padding: 1rem; border: 1px solid rgba(96, 165, 250, .28); border-radius: 1rem; background: linear-gradient(135deg, rgba(38, 81, 157, .27), rgba(105, 70, 190, .15)); }
+.ml-start-strip > div { display: grid; gap: .22rem; }
+.ml-start-strip strong { font-size: 1.05rem; }
+.ml-start-strip small { color: var(--ml-muted); }
+.ml-leader-wait { display: inline-flex; align-items: center; gap: .45rem; color: var(--ml-muted); font-size: .78rem; font-weight: 750; }
+.ml-leader-wait svg { width: 1rem; }
 .ml-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.15rem; }
 .ml-panel-heading .ml-eyebrow { margin-bottom: .35rem; }
 .ml-roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
@@ -136,6 +142,7 @@
   .ml-color-panel { grid-template-columns: 1fr; }
   .ml-roster { grid-template-columns: 1fr; }
   .ml-team-color { align-items: flex-start; flex-direction: column; }
+  .ml-start-strip { align-items: flex-start; flex-direction: column; }
   .ml-waiting-card { min-height: auto; padding: 1.5rem; }
   .ml-dialog { padding: 1.3rem; }
   .ml-dialog-actions { flex-direction: column-reverse; }

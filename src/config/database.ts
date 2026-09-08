@@ -66,4 +66,5 @@ export const DATABASE_TABLES = {
   MULTIPLAYER_LOBBY_PLAYERS: 'multiplayer_lobby_players',
   MULTIPLAYER_TEAM_MEMBERS: 'multiplayer_team_members',
   MULTIPLAYER_TEAM_INVITATIONS: 'multiplayer_team_invitations',
+  DUNGEON_RELAY_UPDATES: 'dungeon_relay_updates',
 };
