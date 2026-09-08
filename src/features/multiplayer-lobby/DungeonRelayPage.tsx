@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { allocateDungeonRelayMatches, DUNGEON_RELAY_SYMBOLS, isDungeonRelayEventEligible } from '@scon/rules';
-import { Check, ChevronLeft, Crown, Eye, Layers3, Loader2, RotateCcw, Skull, Sparkles, Trash2, Trophy, Users, Vote, X, Zap } from 'lucide-react';
+import { allocateDungeonRelayMatches, canDungeonRelayClassEliminate, DUNGEON_RELAY_SYMBOLS, isDungeonRelayEventEligible } from '@scon/rules';
+import { Check, ChevronLeft, Clock3, Crown, Eye, Flame, Layers3, Loader2, RotateCcw, Skull, Sparkles, Trash2, Trophy, Users, Vote, X, Zap } from 'lucide-react';
 import { DATABASE_TABLES } from '../../config/database';
 import { useAuth } from '../../context/useAuth';
 import { useSupabaseRealtime } from '../../hooks/useSupabaseRealtime';
 import { getPlayerColor } from './multiplayerLobby';
-import { DUNGEON_CARD_TYPES, DUNGEON_EVENTS, getDungeonSymbol, type DungeonRelayHandCard, type DungeonRelayPublicCard, type DungeonRelayState } from './dungeonRelayGame';
+import { DUNGEON_CARD_TYPES, DUNGEON_CLASS_POWERS, DUNGEON_EVENTS, getDungeonSymbol, type DungeonRelayHandCard, type DungeonRelayPublicCard, type DungeonRelayState } from './dungeonRelayGame';
 import { dungeonRelayService } from './dungeonRelayService';
 import './dungeonRelay.css';
 
@@ -20,6 +20,10 @@ export default function DungeonRelayPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [busyEventAction, setBusyEventAction] = useState<string | null>(null);
   const [voteTargetId, setVoteTargetId] = useState('');
+  const [powerOpen, setPowerOpen] = useState(false);
+  const [powerCardIds, setPowerCardIds] = useState<string[]>([]);
+  const [powerTargetId, setPowerTargetId] = useState('');
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +51,11 @@ export default function DungeonRelayPage() {
   }, [matchId, navigate]);
 
   useEffect(() => { void loadState(); }, [loadState]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(Date.now()), 250);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useSupabaseRealtime({
     channelName: `dungeon-relay-${matchId}-${user?.id ?? 'anonymous'}`,
@@ -93,6 +102,26 @@ export default function DungeonRelayPage() {
     }
   };
 
+  const activatePower = async () => {
+    if (!state) return;
+    const self = state.players.find(player => player.userId === state.self.userId);
+    if (!self) return;
+    const power = DUNGEON_CLASS_POWERS[self.classId];
+    if (powerCardIds.length !== power.cost) return;
+    setBusyEventAction('power');
+    setError(null);
+    try {
+      await dungeonRelayService.usePower(matchId, powerCardIds, power.target === 'player' ? powerTargetId : null);
+      setPowerOpen(false);
+      setPowerCardIds([]);
+      await loadState();
+    } catch (powerError) {
+      setError(powerError instanceof Error ? powerError.message : 'The class power could not be used.');
+    } finally {
+      setBusyEventAction(null);
+    }
+  };
+
   const playCards = async () => {
     if (selectedIds.length === 0) return;
     setIsPlaying(true);
@@ -128,16 +157,27 @@ export default function DungeonRelayPage() {
   const isResolving = state.match.phase === 'resolving';
   const selfPlayer = state.players.find(player => player.userId === state.self.userId);
   const isEvent = state.dungeon.cardType === 'event' && state.dungeon.eventType !== null;
-  const eligibleEventCards = isEvent
+  const eligibleEventCards = isEvent && !selfPlayer?.eventExcluded
     ? state.self.hand.filter(card => isDungeonRelayEventEligible(card, state.dungeon.eventType!))
     : [];
+  const selfPower = selfPlayer ? DUNGEON_CLASS_POWERS[selfPlayer.classId] : null;
+  const eliminationReady = selfPlayer ? canDungeonRelayClassEliminate(selfPlayer.classId, state.dungeon.cardType) : false;
+  const powerContextReady = Boolean(selfPower && selfPlayer?.status === 'active' && state.match.phase === 'active'
+    && state.self.hand.length >= selfPower.cost
+    && (eliminationReady
+      || (selfPlayer?.classId === 'champion' && isEvent)
+      || (selfPlayer?.classId === 'wizard' && !state.match.timerFrozen)
+      || !['barbarian', 'ranger', 'rogue', 'witch', 'champion', 'wizard'].includes(selfPlayer?.classId ?? '')));
+  const secondsRemaining = state.match.timerFrozen
+    ? state.match.timerRemainingSeconds
+    : state.match.timerDeadline ? Math.max(0, Math.ceil((new Date(state.match.timerDeadline).getTime() - clockNow) / 1000)) : 0;
 
   return (
     <main className={`dr-page${isResolving ? ' is-resolving' : ''}`}>
       <header className="dr-topbar">
         <button type="button" onClick={() => navigate('/multiplayer')}><ChevronLeft /> Lobby</button>
         <div className="dr-title"><span><Sparkles /></span><div><strong>Dungeon Relay</strong><small>Cooperative prototype</small></div></div>
-        <div className="dr-round-label"><span>{DUNGEON_CARD_TYPES[state.dungeon.cardType].label}</span><strong>{state.dungeon.position} / 11</strong></div>
+        <div className={`dr-round-label dr-timer${state.match.timerFrozen ? ' is-frozen' : ''}`}><span><Clock3 /> {state.match.timerFrozen ? 'Frozen' : 'Time'}</span><strong>{secondsRemaining}s · {state.dungeon.position} / 11</strong></div>
       </header>
 
       <div className="dr-progress" aria-label={`Dungeon progress: ${state.dungeon.position} of 11`}>
@@ -156,12 +196,14 @@ export default function DungeonRelayPage() {
           return (
             <article key={player.userId} className={`dr-player${player.status === 'dead' ? ' is-dead' : ''}`} style={{ '--player-color': tone.hex } as CSSProperties}>
               <div className="dr-avatar"><img src={player.avatar || '/npc-placeholder.png'} alt="" />{player.status === 'dead' && <Skull />}</div>
-              <div><strong>{player.username}{player.userId === user?.id ? ' (you)' : ''}</strong><small>{player.status === 'dead' ? 'Spectating' : isEvent && player.confirmed ? 'Event confirmed' : `${player.handCount} in hand`}</small></div>
-              <div className="dr-player-counts"><span title="Deck"><Layers3 />{player.deckCount}</span><span title="Discard">♻ {player.discardCount}</span></div>
+              <div><strong>{player.username}{player.userId === user?.id ? ' (you)' : ''}</strong><small>{tone.className} · {player.status === 'dead' ? 'Spectating' : isEvent && player.eventExcluded ? 'Excluded from event' : isEvent && player.confirmed ? 'Event confirmed' : `${player.handCount} in hand`}</small></div>
+              <div className="dr-player-counts"><span title="Deck"><Layers3 />{player.deckCount}</span><span title="Discard">♻ {player.discardCount}</span><span title="Graveyard"><Skull />{player.graveyardCount}</span></div>
             </article>
           );
         })}
       </section>
+
+      <DiscardPiles state={state} />
 
       <section className="dr-board">
         <DungeonCard key={state.dungeon.position} state={state} matched={allocation?.matched ?? state.dungeon.requirements} />
@@ -206,10 +248,13 @@ export default function DungeonRelayPage() {
             <span>{state.self.status === 'dead' ? 'Your deck ran out while drawing. Help your party from the sidelines.' : isEvent ? 'You may still play cards normally. Highlighted cards may also be discarded to the event.' : 'Select one to five cards, then commit them to the field.'}</span>
           </div>
           {state.self.status === 'active' && (
-            <button type="button" className="dr-play-button" onClick={() => void playCards()} disabled={selectedIds.length === 0 || isPlaying || isResolving || selfPlayer?.confirmed}>
-              {isPlaying ? <Loader2 className="dr-spin" /> : <Zap />}
-              Play {selectedIds.length > 0 ? `${selectedIds.length} card${selectedIds.length === 1 ? '' : 's'}` : 'cards'}
-            </button>
+            <div className="dr-hand-actions">
+              {selfPower && <button type="button" className={`dr-power-button${eliminationReady ? ' is-ready' : ''}`} onClick={() => { setSelectedIds([]); setPowerCardIds([]); setPowerTargetId(state.players.find(player => player.status === 'active' && !player.eventExcluded)?.userId ?? ''); setPowerOpen(true); }} disabled={!powerContextReady || Boolean(selfPlayer?.confirmed)}><Flame /> {selfPower.name}</button>}
+              <button type="button" className="dr-play-button" onClick={() => void playCards()} disabled={selectedIds.length === 0 || isPlaying || isResolving || selfPlayer?.confirmed}>
+                {isPlaying ? <Loader2 className="dr-spin" /> : <Zap />}
+                Play {selectedIds.length > 0 ? `${selectedIds.length} card${selectedIds.length === 1 ? '' : 's'}` : 'cards'}
+              </button>
+            </div>
           )}
         </div>
         <div className="dr-hand">
@@ -235,6 +280,20 @@ export default function DungeonRelayPage() {
 
       {state.match.phase === 'complete' && (
         <EndScreen won={state.match.status === 'won'} isLeader={isLeader} busy={isRetrying} onRetry={() => void retry()} onLobby={() => navigate('/multiplayer')} />
+      )}
+      {powerOpen && selfPlayer && selfPower && (
+        <PowerDialog
+          state={state}
+          power={selfPower}
+          className={getPlayerColor(selfPlayer.color).className}
+          selectedIds={powerCardIds}
+          targetId={powerTargetId}
+          busy={busyEventAction === 'power'}
+          onToggle={cardId => setPowerCardIds(current => current.includes(cardId) ? current.filter(id => id !== cardId) : current.length < selfPower.cost ? [...current, cardId] : current)}
+          onTarget={setPowerTargetId}
+          onClose={() => { setPowerOpen(false); setPowerCardIds([]); }}
+          onUse={() => void activatePower()}
+        />
       )}
     </main>
   );
@@ -264,6 +323,53 @@ function DungeonCard({ state, matched }: { state: DungeonRelayState; matched: Du
   );
 }
 
+function DiscardPiles({ state }: { state: DungeonRelayState }) {
+  if (state.discardCards.length === 0) return null;
+  return (
+    <details className="dr-discard-piles">
+      <summary><Trash2 /> Personal discard piles <span>{state.discardCards.length} recoverable card{state.discardCards.length === 1 ? '' : 's'}</span></summary>
+      <div>
+        {state.players.map(player => {
+          const cards = state.discardCards.filter(card => card.userId === player.userId);
+          if (cards.length === 0) return null;
+          return <section key={player.userId}><strong>{player.username} · {cards.length}</strong><div>{cards.map(card => <RelayCard key={card.id} card={card} contribution={0} publicCard />)}</div></section>;
+        })}
+      </div>
+    </details>
+  );
+}
+
+function PowerDialog({ state, power, className, selectedIds, targetId, busy, onToggle, onTarget, onClose, onUse }: {
+  state: DungeonRelayState;
+  power: { name: string; description: string; cost: number; target: 'none' | 'player' };
+  className: string;
+  selectedIds: string[];
+  targetId: string;
+  busy: boolean;
+  onToggle: (cardId: string) => void;
+  onTarget: (targetId: string) => void;
+  onClose: () => void;
+  onUse: () => void;
+}) {
+  const targets = state.players.filter(player => player.status === 'active' && (className !== 'Champion' || !player.eventExcluded));
+  return (
+    <div className="dr-power-backdrop" role="presentation">
+      <section className="dr-power-dialog" role="dialog" aria-modal="true" aria-labelledby="dr-power-title">
+        <button type="button" className="dr-power-close" onClick={onClose} disabled={busy} aria-label="Close power dialog"><X /></button>
+        <p>{className} power</p>
+        <h2 id="dr-power-title">{power.name}</h2>
+        <span>{power.description}</span>
+        <div className="dr-power-cost"><strong>Choose {power.cost} card{power.cost === 1 ? '' : 's'} to discard</strong><small>{selectedIds.length} / {power.cost} selected</small></div>
+        <div className="dr-power-hand">
+          {state.self.hand.map(card => <button key={card.id} type="button" className={selectedIds.includes(card.id) ? 'is-selected' : ''} onClick={() => onToggle(card.id)} disabled={busy}><RelayCard card={card} contribution={0} /><span className="dr-select-mark"><Check /></span></button>)}
+        </div>
+        {power.target === 'player' && <label className="dr-power-target">Choose a player<select value={targetId} onChange={event => onTarget(event.target.value)} disabled={busy}>{targets.map(player => <option key={player.userId} value={player.userId}>{player.username}{player.userId === state.self.userId ? ' (you)' : ''}</option>)}</select></label>}
+        <div className="dr-power-actions"><button type="button" className="dr-secondary-button" onClick={onClose} disabled={busy}>Cancel</button><button type="button" className="dr-primary-button" onClick={onUse} disabled={busy || selectedIds.length !== power.cost || (power.target === 'player' && !targetId)}>{busy ? <Loader2 className="dr-spin" /> : <Flame />} Use power</button></div>
+      </section>
+    </div>
+  );
+}
+
 function EventPanel({ state, voteTargetId, setVoteTargetId, eligibleCount, busy, onVote, onConfirm }: {
   state: DungeonRelayState;
   voteTargetId: string;
@@ -277,10 +383,14 @@ function EventPanel({ state, voteTargetId, setVoteTargetId, eligibleCount, busy,
   const event = DUNGEON_EVENTS[state.dungeon.eventType];
   const self = state.players.find(player => player.userId === state.self.userId);
   const selectedTarget = state.players.find(player => player.userId === state.dungeon.selectedTargetId);
-  const activePlayers = state.players.filter(player => player.status === 'active');
+  const activePlayers = state.players.filter(player => player.status === 'active' && !player.eventExcluded);
   const votesCast = activePlayers.filter(player => player.voteTargetId).length;
   const confirmations = activePlayers.filter(player => player.confirmed).length;
   const awaitingDiscards = state.dungeon.eventType === 'discard_shields' || state.dungeon.eventType === 'discard_multis';
+
+  if (self?.eventExcluded) {
+    return <section className="dr-event-panel"><div className="dr-event-heading"><span>✦</span><div><small>Party event</small><strong>{event.title}</strong></div></div><p>You have been excluded from this event. Its instructions and effects do not apply to you.</p></section>;
+  }
 
   return (
     <section className="dr-event-panel" aria-labelledby="dr-event-title">

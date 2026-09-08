@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { DungeonRelayCardType, DungeonRelayEventType, DungeonRelaySymbol } from '@scon/rules';
+import type { DungeonRelayCardType, DungeonRelayClass, DungeonRelayEventType, DungeonRelaySymbol } from '@scon/rules';
 
 export const DUNGEON_SYMBOLS: ReadonlyArray<{
   id: DungeonRelaySymbol;
@@ -32,10 +32,24 @@ export const DUNGEON_EVENTS: Readonly<Record<DungeonRelayEventType, { title: str
   discard_multis: { title: 'Travel Light', instructions: 'Play every multi-symbol card normally or discard it to this event, then confirm.' },
 };
 
+export const DUNGEON_CLASS_POWERS: Readonly<Record<DungeonRelayClass, { name: string; description: string; cost: number; target: 'none' | 'player' }>> = {
+  barbarian: { name: 'Challenge', description: 'Defeat a Person card immediately.', cost: 2, target: 'none' },
+  swashbuckler: { name: 'Rally', description: 'Every other surviving player draws 1 card.', cost: 2, target: 'none' },
+  ranger: { name: 'Master Hunter', description: 'Defeat a Beast card immediately.', cost: 2, target: 'none' },
+  alchemist: { name: 'Quick Mix', description: 'Draw 2 cards.', cost: 1, target: 'none' },
+  rogue: { name: 'Bypass', description: 'Defeat an Obstacle card immediately.', cost: 2, target: 'none' },
+  investigator: { name: 'Reconstruct', description: 'Recover the 2 oldest cards from your discard pile.', cost: 2, target: 'none' },
+  wizard: { name: 'Freeze Time', description: 'Pause the clock until any player plays a card.', cost: 2, target: 'none' },
+  witch: { name: 'Counter-Curse', description: 'Defeat a Hazard card immediately.', cost: 2, target: 'none' },
+  champion: { name: 'Intercede', description: 'Exclude one player from the current event.', cost: 2, target: 'player' },
+  cleric: { name: 'Restoration', description: "Put one player's discard pile on top of their deck.", cost: 4, target: 'player' },
+};
+
 const symbolSchema = z.enum(['sword', 'arrow', 'shield', 'staff', 'dagger']);
 const cardTypeSchema = z.enum(['obstacle', 'person', 'beast', 'hazard', 'mini_boss', 'boss', 'event']);
 const eventTypeSchema = z.enum(['discard_shields', 'give_hands', 'pass_left', 'discard_multis']);
-const playerColorSchema = z.enum(['crimson', 'amber', 'emerald', 'cyan', 'azure', 'violet', 'rose', 'silver']);
+const playerColorSchema = z.enum(['crimson', 'rose', 'emerald', 'mint', 'violet', 'lavender', 'azure', 'cyan', 'amber', 'gold']);
+const playerClassSchema = z.enum(['barbarian', 'swashbuckler', 'ranger', 'alchemist', 'rogue', 'investigator', 'wizard', 'witch', 'champion', 'cleric']);
 // Hash-derived card IDs are valid PostgreSQL UUID values but do not carry an
 // RFC version/variant nibble, which z.string().uuid() intentionally requires.
 const postgresUuidSchema = z.string().regex(
@@ -66,6 +80,9 @@ export const dungeonRelayStateSchema = z.object({
     totalDungeons: z.literal(11),
     revision: z.number().int().nonnegative(),
     resolveAt: z.string().nullable(),
+    timerDeadline: z.string().nullable(),
+    timerFrozen: z.boolean(),
+    timerRemainingSeconds: z.number().int().min(0).max(60),
   }),
   dungeon: z.object({
     position: z.number().int().min(1).max(11),
@@ -82,13 +99,16 @@ export const dungeonRelayStateSchema = z.object({
     username: z.string().min(1),
     avatar: z.string(),
     color: playerColorSchema,
+    classId: playerClassSchema,
     status: z.enum(['active', 'dead']),
     seat: z.number().int().min(1).max(8),
     handCount: z.number().int().nonnegative(),
     deckCount: z.number().int().nonnegative(),
     discardCount: z.number().int().nonnegative(),
+    graveyardCount: z.number().int().nonnegative(),
     voteTargetId: z.string().nullable(),
     confirmed: z.boolean(),
+    eventExcluded: z.boolean(),
   })).min(2).max(8),
   self: z.object({
     userId: z.string().min(1),
@@ -102,6 +122,12 @@ export const dungeonRelayStateSchema = z.object({
     playedOrder: z.number().nonnegative(),
   })),
   eventDiscardCards: z.array(cardSchema.extend({
+    userId: z.string().min(1),
+    username: z.string().min(1),
+    color: playerColorSchema,
+    playedOrder: z.number().nonnegative(),
+  })),
+  discardCards: z.array(cardSchema.extend({
     userId: z.string().min(1),
     username: z.string().min(1),
     color: playerColorSchema,
@@ -135,6 +161,13 @@ export function dungeonRelayErrorMessage(message: string) {
     card_not_event_eligible: 'That card is not eligible for this event.',
     event_not_confirming: 'This event is not ready for confirmation yet.',
     eligible_cards_remain: 'Play or discard every highlighted card before confirming.',
+    invalid_power_cost: 'Select exactly the number of cards shown for this power.',
+    match_not_accepting_powers: 'Class powers cannot be used while the dungeon is resolving.',
+    active_target_required: 'Choose a surviving player.',
+    event_required: 'The Champion can only exclude someone during an event.',
+    event_player_excluded: 'That player is excluded from this event.',
+    timer_already_frozen: 'Time is already frozen.',
+    power_not_available: 'That class power cannot affect this card.',
   };
   const key = Object.keys(errors).find(error => message.includes(error));
   return key ? errors[key] : 'The game could not complete that action. Please try again.';

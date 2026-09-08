@@ -39,6 +39,10 @@ export const dungeonRelayService = {
     return runRpc<boolean>('confirm_dungeon_relay_event', { p_match_id: matchId });
   },
 
+  usePower(matchId: string, cardIds: string[], targetId: string | null) {
+    return runRpc<boolean>('use_dungeon_relay_class_power', { p_match_id: matchId, p_card_ids: cardIds, p_target_id: targetId });
+  },
+
   startAgain() {
     return runRpc<string>('start_dungeon_relay_match');
   },

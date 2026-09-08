@@ -6,6 +6,33 @@ export const DUNGEON_RELAY_CARD_TYPES = ["obstacle", "person", "beast", "hazard"
 export type DungeonRelayCardType = (typeof DUNGEON_RELAY_CARD_TYPES)[number];
 export const DUNGEON_RELAY_EVENT_TYPES = ["discard_shields", "give_hands", "pass_left", "discard_multis"] as const;
 export type DungeonRelayEventType = (typeof DUNGEON_RELAY_EVENT_TYPES)[number];
+export const DUNGEON_RELAY_CLASSES = ["barbarian", "swashbuckler", "ranger", "alchemist", "rogue", "investigator", "wizard", "witch", "champion", "cleric"] as const;
+export type DungeonRelayClass = (typeof DUNGEON_RELAY_CLASSES)[number];
+
+export const DUNGEON_RELAY_CLASS_POWER_COST: Readonly<Record<DungeonRelayClass, number>> = {
+  barbarian: 2,
+  swashbuckler: 2,
+  ranger: 2,
+  alchemist: 1,
+  rogue: 2,
+  investigator: 2,
+  wizard: 2,
+  witch: 2,
+  champion: 2,
+  cleric: 4,
+};
+
+export const DUNGEON_RELAY_ELIMINATION_TYPES = {
+  barbarian: "person",
+  ranger: "beast",
+  witch: "hazard",
+  rogue: "obstacle",
+} as const satisfies Partial<Record<DungeonRelayClass, DungeonRelayCardType>>;
+
+export function canDungeonRelayClassEliminate(classId: DungeonRelayClass, cardType: DungeonRelayCardType): boolean {
+  return classId in DUNGEON_RELAY_ELIMINATION_TYPES
+    && DUNGEON_RELAY_ELIMINATION_TYPES[classId as keyof typeof DUNGEON_RELAY_ELIMINATION_TYPES] === cardType;
+}
 
 export interface DungeonRelayCard {
   readonly id: string;

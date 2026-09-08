@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   allocateDungeonRelayMatches,
+  canDungeonRelayClassEliminate,
   createDungeonRelayDeck,
   DUNGEON_RELAY_SYMBOLS,
   dungeonRelayDrawToFive,
@@ -81,5 +82,14 @@ describe("Dungeon Relay prototype rules", () => {
     const seats = { p1: 1, p2: 2, p3: 3 };
     expect(resolveDungeonRelayVote({ p1: "p2", p2: "p2", p3: "p1" }, seats)).toBe("p2");
     expect(resolveDungeonRelayVote({ p1: "p2", p2: "p1" }, seats)).toBe("p1");
+  });
+
+  it("matches elimination powers only to their class card type", () => {
+    expect(canDungeonRelayClassEliminate("barbarian", "person")).toBe(true);
+    expect(canDungeonRelayClassEliminate("ranger", "beast")).toBe(true);
+    expect(canDungeonRelayClassEliminate("witch", "hazard")).toBe(true);
+    expect(canDungeonRelayClassEliminate("rogue", "obstacle")).toBe(true);
+    expect(canDungeonRelayClassEliminate("barbarian", "beast")).toBe(false);
+    expect(canDungeonRelayClassEliminate("cleric", "person")).toBe(false);
   });
 });

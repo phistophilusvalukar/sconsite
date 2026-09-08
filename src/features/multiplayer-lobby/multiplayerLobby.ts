@@ -1,14 +1,16 @@
 import { z } from 'zod';
 
 export const PLAYER_COLORS = [
-  { id: 'crimson', label: 'Crimson', hex: '#ef4444' },
-  { id: 'amber', label: 'Amber', hex: '#f59e0b' },
-  { id: 'emerald', label: 'Emerald', hex: '#22c55e' },
-  { id: 'cyan', label: 'Cyan', hex: '#06b6d4' },
-  { id: 'azure', label: 'Azure', hex: '#3b82f6' },
-  { id: 'violet', label: 'Violet', hex: '#8b5cf6' },
-  { id: 'rose', label: 'Rose', hex: '#ec4899' },
-  { id: 'silver', label: 'Silver', hex: '#cbd5e1' },
+  { id: 'crimson', label: 'Crimson', classId: 'barbarian', className: 'Barbarian', alignment: 'dark', hex: '#dc2626' },
+  { id: 'rose', label: 'Rose', classId: 'swashbuckler', className: 'Swashbuckler', alignment: 'light', hex: '#fb7185' },
+  { id: 'emerald', label: 'Emerald', classId: 'ranger', className: 'Ranger', alignment: 'dark', hex: '#15803d' },
+  { id: 'mint', label: 'Mint', classId: 'alchemist', className: 'Alchemist', alignment: 'light', hex: '#6ee7b7' },
+  { id: 'violet', label: 'Violet', classId: 'rogue', className: 'Rogue', alignment: 'dark', hex: '#7c3aed' },
+  { id: 'lavender', label: 'Lavender', classId: 'investigator', className: 'Investigator', alignment: 'light', hex: '#c4b5fd' },
+  { id: 'azure', label: 'Azure', classId: 'wizard', className: 'Wizard', alignment: 'dark', hex: '#2563eb' },
+  { id: 'cyan', label: 'Cyan', classId: 'witch', className: 'Witch', alignment: 'light', hex: '#67e8f9' },
+  { id: 'amber', label: 'Amber', classId: 'champion', className: 'Champion', alignment: 'dark', hex: '#d97706' },
+  { id: 'gold', label: 'Gold', classId: 'cleric', className: 'Cleric', alignment: 'light', hex: '#fde047' },
 ] as const;
 
 export type PlayerColor = (typeof PLAYER_COLORS)[number]['id'];
@@ -82,7 +84,7 @@ export function multiplayerErrorMessage(message: string) {
     authentication_required: 'Sign in before joining the multiplayer lobby.',
     profile_required: 'Your member profile is still being prepared. Please try again.',
     invalid_lobby_mode: 'That lobby option is not available.',
-    invalid_player_color: 'Choose one of the available player colors.',
+    invalid_player_color: 'Choose one of the available classes.',
     not_in_lobby: 'Join the lobby before changing your color.',
     not_on_team: 'You are not currently on a team.',
     team_full: 'That team already has eight players.',

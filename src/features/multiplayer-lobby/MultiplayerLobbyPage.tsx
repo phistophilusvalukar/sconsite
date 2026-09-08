@@ -144,7 +144,7 @@ export default function MultiplayerLobbyPage() {
           <div>
             <p className="ml-eyebrow"><Zap /> Live multiplayer staging</p>
             <h1>Gather your party.</h1>
-            <p>Choose your banner color, wait for an invitation, or assemble a team of up to eight players.</p>
+            <p>Choose your class, wait for an invitation, or assemble a team of up to eight players.</p>
           </div>
           {state.self && (
             <button className="ml-quiet-button" type="button" onClick={() => void mutate('leave', () => multiplayerLobbyService.leave())} disabled={activeAction !== null}>
@@ -220,7 +220,7 @@ function LobbyEntrance({ color, activeAction, onColorChange, onEnter }: {
   return (
     <div className="ml-entrance">
       <section className="ml-panel ml-color-panel">
-        <div className="ml-step"><span>01</span><div><h2>Choose your color</h2><p>This follows you into your team and can be changed at any time.</p></div></div>
+        <div className="ml-step"><span>01</span><div><h2>Choose your class</h2><p>Your class and its light or dark color follow you into the game.</p></div></div>
         <ColorPicker value={color} onChange={onColorChange} disabled={activeAction !== null} />
       </section>
       <section className="ml-panel">
@@ -298,7 +298,7 @@ function SoloQueue({ color, activeAction, onColorChange, onEnter }: {
           <button className="ml-secondary-button" type="button" onClick={() => onEnter('waiting')} disabled={activeAction !== null}>Wait for invite</button>
         </div>
       </section>
-      <aside className="ml-panel ml-side-panel"><h3>Your color</h3><ColorPicker value={color} onChange={onColorChange} disabled={activeAction !== null} compact /></aside>
+      <aside className="ml-panel ml-side-panel"><h3>Your class</h3><ColorPicker value={color} onChange={onColorChange} disabled={activeAction !== null} compact /></aside>
     </div>
   );
 }
@@ -339,14 +339,14 @@ function TeamBuilder({ state, currentUserId, color, activeAction, onColorChange,
               <article className="ml-member" key={member.userId} style={{ '--player-color': tone.hex } as React.CSSProperties}>
                 <img src={member.avatar || '/npc-placeholder.png'} alt="" />
                 <span className="ml-player-swatch" />
-                <div><strong>{member.username}{member.userId === currentUserId ? ' (you)' : ''}</strong><small>{tone.label}</small></div>
+                <div><strong>{member.username}{member.userId === currentUserId ? ' (you)' : ''}</strong><small>{tone.className} · {tone.label}</small></div>
                 {member.userId === team.leaderId && <Crown aria-label="Team leader" />}
               </article>
             );
           })}
           {Array.from({ length: 8 - team.members.length }, (_, index) => <div className="ml-empty-slot" key={index}><UserPlus /><span>Open slot</span></div>)}
         </div>
-        <div className="ml-team-color"><div><h3>Your team color</h3><p>Everyone sees color changes in real time.</p></div><ColorPicker value={color} onChange={onColorChange} disabled={activeAction !== null} compact /></div>
+        <div className="ml-team-color"><div><h3>Your class</h3><p>Everyone sees class changes in real time before the game starts.</p></div><ColorPicker value={color} onChange={onColorChange} disabled={activeAction !== null} compact /></div>
       </section>
 
       <aside className="ml-panel ml-invite-panel">
@@ -364,7 +364,7 @@ function TeamBuilder({ state, currentUserId, color, activeAction, onColorChange,
               return (
                 <article className="ml-waiting-player" key={player.userId} style={{ '--player-color': tone.hex } as React.CSSProperties}>
                   <img src={player.avatar || '/npc-placeholder.png'} alt="" />
-                  <span><strong>{player.username}</strong><small><i />{tone.label}</small></span>
+                  <span><strong>{player.username}</strong><small><i />{tone.className} · {tone.label}</small></span>
                   <button type="button" onClick={() => onInvite(player.userId)} disabled={activeAction !== null || isPending}>
                     {isBusy ? <Loader2 className="ml-spin" /> : isPending ? <Clock3 /> : <UserPlus />}
                     {isPending ? 'Invited' : 'Invite'}
@@ -386,7 +386,7 @@ function ColorPicker({ value, onChange, disabled, compact = false }: {
   compact?: boolean;
 }) {
   return (
-    <div className={`ml-colors${compact ? ' ml-colors-compact' : ''}`} role="radiogroup" aria-label="Player color">
+    <div className={`ml-colors${compact ? ' ml-colors-compact' : ''}`} role="radiogroup" aria-label="Player class">
       {PLAYER_COLORS.map(color => (
         <button
           key={color.id}
@@ -395,11 +395,11 @@ function ColorPicker({ value, onChange, disabled, compact = false }: {
           style={{ '--swatch': color.hex } as React.CSSProperties}
           role="radio"
           aria-checked={value === color.id}
-          aria-label={color.label}
-          title={color.label}
+          aria-label={`${color.className}, ${color.label} ${color.alignment}`}
+          title={`${color.className} · ${color.label} (${color.alignment})`}
           disabled={disabled}
           onClick={() => onChange(color.id)}
-        ><span /></button>
+        ><span /><small><strong>{color.className}</strong><em>{color.alignment} · {color.label}</em></small></button>
       ))}
     </div>
   );

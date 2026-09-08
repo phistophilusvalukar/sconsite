@@ -3,9 +3,9 @@ import { getPlayerColor, multiplayerErrorMessage, multiplayerLobbyStateSchema, P
 
 describe('multiplayer lobby contracts', () => {
   it('defines eight unique player colors', () => {
-    expect(PLAYER_COLORS).toHaveLength(8);
-    expect(new Set(PLAYER_COLORS.map(color => color.id)).size).toBe(8);
-    expect(new Set(PLAYER_COLORS.map(color => color.hex)).size).toBe(8);
+    expect(PLAYER_COLORS).toHaveLength(10);
+    expect(new Set(PLAYER_COLORS.map(color => color.id)).size).toBe(10);
+    expect(new Set(PLAYER_COLORS.map(color => color.hex)).size).toBe(10);
   });
 
   it('parses a complete team lobby snapshot', () => {
@@ -24,7 +24,7 @@ describe('multiplayer lobby contracts', () => {
     });
 
     expect(state.team?.members[0].color).toBe('azure');
-    expect(getPlayerColor('azure').label).toBe('Azure');
+    expect(getPlayerColor('azure').className).toBe('Wizard');
   });
 
   it('rejects teams larger than eight players', () => {
