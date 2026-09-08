@@ -43,12 +43,18 @@
 .dr-player-counts svg { width: .7rem; height: .7rem; }
 .dr-player.is-dead { opacity: .48; filter: grayscale(.8); }
 .dr-board { position: relative; z-index: 1; display: grid; width: min(1180px, calc(100% - 2rem)); grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr); gap: 1rem; margin: 0 auto; }
-.dr-dungeon-card { position: relative; min-height: 29rem; overflow: hidden; border: 1px solid rgba(96,165,250,.28); border-radius: 1.3rem; background: linear-gradient(160deg, #192942, #0b1322 55%, #11192a); box-shadow: 0 24px 70px rgba(0,0,0,.35); animation: dr-dungeon-reveal .48s cubic-bezier(.2,.8,.2,1); transform-origin: 50% 50%; }
+.dr-dungeon-card { position: relative; min-height: 29rem; padding-bottom: 3rem; overflow: hidden; border: 1px solid rgba(96,165,250,.28); border-radius: 1.3rem; background: linear-gradient(160deg, #192942, #0b1322 55%, #11192a); box-shadow: 0 24px 70px rgba(0,0,0,.35); animation: dr-dungeon-reveal .48s cubic-bezier(.2,.8,.2,1); transform-origin: 50% 50%; }
 .dr-dungeon-card.is-boss { border-color: rgba(251,191,36,.42); background: linear-gradient(160deg, #3b2a18, #17101d 58%, #111320); box-shadow: 0 24px 80px rgba(117,69,15,.2); }
+.dr-dungeon-card.is-mini_boss { border-color: rgba(192,132,252,.48); background: linear-gradient(160deg, #2e1c46, #111321 58%, #101624); }
+.dr-dungeon-card.is-event { border-color: rgba(45,212,191,.44); background: linear-gradient(160deg, #11333a, #0c1722 58%, #111827); }
 .dr-dungeon-art { position: relative; display: grid; height: 11rem; place-items: center; overflow: hidden; border-bottom: 1px solid var(--dr-line); background: radial-gradient(circle, rgba(96,165,250,.27), transparent 52%), linear-gradient(135deg, #152441, #09101d); }
 .dr-dungeon-card.is-boss .dr-dungeon-art { background: radial-gradient(circle, rgba(251,191,36,.24), transparent 52%), linear-gradient(135deg, #332314, #130c17); }
+.dr-dungeon-card.is-mini_boss .dr-dungeon-art { background: radial-gradient(circle, rgba(192,132,252,.25), transparent 52%), linear-gradient(135deg, #2a1742, #100d18); }
+.dr-dungeon-card.is-event .dr-dungeon-art { background: radial-gradient(circle, rgba(45,212,191,.24), transparent 52%), linear-gradient(135deg, #12323b, #09131b); }
 .dr-dungeon-art > span { z-index: 1; display: grid; width: 4.4rem; height: 5.8rem; place-items: center; border: 1px solid rgba(147,197,253,.4); border-radius: 2.2rem 2.2rem .5rem .5rem; background: rgba(3,8,17,.72); color: #bfdbfe; font-family: Georgia,serif; font-size: 2rem; box-shadow: inset 0 0 25px rgba(59,130,246,.12), 0 0 30px rgba(59,130,246,.18); }
 .dr-dungeon-card.is-boss .dr-dungeon-art > span { border-color: rgba(251,191,36,.45); color: #fbbf24; }
+.dr-dungeon-card.is-mini_boss .dr-dungeon-art > span { border-color: rgba(192,132,252,.5); color: #d8b4fe; }
+.dr-dungeon-card.is-event .dr-dungeon-art > span { border-color: rgba(45,212,191,.5); color: #5eead4; }
 .dr-dungeon-art svg { width: 2rem; }
 .dr-door-lines { position: absolute; inset: 0; background: repeating-radial-gradient(ellipse at 50% 100%, transparent 0 27px, rgba(148,163,184,.08) 28px 29px); }
 .dr-dungeon-copy { padding: 1.15rem 1.25rem .8rem; text-align: center; }
@@ -62,7 +68,31 @@
 .dr-requirement > div { display: flex; flex-wrap: wrap; gap: .25rem; }
 .dr-requirement i { display: grid; width: 1.55rem; height: 1.55rem; place-items: center; border: 1px solid color-mix(in srgb, var(--symbol-color) 45%, transparent); border-radius: .4rem; background: color-mix(in srgb, var(--symbol-color) 11%, transparent); color: var(--symbol-color); font-size: .9rem; font-style: normal; transition: .35s; }
 .dr-requirement i.is-matched { border-color: rgba(148,163,184,.12); background: rgba(148,163,184,.06); color: #445064; filter: grayscale(1); text-decoration: line-through; }
+.dr-card-type { position: absolute; right: 0; bottom: 0; left: 0; display: flex; height: 2.65rem; align-items: center; justify-content: center; gap: .45rem; border-top: 1px solid var(--dr-line); background: rgba(3,8,16,.42); color: #a9b7ca; font-size: .68rem; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+.dr-card-type span { color: #bfdbfe; font-size: 1rem; }
+.is-event .dr-card-type span { color: #5eead4; }
+.is-mini_boss .dr-card-type span { color: #d8b4fe; }
+.is-boss .dr-card-type span { color: #fbbf24; }
 .dr-play-area { min-height: 29rem; padding: 1.1rem; border: 1px solid var(--dr-line); border-radius: 1.3rem; background: rgba(7,12,22,.56); }
+.dr-event-panel { margin-bottom: 1rem; padding: 1rem; border: 1px solid rgba(45,212,191,.28); border-radius: 1rem; background: linear-gradient(135deg, rgba(16,67,72,.42), rgba(12,24,37,.72)); }
+.dr-event-heading { display: flex; align-items: center; gap: .7rem; }
+.dr-event-heading > span { display: grid; width: 2.4rem; height: 2.4rem; place-items: center; border-radius: .7rem; background: rgba(45,212,191,.14); color: #5eead4; font-size: 1.25rem; }
+.dr-event-heading > div { display: grid; }
+.dr-event-heading small { color: #5eead4; font-size: .58rem; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+.dr-event-panel > p { margin: .8rem 0; color: #b8c5d7; font-size: .78rem; line-height: 1.5; }
+.dr-event-controls { display: grid; grid-template-columns: minmax(8rem, 1fr) auto; align-items: end; gap: .45rem .65rem; }
+.dr-event-controls label { grid-column: 1 / -1; color: var(--dr-muted); font-size: .64rem; font-weight: 750; text-transform: uppercase; }
+.dr-event-controls select { min-width: 0; padding: .64rem .7rem; border: 1px solid var(--dr-line); border-radius: .6rem; background: #0a1320; color: var(--dr-text); }
+.dr-event-controls button { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; padding: .62rem .8rem; border: 1px solid rgba(45,212,191,.45); border-radius: .6rem; background: #115e59; color: white; font-weight: 800; cursor: pointer; }
+.dr-event-controls button:disabled { cursor: not-allowed; opacity: .5; }
+.dr-event-controls button svg { width: .9rem; }
+.dr-event-controls > small { grid-column: 1 / -1; color: var(--dr-muted); font-size: .63rem; }
+.dr-event-result, .dr-event-warning { grid-column: 1 / -1; display: flex; align-items: center; gap: .4rem; margin: 0; color: #cbd5e1; }
+.dr-event-result svg, .dr-event-warning svg { width: 1rem; }
+.dr-event-warning { color: #fde68a; }
+.dr-event-discard-pile { margin-top: 1rem; padding-top: .8rem; border-top: 1px dashed rgba(45,212,191,.25); }
+.dr-event-discard-pile > strong { display: flex; align-items: center; gap: .4rem; color: #5eead4; font-size: .7rem; text-transform: uppercase; }
+.dr-event-discard-pile > strong svg { width: .9rem; }
 .dr-field-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .1rem .2rem 1rem; border-bottom: 1px solid var(--dr-line); }
 .dr-field-heading span { font-weight: 800; }
 .dr-field-heading small { color: var(--dr-muted); }
@@ -89,14 +119,18 @@
 .dr-secondary-button { border: 1px solid var(--dr-line); background: rgba(255,255,255,.04); color: var(--dr-text); }
 .dr-play-button svg, .dr-primary-button svg, .dr-secondary-button svg { width: 1rem; }
 .dr-play-button:disabled, .dr-primary-button:disabled { cursor: not-allowed; opacity: .5; }
-.dr-hand { display: flex; min-height: 11rem; align-items: flex-start; justify-content: center; gap: .75rem; }
-.dr-hand > button { position: relative; padding: 0; border: 0; border-radius: .85rem; background: transparent; cursor: pointer; transition: transform .2s; }
-.dr-hand > button:hover:not(:disabled) { transform: translateY(-.7rem); }
-.dr-hand > button.is-selected { transform: translateY(-1rem); }
-.dr-hand > button.is-selected .dr-card { box-shadow: 0 0 0 3px #dbeafe, 0 0 35px color-mix(in srgb, var(--symbol-color) 45%, transparent); }
+.dr-hand { display: flex; min-height: 11rem; align-items: flex-start; justify-content: center; gap: .75rem; overflow-x: auto; scrollbar-width: thin; }
+.dr-hand-card-wrap { position: relative; display: grid; flex: 0 0 auto; justify-items: center; gap: .35rem; }
+.dr-hand-card-wrap > button:first-child { position: relative; padding: 0; border: 0; border-radius: .85rem; background: transparent; cursor: pointer; transition: transform .2s; }
+.dr-hand-card-wrap > button:first-child:hover:not(:disabled) { transform: translateY(-.5rem); }
+.dr-hand-card-wrap > button:first-child.is-selected { transform: translateY(-.7rem); }
+.dr-hand-card-wrap > button:first-child.is-selected .dr-card { box-shadow: 0 0 0 3px #dbeafe, 0 0 35px color-mix(in srgb, var(--symbol-color) 45%, transparent); }
+.dr-hand-card-wrap.is-event-eligible .dr-card { box-shadow: 0 0 0 2px rgba(45,212,191,.7), 0 10px 32px rgba(45,212,191,.17); }
+.dr-event-discard-button { display: inline-flex; align-items: center; gap: .3rem; padding: .35rem .55rem; border: 1px solid rgba(45,212,191,.36); border-radius: .55rem; background: rgba(17,94,89,.7); color: #ccfbf1; font-size: .64rem; font-weight: 800; cursor: pointer; }
+.dr-event-discard-button svg { width: .75rem; }
 .dr-select-mark { position: absolute; top: -.45rem; right: -.45rem; display: none; width: 1.5rem; height: 1.5rem; place-items: center; border-radius: 999px; background: #dbeafe; color: #0b1322; }
 .dr-select-mark svg { width: .85rem; }
-.dr-hand > button.is-selected .dr-select-mark { display: grid; }
+.dr-hand-card-wrap > button.is-selected .dr-select-mark { display: grid; }
 .dr-spectator-hand { display: flex; min-height: 9rem; flex-direction: column; align-items: center; justify-content: center; color: var(--dr-muted); }
 .dr-spectator-hand svg { width: 2.3rem; height: 2.3rem; margin-bottom: .5rem; color: #fb7185; }
 .dr-spectator-hand strong { color: var(--dr-text); }

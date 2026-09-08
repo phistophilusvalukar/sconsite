@@ -27,6 +27,18 @@ export const dungeonRelayService = {
     return runRpc<boolean>('advance_dungeon_relay_round', { p_match_id: matchId });
   },
 
+  vote(matchId: string, targetId: string) {
+    return runRpc<boolean>('vote_dungeon_relay_event_target', { p_match_id: matchId, p_target_id: targetId });
+  },
+
+  discardForEvent(matchId: string, cardIds: string[]) {
+    return runRpc<boolean>('discard_dungeon_relay_event_cards', { p_match_id: matchId, p_card_ids: cardIds });
+  },
+
+  confirmEvent(matchId: string) {
+    return runRpc<boolean>('confirm_dungeon_relay_event', { p_match_id: matchId });
+  },
+
   startAgain() {
     return runRpc<string>('start_dungeon_relay_match');
   },

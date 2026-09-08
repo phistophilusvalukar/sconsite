@@ -18,22 +18,24 @@ describe('Dungeon Relay client contract', () => {
       },
       dungeon: {
         position: 1, isBoss: false, name: 'Dungeon Chamber 1',
+        cardType: 'obstacle', eventType: null, eventStage: null, selectedTargetId: null,
         requirements: { sword: 1, arrow: 2, shield: 0, staff: 1, dagger: 0 },
       },
       players: [
-        { userId: 'player-1', username: 'One', avatar: '', color: 'azure', status: 'active', seat: 1, handCount: 4, deckCount: 45, discardCount: 0 },
-        { userId: 'player-2', username: 'Two', avatar: '', color: 'rose', status: 'active', seat: 2, handCount: 5, deckCount: 45, discardCount: 0 },
+        { userId: 'player-1', username: 'One', avatar: '', color: 'azure', status: 'active', seat: 1, handCount: 4, deckCount: 45, discardCount: 0, voteTargetId: null, confirmed: false },
+        { userId: 'player-2', username: 'Two', avatar: '', color: 'rose', status: 'active', seat: 2, handCount: 5, deckCount: 45, discardCount: 0, voteTargetId: null, confirmed: false },
       ],
       self: { userId: 'player-1', status: 'active', hand: [{ id: 'd9428888-922b-a1e1-085c-61cd3cbb3210', symbol: 'arrow', symbols: 2 }] },
       playedCards: [{
         id: '37608de1-865b-4480-bf35-365c60644e2e', userId: 'player-1', username: 'One', color: 'azure', symbol: 'sword', symbols: 1, playedOrder: 1,
       }],
+      eventDiscardCards: [],
     });
     expect(result.self.hand).toHaveLength(1);
     expect(result.players[1]).not.toHaveProperty('hand');
   });
 
-  it('rejects snapshots that expose more than five cards in the private hand', () => {
+  it('accepts a larger private hand after a give-hands event', () => {
     const cards = Array.from({ length: 6 }, (_, index) => ({
       id: `07608de1-865b-4480-bf35-365c60644e0${index}`,
       symbol: 'sword',
@@ -55,15 +57,20 @@ describe('Dungeon Relay client contract', () => {
         position: 1,
         isBoss: false,
         name: 'Dungeon Chamber 1',
+        cardType: 'event',
+        eventType: 'give_hands',
+        eventStage: 'confirming',
+        selectedTargetId: 'player-1',
         requirements: { sword: 1, arrow: 1, shield: 1, staff: 1, dagger: 0 },
       },
       players: [
-        { userId: 'player-1', username: 'One', avatar: '', color: 'azure', status: 'active', seat: 1, handCount: 5, deckCount: 45, discardCount: 0 },
-        { userId: 'player-2', username: 'Two', avatar: '', color: 'rose', status: 'active', seat: 2, handCount: 5, deckCount: 45, discardCount: 0 },
+        { userId: 'player-1', username: 'One', avatar: '', color: 'azure', status: 'active', seat: 1, handCount: 6, deckCount: 45, discardCount: 0, voteTargetId: 'player-1', confirmed: false },
+        { userId: 'player-2', username: 'Two', avatar: '', color: 'rose', status: 'active', seat: 2, handCount: 0, deckCount: 45, discardCount: 0, voteTargetId: 'player-1', confirmed: false },
       ],
       self: { userId: 'player-1', status: 'active', hand: cards },
       playedCards: [],
+      eventDiscardCards: [],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 });

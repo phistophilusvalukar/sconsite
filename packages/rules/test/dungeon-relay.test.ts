@@ -6,6 +6,8 @@ import {
   dungeonRelayDrawToFive,
   dungeonRelayRequirementTotal,
   dungeonRelayRequirementTotalForPosition,
+  isDungeonRelayEventEligible,
+  resolveDungeonRelayVote,
 } from "../src/index.js";
 
 describe("Dungeon Relay prototype rules", () => {
@@ -54,10 +56,10 @@ describe("Dungeon Relay prototype rules", () => {
     expect(allocation.matched).toMatchObject({ sword: 1, staff: 0 });
   });
 
-  it("scales chambers and always gives the boss at least ten symbols", () => {
+  it("scales chambers and gives every boss exactly fifteen symbols", () => {
     expect(dungeonRelayRequirementTotalForPosition(2, 1)).toBe(4);
-    expect(dungeonRelayRequirementTotalForPosition(2, 11)).toBe(10);
-    expect(dungeonRelayRequirementTotalForPosition(8, 11)).toBe(24);
+    expect(dungeonRelayRequirementTotalForPosition(2, 11)).toBe(15);
+    expect(dungeonRelayRequirementTotalForPosition(8, 11)).toBe(15);
   });
 
   it("kills a player only when the deck cannot complete a required refill", () => {
@@ -65,5 +67,19 @@ describe("Dungeon Relay prototype rules", () => {
     expect(dungeonRelayDrawToFive(2, 2)).toEqual({ drawCount: 2, dead: true });
     expect(dungeonRelayDrawToFive(0, 5)).toEqual({ drawCount: 5, dead: false });
     expect(dungeonRelayDrawToFive(0, 4)).toEqual({ drawCount: 4, dead: true });
+    expect(dungeonRelayDrawToFive(10, 0)).toEqual({ drawCount: 0, dead: false });
+  });
+
+  it("identifies only cards eligible for discard events", () => {
+    expect(isDungeonRelayEventEligible({ symbol: "shield", symbols: 1 }, "discard_shields")).toBe(true);
+    expect(isDungeonRelayEventEligible({ symbol: "arrow", symbols: 2 }, "discard_shields")).toBe(false);
+    expect(isDungeonRelayEventEligible({ symbol: "arrow", symbols: 2 }, "discard_multis")).toBe(true);
+    expect(isDungeonRelayEventEligible({ symbol: "arrow", symbols: 1 }, "discard_multis")).toBe(false);
+  });
+
+  it("resolves event votes by majority and breaks ties by target seat", () => {
+    const seats = { p1: 1, p2: 2, p3: 3 };
+    expect(resolveDungeonRelayVote({ p1: "p2", p2: "p2", p3: "p1" }, seats)).toBe("p2");
+    expect(resolveDungeonRelayVote({ p1: "p2", p2: "p1" }, seats)).toBe("p1");
   });
 });

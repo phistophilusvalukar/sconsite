@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { allocateDungeonRelayMatches, DUNGEON_RELAY_SYMBOLS } from '@scon/rules';
-import { Check, ChevronLeft, Crown, Eye, Layers3, Loader2, RotateCcw, Skull, Sparkles, Trophy, Users, X, Zap } from 'lucide-react';
+import { allocateDungeonRelayMatches, DUNGEON_RELAY_SYMBOLS, isDungeonRelayEventEligible } from '@scon/rules';
+import { Check, ChevronLeft, Crown, Eye, Layers3, Loader2, RotateCcw, Skull, Sparkles, Trash2, Trophy, Users, Vote, X, Zap } from 'lucide-react';
 import { DATABASE_TABLES } from '../../config/database';
 import { useAuth } from '../../context/useAuth';
 import { useSupabaseRealtime } from '../../hooks/useSupabaseRealtime';
 import { getPlayerColor } from './multiplayerLobby';
-import { getDungeonSymbol, type DungeonRelayHandCard, type DungeonRelayPublicCard, type DungeonRelayState } from './dungeonRelayGame';
+import { DUNGEON_CARD_TYPES, DUNGEON_EVENTS, getDungeonSymbol, type DungeonRelayHandCard, type DungeonRelayPublicCard, type DungeonRelayState } from './dungeonRelayGame';
 import { dungeonRelayService } from './dungeonRelayService';
 import './dungeonRelay.css';
 
@@ -18,6 +18,8 @@ export default function DungeonRelayPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [busyEventAction, setBusyEventAction] = useState<string | null>(null);
+  const [voteTargetId, setVoteTargetId] = useState('');
   const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +28,9 @@ export default function DungeonRelayPage() {
     try {
       const snapshot = await dungeonRelayService.getState(matchId);
       setState(snapshot);
+      setVoteTargetId(current => snapshot.players.some(player => player.userId === current && player.status === 'active')
+        ? current
+        : snapshot.players.find(player => player.status === 'active')?.userId ?? '');
       setSelectedIds(current => current.filter(id => snapshot.self.hand.some(card => card.id === id)));
       if (snapshot.match.phase === 'complete') {
         const activeMatchId = await dungeonRelayService.getActiveMatch();
@@ -72,7 +77,20 @@ export default function DungeonRelayPage() {
     if (!state || state.match.phase !== 'active' || state.self.status === 'dead' || isPlaying) return;
     setSelectedIds(current => current.includes(cardId)
       ? current.filter(id => id !== cardId)
-      : [...current, cardId]);
+      : current.length >= 5 ? current : [...current, cardId]);
+  };
+
+  const runEventAction = async (key: string, action: () => Promise<unknown>) => {
+    setBusyEventAction(key);
+    setError(null);
+    try {
+      await action();
+      await loadState();
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'The event action could not be completed.');
+    } finally {
+      setBusyEventAction(null);
+    }
   };
 
   const playCards = async () => {
@@ -108,13 +126,18 @@ export default function DungeonRelayPage() {
 
   const isLeader = state.match.leaderId === user?.id;
   const isResolving = state.match.phase === 'resolving';
+  const selfPlayer = state.players.find(player => player.userId === state.self.userId);
+  const isEvent = state.dungeon.cardType === 'event' && state.dungeon.eventType !== null;
+  const eligibleEventCards = isEvent
+    ? state.self.hand.filter(card => isDungeonRelayEventEligible(card, state.dungeon.eventType!))
+    : [];
 
   return (
     <main className={`dr-page${isResolving ? ' is-resolving' : ''}`}>
       <header className="dr-topbar">
         <button type="button" onClick={() => navigate('/multiplayer')}><ChevronLeft /> Lobby</button>
         <div className="dr-title"><span><Sparkles /></span><div><strong>Dungeon Relay</strong><small>Cooperative prototype</small></div></div>
-        <div className="dr-round-label"><span>{state.dungeon.isBoss ? 'Boss' : 'Chamber'}</span><strong>{state.dungeon.position} / 11</strong></div>
+        <div className="dr-round-label"><span>{DUNGEON_CARD_TYPES[state.dungeon.cardType].label}</span><strong>{state.dungeon.position} / 11</strong></div>
       </header>
 
       <div className="dr-progress" aria-label={`Dungeon progress: ${state.dungeon.position} of 11`}>
@@ -133,7 +156,7 @@ export default function DungeonRelayPage() {
           return (
             <article key={player.userId} className={`dr-player${player.status === 'dead' ? ' is-dead' : ''}`} style={{ '--player-color': tone.hex } as CSSProperties}>
               <div className="dr-avatar"><img src={player.avatar || '/npc-placeholder.png'} alt="" />{player.status === 'dead' && <Skull />}</div>
-              <div><strong>{player.username}{player.userId === user?.id ? ' (you)' : ''}</strong><small>{player.status === 'dead' ? 'Spectating' : `${player.handCount} in hand`}</small></div>
+              <div><strong>{player.username}{player.userId === user?.id ? ' (you)' : ''}</strong><small>{player.status === 'dead' ? 'Spectating' : isEvent && player.confirmed ? 'Event confirmed' : `${player.handCount} in hand`}</small></div>
               <div className="dr-player-counts"><span title="Deck"><Layers3 />{player.deckCount}</span><span title="Discard">♻ {player.discardCount}</span></div>
             </article>
           );
@@ -143,7 +166,18 @@ export default function DungeonRelayPage() {
       <section className="dr-board">
         <DungeonCard key={state.dungeon.position} state={state} matched={allocation?.matched ?? state.dungeon.requirements} />
 
-        <div className="dr-play-area">
+        <div className={`dr-play-area${isEvent ? ' is-event' : ''}`}>
+          {isEvent && (
+            <EventPanel
+              state={state}
+              voteTargetId={voteTargetId}
+              setVoteTargetId={setVoteTargetId}
+              eligibleCount={eligibleEventCards.length}
+              busy={busyEventAction}
+              onVote={() => void runEventAction('vote', () => dungeonRelayService.vote(matchId, voteTargetId))}
+              onConfirm={() => void runEventAction('confirm', () => dungeonRelayService.confirmEvent(matchId))}
+            />
+          )}
           <div className="dr-field-heading"><span>Cards on the field</span><small>{state.playedCards.length === 0 ? 'Play cards together to match the dungeon' : `${state.playedCards.length} cards committed`}</small></div>
           {state.playedCards.length === 0 ? (
             <div className="dr-empty-field"><Zap /><span>The field is waiting</span></div>
@@ -154,31 +188,47 @@ export default function DungeonRelayPage() {
               ))}
             </div>
           )}
+          {state.eventDiscardCards.length > 0 && (
+            <div className="dr-event-discard-pile">
+              <strong><Trash2 /> Discarded to event</strong>
+              <div className="dr-played-cards">{state.eventDiscardCards.map(card => <RelayCard key={card.id} card={card} contribution={0} publicCard />)}</div>
+            </div>
+          )}
         </div>
 
-        {isResolving && <ResolutionBanner isBoss={state.dungeon.isBoss} />}
+        {isResolving && <ResolutionBanner isBoss={state.dungeon.isBoss} isEvent={isEvent} />}
       </section>
 
       <section className="dr-hand-zone">
         <div className="dr-hand-heading">
           <div>
             <p>{state.self.status === 'dead' ? <><Eye /> Spectating</> : <><Layers3 /> Your hand</>}</p>
-            <span>{state.self.status === 'dead' ? 'Your deck ran out while drawing. Help your party from the sidelines.' : 'Select one or more cards, then commit them to the field.'}</span>
+            <span>{state.self.status === 'dead' ? 'Your deck ran out while drawing. Help your party from the sidelines.' : isEvent ? 'You may still play cards normally. Highlighted cards may also be discarded to the event.' : 'Select one to five cards, then commit them to the field.'}</span>
           </div>
           {state.self.status === 'active' && (
-            <button type="button" className="dr-play-button" onClick={() => void playCards()} disabled={selectedIds.length === 0 || isPlaying || isResolving}>
+            <button type="button" className="dr-play-button" onClick={() => void playCards()} disabled={selectedIds.length === 0 || isPlaying || isResolving || selfPlayer?.confirmed}>
               {isPlaying ? <Loader2 className="dr-spin" /> : <Zap />}
               Play {selectedIds.length > 0 ? `${selectedIds.length} card${selectedIds.length === 1 ? '' : 's'}` : 'cards'}
             </button>
           )}
         </div>
         <div className="dr-hand">
-          {state.self.status === 'active' && state.self.hand.map(card => (
-            <button key={card.id} type="button" className={selectedIds.includes(card.id) ? 'is-selected' : ''} onClick={() => toggleCard(card.id)} disabled={isPlaying || isResolving} aria-pressed={selectedIds.includes(card.id)}>
-              <RelayCard card={card} contribution={0} />
-              <span className="dr-select-mark"><Check /></span>
-            </button>
-          ))}
+          {state.self.status === 'active' && state.self.hand.map(card => {
+            const eventEligible = isEvent && isDungeonRelayEventEligible(card, state.dungeon.eventType!);
+            return (
+              <div key={card.id} className={`dr-hand-card-wrap${eventEligible ? ' is-event-eligible' : ''}`}>
+                <button type="button" className={selectedIds.includes(card.id) ? 'is-selected' : ''} onClick={() => toggleCard(card.id)} disabled={isPlaying || isResolving || Boolean(selfPlayer?.confirmed)} aria-pressed={selectedIds.includes(card.id)}>
+                  <RelayCard card={card} contribution={0} />
+                  <span className="dr-select-mark"><Check /></span>
+                </button>
+                {eventEligible && !selfPlayer?.confirmed && (
+                  <button type="button" className="dr-event-discard-button" disabled={Boolean(busyEventAction) || isResolving} onClick={() => void runEventAction(card.id, () => dungeonRelayService.discardForEvent(matchId, [card.id]))}>
+                    {busyEventAction === card.id ? <Loader2 className="dr-spin" /> : <Trash2 />} Discard
+                  </button>
+                )}
+              </div>
+            );
+          })}
           {state.self.status === 'dead' && <div className="dr-spectator-hand"><Skull /><strong>You have fallen</strong><span>The shared board will continue updating live.</span></div>}
         </div>
       </section>
@@ -191,10 +241,11 @@ export default function DungeonRelayPage() {
 }
 
 function DungeonCard({ state, matched }: { state: DungeonRelayState; matched: DungeonRelayState['dungeon']['requirements'] }) {
+  const cardType = DUNGEON_CARD_TYPES[state.dungeon.cardType];
   return (
-    <article className={`dr-dungeon-card${state.dungeon.isBoss ? ' is-boss' : ''}`}>
-      <div className="dr-dungeon-art"><span>{state.dungeon.isBoss ? <Crown /> : state.dungeon.position}</span><div className="dr-door-lines" /></div>
-      <div className="dr-dungeon-copy"><p>{state.dungeon.isBoss ? 'Final encounter' : `Depth ${state.dungeon.position}`}</p><h1>{state.dungeon.name}</h1><span>Match every required symbol to advance</span></div>
+    <article className={`dr-dungeon-card is-${state.dungeon.cardType}`}>
+      <div className="dr-dungeon-art"><span>{state.dungeon.isBoss ? <Crown /> : cardType.glyph}</span><div className="dr-door-lines" /></div>
+      <div className="dr-dungeon-copy"><p>{state.dungeon.isBoss ? 'Final encounter' : `Depth ${state.dungeon.position}`}</p><h1>{state.dungeon.name}</h1><span>{state.dungeon.cardType === 'event' ? 'The party must resolve this event to advance' : 'Match every required symbol to advance'}</span></div>
       <div className="dr-requirements">
         {DUNGEON_RELAY_SYMBOLS.map(symbol => {
           const requirement = state.dungeon.requirements[symbol];
@@ -208,7 +259,53 @@ function DungeonCard({ state, matched }: { state: DungeonRelayState; matched: Du
           );
         })}
       </div>
+      <footer className="dr-card-type"><span>{cardType.glyph}</span>{cardType.label}</footer>
     </article>
+  );
+}
+
+function EventPanel({ state, voteTargetId, setVoteTargetId, eligibleCount, busy, onVote, onConfirm }: {
+  state: DungeonRelayState;
+  voteTargetId: string;
+  setVoteTargetId: (value: string) => void;
+  eligibleCount: number;
+  busy: string | null;
+  onVote: () => void;
+  onConfirm: () => void;
+}) {
+  if (!state.dungeon.eventType) return null;
+  const event = DUNGEON_EVENTS[state.dungeon.eventType];
+  const self = state.players.find(player => player.userId === state.self.userId);
+  const selectedTarget = state.players.find(player => player.userId === state.dungeon.selectedTargetId);
+  const activePlayers = state.players.filter(player => player.status === 'active');
+  const votesCast = activePlayers.filter(player => player.voteTargetId).length;
+  const confirmations = activePlayers.filter(player => player.confirmed).length;
+  const awaitingDiscards = state.dungeon.eventType === 'discard_shields' || state.dungeon.eventType === 'discard_multis';
+
+  return (
+    <section className="dr-event-panel" aria-labelledby="dr-event-title">
+      <div className="dr-event-heading"><span>✦</span><div><small>Party event</small><strong id="dr-event-title">{event.title}</strong></div></div>
+      <p>{event.instructions}</p>
+      {state.dungeon.eventStage === 'voting' ? (
+        <div className="dr-event-controls">
+          <label htmlFor="dr-vote-target">Choose a player</label>
+          <select id="dr-vote-target" value={voteTargetId} onChange={eventValue => setVoteTargetId(eventValue.target.value)} disabled={Boolean(busy)}>
+            {activePlayers.map(player => <option key={player.userId} value={player.userId}>{player.username}{player.userId === state.self.userId ? ' (you)' : ''}</option>)}
+          </select>
+          <button type="button" onClick={onVote} disabled={!voteTargetId || Boolean(busy) || self?.status !== 'active'}>{busy === 'vote' ? <Loader2 className="dr-spin" /> : <Vote />} Cast vote</button>
+          <small>{votesCast} / {activePlayers.length} votes cast{self?.voteTargetId ? ' · your vote is recorded' : ''}</small>
+        </div>
+      ) : (
+        <div className="dr-event-controls">
+          {selectedTarget && <p className="dr-event-result"><Crown /> All hands will go to <strong>{selectedTarget.username}</strong>.</p>}
+          {awaitingDiscards && eligibleCount > 0 && <p className="dr-event-warning"><Trash2 /> You still have {eligibleCount} highlighted card{eligibleCount === 1 ? '' : 's'} to play or discard.</p>}
+          <button type="button" onClick={onConfirm} disabled={Boolean(busy) || Boolean(self?.confirmed) || eligibleCount > 0 || self?.status !== 'active'}>
+            {busy === 'confirm' ? <Loader2 className="dr-spin" /> : <Check />} {self?.confirmed ? 'Confirmed' : 'Confirm event'}
+          </button>
+          <small>{confirmations} / {activePlayers.length} players confirmed</small>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -231,11 +328,11 @@ function RelayCard({ card, contribution, publicCard = false }: {
   );
 }
 
-function ResolutionBanner({ isBoss }: { isBoss: boolean }) {
+function ResolutionBanner({ isBoss, isEvent }: { isBoss: boolean; isEvent: boolean }) {
   return (
     <div className="dr-resolution" role="status" aria-live="assertive">
       <span><Check /></span>
-      <div><strong>{isBoss ? 'Boss defeated!' : 'Symbols matched!'}</strong><small>{isBoss ? 'The dungeon is conquered.' : 'Drawing the next chamber…'}</small></div>
+      <div><strong>{isBoss ? 'Boss defeated!' : isEvent ? 'Event resolved!' : 'Symbols matched!'}</strong><small>{isBoss ? 'The dungeon is conquered.' : 'Drawing the next card…'}</small></div>
     </div>
   );
 }

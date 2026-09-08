@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { DungeonRelaySymbol } from '@scon/rules';
+import type { DungeonRelayCardType, DungeonRelayEventType, DungeonRelaySymbol } from '@scon/rules';
 
 export const DUNGEON_SYMBOLS: ReadonlyArray<{
   id: DungeonRelaySymbol;
@@ -15,7 +15,26 @@ export const DUNGEON_SYMBOLS: ReadonlyArray<{
   { id: 'dagger', label: 'Purple Daggers', shortLabel: 'Dagger', color: '#a855f7', glyph: '†' },
 ];
 
+export const DUNGEON_CARD_TYPES: Readonly<Record<DungeonRelayCardType, { label: string; glyph: string }>> = {
+  obstacle: { label: 'Obstacle', glyph: '◆' },
+  person: { label: 'Person', glyph: '♟' },
+  beast: { label: 'Beast', glyph: '♞' },
+  hazard: { label: 'Hazard', glyph: '⚠' },
+  mini_boss: { label: 'Mini-Boss', glyph: '♛' },
+  boss: { label: 'Boss', glyph: '♜' },
+  event: { label: 'Event', glyph: '✦' },
+};
+
+export const DUNGEON_EVENTS: Readonly<Record<DungeonRelayEventType, { title: string; instructions: string }>> = {
+  discard_shields: { title: 'Shields Must Fall', instructions: 'Play every Shield normally or discard it to this event, then confirm.' },
+  give_hands: { title: 'Choose the Champion', instructions: 'Vote for one surviving player to receive every hand, then everyone confirms.' },
+  pass_left: { title: 'Arcane Exchange', instructions: 'When everyone confirms, each hand passes to the next surviving player.' },
+  discard_multis: { title: 'Travel Light', instructions: 'Play every multi-symbol card normally or discard it to this event, then confirm.' },
+};
+
 const symbolSchema = z.enum(['sword', 'arrow', 'shield', 'staff', 'dagger']);
+const cardTypeSchema = z.enum(['obstacle', 'person', 'beast', 'hazard', 'mini_boss', 'boss', 'event']);
+const eventTypeSchema = z.enum(['discard_shields', 'give_hands', 'pass_left', 'discard_multis']);
 const playerColorSchema = z.enum(['crimson', 'amber', 'emerald', 'cyan', 'azure', 'violet', 'rose', 'silver']);
 // Hash-derived card IDs are valid PostgreSQL UUID values but do not carry an
 // RFC version/variant nibble, which z.string().uuid() intentionally requires.
@@ -52,6 +71,10 @@ export const dungeonRelayStateSchema = z.object({
     position: z.number().int().min(1).max(11),
     isBoss: z.boolean(),
     name: z.string().min(1),
+    cardType: cardTypeSchema,
+    eventType: eventTypeSchema.nullable(),
+    eventStage: z.enum(['voting', 'confirming', 'completed']).nullable(),
+    selectedTargetId: z.string().nullable(),
     requirements: requirementsSchema,
   }),
   players: z.array(z.object({
@@ -64,13 +87,21 @@ export const dungeonRelayStateSchema = z.object({
     handCount: z.number().int().nonnegative(),
     deckCount: z.number().int().nonnegative(),
     discardCount: z.number().int().nonnegative(),
+    voteTargetId: z.string().nullable(),
+    confirmed: z.boolean(),
   })).min(2).max(8),
   self: z.object({
     userId: z.string().min(1),
     status: z.enum(['active', 'dead']),
-    hand: z.array(cardSchema).max(5),
+    hand: z.array(cardSchema).max(40),
   }),
   playedCards: z.array(cardSchema.extend({
+    userId: z.string().min(1),
+    username: z.string().min(1),
+    color: playerColorSchema,
+    playedOrder: z.number().nonnegative(),
+  })),
+  eventDiscardCards: z.array(cardSchema.extend({
     userId: z.string().min(1),
     username: z.string().min(1),
     color: playerColorSchema,
@@ -96,6 +127,14 @@ export function dungeonRelayErrorMessage(message: string) {
     card_not_in_hand: 'One of those cards is no longer in your hand.',
     team_leader_required: 'Only the team leader can start a new run.',
     at_least_two_players: 'Dungeon Relay needs at least two players.',
+    event_already_confirmed: 'You already confirmed this event.',
+    event_not_voting: 'Voting for this event has already closed.',
+    active_player_required: 'Only surviving players can take that action.',
+    select_event_cards: 'Choose at least one eligible card to discard.',
+    event_does_not_discard: 'This event does not accept discarded cards.',
+    card_not_event_eligible: 'That card is not eligible for this event.',
+    event_not_confirming: 'This event is not ready for confirmation yet.',
+    eligible_cards_remain: 'Play or discard every highlighted card before confirming.',
   };
   const key = Object.keys(errors).find(error => message.includes(error));
   return key ? errors[key] : 'The game could not complete that action. Please try again.';
