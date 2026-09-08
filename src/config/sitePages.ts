@@ -36,6 +36,7 @@ export type SitePageKey =
   | 'citadel-tactics'
   | 'tactical-puzzles'
   | 'campaign-objectives'
+  | 'multiplayer-lobby'
   | 'event'
   | 'skill-checks'
   | 'news';
@@ -177,6 +178,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Objective status board, party run timelines, and journal entries.',
     icon: GitBranch,
     routePrefixes: ['/campaign-objectives']
+  },
+  {
+    key: 'multiplayer-lobby',
+    name: 'Multiplayer',
+    href: '/multiplayer',
+    description: 'Live matchmaking lobby, team invitations, and party staging.',
+    icon: Users,
+    routePrefixes: ['/multiplayer']
   },
   {
     key: 'event',

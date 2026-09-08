@@ -41,6 +41,7 @@ const TacticalPuzzlesPage = lazy(() => import('./features/tactical-puzzles/route
 const DbAdminPage = lazy(() => import('./pages/DbAdminPage'));
 const MarketplacePage = lazy(() => import('./features/marketplace/MarketplacePage'));
 const ShopPage = lazy(() => import('./features/marketplace/ShopPage'));
+const MultiplayerLobbyPage = lazy(() => import('./features/multiplayer-lobby/MultiplayerLobbyPage'));
 
 function RouteFallback() {
   return (
@@ -98,6 +99,7 @@ function AppRoutes() {
         <Route path="/campaign-objectives/:campaignSlug" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
         <Route path="/campaign-objectives/:campaignSlug/parties/:partyId" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
         <Route path="/campaign-objectives/:campaignSlug/journals/:journalId" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
+        <Route path="/multiplayer" element={<MemberPageGate pageKey="multiplayer-lobby"><MultiplayerLobbyPage /></MemberPageGate>} />
         <Route path="/event" element={<PageGate pageKey="event"><EventPage /></PageGate>} />
         <Route path="/skill-checks" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />
         <Route path="/skill-checks/challenges" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />
