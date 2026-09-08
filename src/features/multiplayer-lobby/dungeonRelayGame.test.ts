@@ -24,7 +24,7 @@ describe('Dungeon Relay client contract', () => {
         { userId: 'player-1', username: 'One', avatar: '', color: 'azure', status: 'active', seat: 1, handCount: 4, deckCount: 45, discardCount: 0 },
         { userId: 'player-2', username: 'Two', avatar: '', color: 'rose', status: 'active', seat: 2, handCount: 5, deckCount: 45, discardCount: 0 },
       ],
-      self: { userId: 'player-1', status: 'active', hand: [{ id: '07608de1-865b-4480-bf35-365c60644e20', symbol: 'arrow', symbols: 2 }] },
+      self: { userId: 'player-1', status: 'active', hand: [{ id: 'd9428888-922b-a1e1-085c-61cd3cbb3210', symbol: 'arrow', symbols: 2 }] },
       playedCards: [{
         id: '37608de1-865b-4480-bf35-365c60644e2e', userId: 'player-1', username: 'One', color: 'azure', symbol: 'sword', symbols: 1, playedOrder: 1,
       }],

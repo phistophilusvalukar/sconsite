@@ -17,6 +17,12 @@ export const DUNGEON_SYMBOLS: ReadonlyArray<{
 
 const symbolSchema = z.enum(['sword', 'arrow', 'shield', 'staff', 'dagger']);
 const playerColorSchema = z.enum(['crimson', 'amber', 'emerald', 'cyan', 'azure', 'violet', 'rose', 'silver']);
+// Hash-derived card IDs are valid PostgreSQL UUID values but do not carry an
+// RFC version/variant nibble, which z.string().uuid() intentionally requires.
+const postgresUuidSchema = z.string().regex(
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  'Invalid PostgreSQL UUID',
+);
 const requirementsSchema = z.object({
   sword: z.number().int().nonnegative(),
   arrow: z.number().int().nonnegative(),
@@ -25,7 +31,7 @@ const requirementsSchema = z.object({
   dagger: z.number().int().nonnegative(),
 });
 const cardSchema = z.object({
-  id: z.string().uuid(),
+  id: postgresUuidSchema,
   symbol: symbolSchema,
   symbols: z.union([z.literal(1), z.literal(2), z.literal(3)]),
 });

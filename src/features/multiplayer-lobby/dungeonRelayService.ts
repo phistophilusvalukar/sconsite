@@ -13,7 +13,8 @@ export const dungeonRelayService = {
     const result = dungeonRelayStateSchema.safeParse(data);
     if (!result.success) {
       console.error('Invalid Dungeon Relay snapshot:', result.error);
-      throw new Error('The game returned an invalid state.');
+      const field = result.error.issues[0]?.path.join('.');
+      throw new Error(`The game returned an invalid state${field ? ` (${field})` : ''}.`);
     }
     return result.data;
   },
