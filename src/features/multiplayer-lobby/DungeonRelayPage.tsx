@@ -24,6 +24,7 @@ export default function DungeonRelayPage() {
   const [powerCardIds, setPowerCardIds] = useState<string[]>([]);
   const [powerTargetId, setPowerTargetId] = useState('');
   const [clockNow, setClockNow] = useState(() => Date.now());
+  const [isExpiring, setIsExpiring] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +77,16 @@ export default function DungeonRelayPage() {
     }, delay);
     return () => window.clearTimeout(timer);
   }, [loadState, matchId, state]);
+
+  useEffect(() => {
+    if (!state || isExpiring || state.match.status !== 'active' || state.match.timerFrozen || !state.match.timerDeadline) return;
+    if (state.dungeon.isBoss && state.match.phase === 'resolving') return;
+    if (new Date(state.match.timerDeadline).getTime() > clockNow) return;
+    setIsExpiring(true);
+    void dungeonRelayService.expireTimer(matchId).then(() => loadState()).catch(errorValue => {
+      setError(errorValue instanceof Error ? errorValue.message : 'The run timer could not be resolved.');
+    }).finally(() => setIsExpiring(false));
+  }, [clockNow, isExpiring, loadState, matchId, state]);
 
   const allocation = useMemo(() => state ? allocateDungeonRelayMatches(
     state.dungeon.requirements,
@@ -171,13 +182,15 @@ export default function DungeonRelayPage() {
   const secondsRemaining = state.match.timerFrozen
     ? state.match.timerRemainingSeconds
     : state.match.timerDeadline ? Math.max(0, Math.ceil((new Date(state.match.timerDeadline).getTime() - clockNow) / 1000)) : 0;
+  const resumeLockSeconds = state.match.timerResumeLockedUntil ? Math.max(0, Math.ceil((new Date(state.match.timerResumeLockedUntil).getTime() - clockNow) / 1000)) : 0;
+  const timerLabel = `${Math.floor(secondsRemaining / 60)}:${String(secondsRemaining % 60).padStart(2, '0')}`;
 
   return (
     <main className={`dr-page${isResolving ? ' is-resolving' : ''}`}>
       <header className="dr-topbar">
         <button type="button" onClick={() => navigate('/multiplayer')}><ChevronLeft /> Lobby</button>
         <div className="dr-title"><span><Sparkles /></span><div><strong>Dungeon Relay</strong><small>Cooperative prototype</small></div></div>
-        <div className={`dr-round-label dr-timer${state.match.timerFrozen ? ' is-frozen' : ''}`}><span><Clock3 /> {state.match.timerFrozen ? 'Frozen' : 'Time'}</span><strong>{secondsRemaining}s · {state.dungeon.position} / 11</strong></div>
+        <div className={`dr-round-label dr-timer${state.match.timerFrozen ? ' is-frozen' : ''}`}><span><Clock3 /> {state.match.timerFrozen ? 'Frozen' : 'Run time'}</span><strong>{timerLabel} · {state.dungeon.position} / 11</strong></div>
       </header>
 
       <div className="dr-progress" aria-label={`Dungeon progress: ${state.dungeon.position} of 11`}>
@@ -189,6 +202,7 @@ export default function DungeonRelayPage() {
       </div>
 
       {error && <div className="dr-error" role="alert"><X /><span>{error}</span></div>}
+      {state.match.timerFrozen && <div className="dr-freeze-notice" role="status" aria-live="assertive"><Clock3 /><div><strong>Time has been frozen!</strong><span>{resumeLockSeconds > 0 ? `Card play unlocks in ${resumeLockSeconds}…` : 'The next card played will restart the clock.'}</span></div></div>}
 
       <section className="dr-party" aria-label="Party status">
         {state.players.map(player => {
@@ -250,7 +264,7 @@ export default function DungeonRelayPage() {
           {state.self.status === 'active' && (
             <div className="dr-hand-actions">
               {selfPower && <button type="button" className={`dr-power-button${eliminationReady ? ' is-ready' : ''}`} onClick={() => { setSelectedIds([]); setPowerCardIds([]); setPowerTargetId(state.players.find(player => player.status === 'active' && !player.eventExcluded)?.userId ?? ''); setPowerOpen(true); }} disabled={!powerContextReady || Boolean(selfPlayer?.confirmed)}><Flame /> {selfPower.name}</button>}
-              <button type="button" className="dr-play-button" onClick={() => void playCards()} disabled={selectedIds.length === 0 || isPlaying || isResolving || selfPlayer?.confirmed}>
+              <button type="button" className="dr-play-button" onClick={() => void playCards()} disabled={selectedIds.length === 0 || isPlaying || isResolving || selfPlayer?.confirmed || resumeLockSeconds > 0}>
                 {isPlaying ? <Loader2 className="dr-spin" /> : <Zap />}
                 Play {selectedIds.length > 0 ? `${selectedIds.length} card${selectedIds.length === 1 ? '' : 's'}` : 'cards'}
               </button>
@@ -279,7 +293,7 @@ export default function DungeonRelayPage() {
       </section>
 
       {state.match.phase === 'complete' && (
-        <EndScreen won={state.match.status === 'won'} isLeader={isLeader} busy={isRetrying} onRetry={() => void retry()} onLobby={() => navigate('/multiplayer')} />
+        <EndScreen won={state.match.status === 'won'} timedOut={state.match.status === 'lost' && secondsRemaining === 0 && state.players.some(player => player.status === 'active')} isLeader={isLeader} busy={isRetrying} onRetry={() => void retry()} onLobby={() => navigate('/multiplayer')} />
       )}
       {powerOpen && selfPlayer && selfPower && (
         <PowerDialog
@@ -447,14 +461,14 @@ function ResolutionBanner({ isBoss, isEvent }: { isBoss: boolean; isEvent: boole
   );
 }
 
-function EndScreen({ won, isLeader, busy, onRetry, onLobby }: { won: boolean; isLeader: boolean; busy: boolean; onRetry: () => void; onLobby: () => void }) {
+function EndScreen({ won, timedOut, isLeader, busy, onRetry, onLobby }: { won: boolean; timedOut: boolean; isLeader: boolean; busy: boolean; onRetry: () => void; onLobby: () => void }) {
   return (
     <div className="dr-end-backdrop">
       <section className={`dr-end-screen${won ? ' is-win' : ''}`} role="dialog" aria-modal="true" aria-labelledby="dr-end-title">
         <span className="dr-end-icon">{won ? <Trophy /> : <Skull />}</span>
-        <p>{won ? 'Dungeon cleared' : 'Party defeated'}</p>
-        <h2 id="dr-end-title">{won ? 'The Warden has fallen!' : 'No adventurers remain.'}</h2>
-        <span>{won ? 'Your party defeated all ten chambers and the boss.' : 'Every player ran out of cards while drawing.'}</span>
+        <p>{won ? 'Dungeon cleared' : timedOut ? 'Time expired' : 'Party defeated'}</p>
+        <h2 id="dr-end-title">{won ? 'The Warden has fallen!' : timedOut ? 'The dungeon closes around you.' : 'No adventurers remain.'}</h2>
+        <span>{won ? 'Your party defeated all ten chambers and the boss.' : timedOut ? 'The party did not defeat the boss within five minutes.' : 'Every player ran out of cards while drawing.'}</span>
         <div>
           <button type="button" className="dr-secondary-button" onClick={onLobby}><Users /> Team lobby</button>
           {isLeader ? <button type="button" className="dr-primary-button" onClick={onRetry} disabled={busy}>{busy ? <Loader2 className="dr-spin" /> : <RotateCcw />} Try again</button> : <small>Waiting for the team leader to start another run.</small>}

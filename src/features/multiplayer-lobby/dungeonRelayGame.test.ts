@@ -15,7 +15,7 @@ describe('Dungeon Relay client contract', () => {
       match: {
         id: '17608de1-865b-4480-bf35-365c60644e2e', teamId: '27608de1-865b-4480-bf35-365c60644e2e',
         leaderId: 'player-1', status: 'active', phase: 'active', dungeonPosition: 1, totalDungeons: 11, revision: 1, resolveAt: null,
-        timerDeadline: '2026-09-08T00:01:00Z', timerFrozen: false, timerRemainingSeconds: 60,
+        timerDeadline: '2026-09-08T00:05:00Z', timerFrozen: false, timerRemainingSeconds: 300, timerResumeLockedUntil: null,
       },
       dungeon: {
         position: 1, isBoss: false, name: 'Dungeon Chamber 1',
@@ -57,6 +57,7 @@ describe('Dungeon Relay client contract', () => {
         timerDeadline: null,
         timerFrozen: true,
         timerRemainingSeconds: 42,
+        timerResumeLockedUntil: '2026-09-08T00:00:03Z',
       },
       dungeon: {
         position: 1,

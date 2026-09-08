@@ -82,7 +82,8 @@ export const dungeonRelayStateSchema = z.object({
     resolveAt: z.string().nullable(),
     timerDeadline: z.string().nullable(),
     timerFrozen: z.boolean(),
-    timerRemainingSeconds: z.number().int().min(0).max(60),
+    timerRemainingSeconds: z.number().int().min(0).max(300),
+    timerResumeLockedUntil: z.string().nullable(),
   }),
   dungeon: z.object({
     position: z.number().int().min(1).max(11),
@@ -168,6 +169,8 @@ export function dungeonRelayErrorMessage(message: string) {
     event_player_excluded: 'That player is excluded from this event.',
     timer_already_frozen: 'Time is already frozen.',
     power_not_available: 'That class power cannot affect this card.',
+    time_freeze_lockout: 'Time was just frozen. Wait for the party notification before playing.',
+    run_time_expired: 'The five-minute dungeon timer has expired.',
   };
   const key = Object.keys(errors).find(error => message.includes(error));
   return key ? errors[key] : 'The game could not complete that action. Please try again.';
