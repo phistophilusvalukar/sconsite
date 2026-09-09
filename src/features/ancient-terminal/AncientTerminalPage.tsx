@@ -59,11 +59,12 @@ fn clean():
 `;
 
 const FIXED_CLEANER_SOURCE = BROKEN_CLEANER_SOURCE.replace('for target in targets\n', 'for target in targets:\n');
+const TERMINAL_HISTORY_GUARD = 'ancient-terminal-session-guard';
 
 const BASIC_HELP: Omit<TerminalLine, 'id'>[] = [
   { voice: 'os', text: 'ANCIENT SHELL HELP 0.1' },
   { voice: 'os', text: 'HELP  UPDATE  LS  DIR  CD  PWD  TYPE  CAT  VIM  EDIT  OURO  ALIAS' },
-  { voice: 'os', text: 'CLEAR  CLS' },
+  { voice: 'os', text: 'CLEAR  CLS  EXIT' },
   { voice: 'muted', text: 'Run UPDATE to install command descriptions.' },
   { voice: 'muted', text: 'TAB completes names. UP/DOWN recall commands. Copy and paste are enabled.' },
 ];
@@ -85,6 +86,7 @@ const DETAILED_HELP: Omit<TerminalLine, 'id'>[] = [
   { voice: 'muted', text: 'SHELL' },
   { voice: 'os', text: '  UPDATE            install the newest local help index' },
   { voice: 'os', text: '  CLEAR / CLS       clear terminal output' },
+  { voice: 'os', text: '  EXIT              disconnect safely and return to the site' },
   { voice: 'muted', text: 'TAB completes names. UP/DOWN recall commands. Text can be copied and pasted.' },
 ];
 
@@ -372,6 +374,7 @@ export default function AncientTerminalPage() {
   const [sequenceRunning, setSequenceRunning] = useState(false);
   const [horrorShake, setHorrorShake] = useState<HorrorPulse | null>(null);
   const [erasingGetPopId, setErasingGetPopId] = useState<string | null>(null);
+  const [activeGlitchGetPopId, setActiveGlitchGetPopId] = useState<string | null>(null);
   const [vimFile, setVimFile] = useState<EditorFileName | null>(null);
   const [vimMode, setVimMode] = useState<VimMode>('normal');
   const [vimCommand, setVimCommand] = useState('');
@@ -384,6 +387,9 @@ export default function AncientTerminalPage() {
   const awakeningRef = useRef(eldritchAwakened);
   const aliasesRef = useRef<TerminalAliases>({});
   const shakeTimerRef = useRef(0);
+  const navigationAuthorizedRef = useRef(false);
+  const exitToHomeRef = useRef(false);
+  const restoringHistoryGuardRef = useRef(false);
   const completionRef = useRef<{ candidates: string[]; index: number } | null>(null);
   const vimOpen = vimFile !== null;
   const activeSource = vimFile === 'alias.tot' ? aliasSource : vimFile === 'cleaner.oro' ? cleanerSource : worldSource;
@@ -407,6 +413,48 @@ export default function AncientTerminalPage() {
   }, []);
 
   useEffect(() => () => window.clearTimeout(shakeTimerRef.current), []);
+
+  useEffect(() => {
+    const historyState = typeof window.history.state === 'object' && window.history.state !== null
+      ? window.history.state as Record<string, unknown>
+      : {};
+
+    if (historyState[TERMINAL_HISTORY_GUARD] !== true) {
+      window.history.pushState({ ...historyState, [TERMINAL_HISTORY_GUARD]: true }, '', window.location.href);
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (navigationAuthorizedRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    const handlePopState = () => {
+      if (navigationAuthorizedRef.current) {
+        if (exitToHomeRef.current) window.location.replace('/');
+        return;
+      }
+      if (restoringHistoryGuardRef.current) {
+        restoringHistoryGuardRef.current = false;
+        return;
+      }
+
+      if (window.confirm('Disconnect from ANCIENT?\n\nTerminal activity since the last save may be lost.')) {
+        navigationAuthorizedRef.current = true;
+        window.history.back();
+      } else {
+        restoringHistoryGuardRef.current = true;
+        window.history.forward();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
   const bootSequence = useMemo(() => scriptFixed ? BOOT.map((line, index) => {
     if (index === 7) return { voice: 'patch' as const, text: 'world_init.oro: syntax check passed' };
     if (index === 8) return { voice: 'patch' as const, text: 'world_init.getPop() ...................................... [OK]' };
@@ -708,6 +756,13 @@ export default function AncientTerminalPage() {
       return;
     }
 
+    if (normalized === 'exit') {
+      navigationAuthorizedRef.current = true;
+      exitToHomeRef.current = true;
+      window.history.back();
+      return;
+    }
+
     const aliasTarget = aliasesRef.current[normalized];
     if (aliasTarget) {
       if (aliasDepth >= 8) {
@@ -876,9 +931,12 @@ export default function AncientTerminalPage() {
           {bootLines.map(line => <TypingLine key={line.id} line={line} onStart={scrollToLatestLine} flushToken={flushToken} />)}
           {ready && <TypingLine line={{ id: -1, voice: 'muted', text: 'Type HELP for available commands.', delay: 500 }} onStart={scrollToLatestLine} flushToken={flushToken} />}
           {history.map(item => 'kind' in item
-            ? <GetPopSequence key={item.id} aggressive={item.aggressive} animateGlitch={item.id === latestGetPopId} erase={item.id === erasingGetPopId} onOverwrite={handleOverwrite} onComplete={() => setSequenceRunning(false)} onLineStart={scrollToLatestLine} onHorrorPulse={pulse => {
+            ? <GetPopSequence key={item.id} aggressive={item.aggressive} animateGlitch={item.id === activeGlitchGetPopId || item.id === erasingGetPopId} erase={item.id === erasingGetPopId} onOverwrite={handleOverwrite} onComplete={() => setSequenceRunning(false)} onLineStart={scrollToLatestLine} onHorrorPulse={pulse => {
                 triggerHorrorPulse(pulse);
-                if (pulse === 'arrival' && item.eraseTargetId) setErasingGetPopId(item.eraseTargetId);
+                if (pulse === 'arrival') {
+                  setActiveGlitchGetPopId(item.id);
+                  if (item.eraseTargetId) setErasingGetPopId(item.eraseTargetId);
+                }
               }} />
             : <TypingLine key={item.id} line={item} onStart={scrollToLatestLine} flushToken={flushToken} />)}
         </div>

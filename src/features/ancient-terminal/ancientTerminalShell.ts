@@ -35,6 +35,7 @@ const SHELL_COMMANDS = [
   'ALIAS',
   'CLEAR',
   'CLS',
+  'EXIT',
 ] as const;
 
 const DIRECTORY_CHILDREN: Record<TerminalDirectory, readonly string[]> = {
