@@ -20,7 +20,6 @@ import { useAuth } from '../../context/useAuth';
 import { useSupabaseRealtime } from '../../hooks/useSupabaseRealtime';
 import {
   getPlayerColor,
-  PLAYER_COLORS,
   type LobbyMode,
   type MultiplayerLobbyState,
   type PlayerColor,
@@ -28,6 +27,7 @@ import {
 } from './multiplayerLobby';
 import { multiplayerLobbyService } from './multiplayerLobbyService';
 import './multiplayerLobby.css';
+import LobbyClassPicker from './LobbyClassPicker';
 
 const EMPTY_STATE: MultiplayerLobbyState = {
   self: null,
@@ -219,9 +219,9 @@ function LobbyEntrance({ color, activeAction, onColorChange, onEnter }: {
 }) {
   return (
     <div className="ml-entrance">
-      <section className="ml-panel ml-color-panel">
-        <div className="ml-step"><span>01</span><div><h2>Choose your class</h2><p>Your class and its light or dark color follow you into the game.</p></div></div>
-        <ColorPicker value={color} onChange={onColorChange} disabled={activeAction !== null} />
+      <section className="ml-panel ml-class-panel">
+        <div className="ml-step"><span>01</span><div><h2>Choose your class</h2><p>Compare powers and cards to find your place in the party.</p></div></div>
+        <LobbyClassPicker value={color} onChange={onColorChange} disabled={activeAction !== null} />
       </section>
       <section className="ml-panel">
         <div className="ml-step"><span>02</span><div><h2>How are you joining?</h2><p>Your lobby status is live and can be changed later.</p></div></div>
@@ -272,8 +272,8 @@ function WaitingRoom({ state, color, activeAction, onColorChange, onEnter }: {
         </div>
       </section>
       <aside className="ml-panel ml-side-panel">
-        <h3>Your color</h3>
-        <ColorPicker value={color} onChange={onColorChange} disabled={activeAction !== null} compact />
+        <h3>Your class</h3>
+        <LobbyClassPicker value={color} onChange={onColorChange} disabled={activeAction !== null} />
         <div className="ml-lobby-count"><Users /><span><strong>{state.waitingPlayers.length + 1}</strong> players waiting now</span></div>
       </aside>
     </div>
@@ -298,7 +298,7 @@ function SoloQueue({ color, activeAction, onColorChange, onEnter }: {
           <button className="ml-secondary-button" type="button" onClick={() => onEnter('waiting')} disabled={activeAction !== null}>Wait for invite</button>
         </div>
       </section>
-      <aside className="ml-panel ml-side-panel"><h3>Your class</h3><ColorPicker value={color} onChange={onColorChange} disabled={activeAction !== null} compact /></aside>
+      <aside className="ml-panel ml-side-panel"><h3>Your class</h3><LobbyClassPicker value={color} onChange={onColorChange} disabled={activeAction !== null} /></aside>
     </div>
   );
 }
@@ -346,7 +346,7 @@ function TeamBuilder({ state, currentUserId, color, activeAction, onColorChange,
           })}
           {Array.from({ length: 8 - team.members.length }, (_, index) => <div className="ml-empty-slot" key={index}><UserPlus /><span>Open slot</span></div>)}
         </div>
-        <div className="ml-team-color"><div><h3>Your class</h3><p>Everyone sees class changes in real time before the game starts.</p></div><ColorPicker value={color} onChange={onColorChange} disabled={activeAction !== null} compact /></div>
+        <div className="ml-team-class"><div><h3>Your class</h3><p>Everyone sees class changes in real time before the game starts.</p></div><LobbyClassPicker value={color} onChange={onColorChange} disabled={activeAction !== null} /></div>
       </section>
 
       <aside className="ml-panel ml-invite-panel">
@@ -379,32 +379,6 @@ function TeamBuilder({ state, currentUserId, color, activeAction, onColorChange,
   );
 }
 
-function ColorPicker({ value, onChange, disabled, compact = false }: {
-  value: PlayerColor;
-  onChange: (color: PlayerColor) => void;
-  disabled: boolean;
-  compact?: boolean;
-}) {
-  return (
-    <div className={`ml-colors${compact ? ' ml-colors-compact' : ''}`} role="radiogroup" aria-label="Player class">
-      {PLAYER_COLORS.map(color => (
-        <button
-          key={color.id}
-          type="button"
-          className={value === color.id ? 'is-selected' : ''}
-          style={{ '--swatch': color.hex } as React.CSSProperties}
-          role="radio"
-          aria-checked={value === color.id}
-          aria-label={`${color.className}, ${color.label} ${color.alignment}`}
-          title={`${color.className} · ${color.label} (${color.alignment})`}
-          disabled={disabled}
-          onClick={() => onChange(color.id)}
-        ><span /><small><strong>{color.className}</strong><em>{color.alignment} · {color.label}</em></small></button>
-      ))}
-    </div>
-  );
-}
-
 function InvitationDialog({ invitation, busy, onRespond }: {
   invitation: TeamInvitation;
   busy: boolean;
@@ -417,7 +391,7 @@ function InvitationDialog({ invitation, busy, onRespond }: {
         <p className="ml-eyebrow">Team invitation</p>
         <h2 id="team-invitation-title">{invitation.inviterName} wants you on their team</h2>
         <div className="ml-inviter"><img src={invitation.inviterAvatar || '/npc-placeholder.png'} alt="" /><span><strong>{invitation.inviterName}</strong><small>sent an invitation just now</small></span></div>
-        <p>Accept to join their Team Building screen immediately. You can still change your color after joining.</p>
+        <p>Accept to join their Team Building screen immediately. You can still change your class after joining.</p>
         <div className="ml-dialog-actions">
           <button className="ml-secondary-button" type="button" onClick={() => onRespond(false)} disabled={busy}><X /> Decline</button>
           <button className="ml-primary-button" type="button" onClick={() => onRespond(true)} disabled={busy}>{busy ? <Loader2 className="ml-spin" /> : <Check />} Accept invitation</button>

@@ -85,7 +85,7 @@ export function multiplayerErrorMessage(message: string) {
     profile_required: 'Your member profile is still being prepared. Please try again.',
     invalid_lobby_mode: 'That lobby option is not available.',
     invalid_player_color: 'Choose one of the available classes.',
-    not_in_lobby: 'Join the lobby before changing your color.',
+    not_in_lobby: 'Join the lobby before changing your class.',
     not_on_team: 'You are not currently on a team.',
     team_full: 'That team already has eight players.',
     player_not_waiting: 'That player is no longer waiting for a team.',
