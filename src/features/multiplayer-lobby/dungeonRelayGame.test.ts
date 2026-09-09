@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { dungeonRelayStateSchema, getDungeonSymbol } from './dungeonRelayGame';
+import { dungeonRelayCardSchema, dungeonRelayStateSchema, getDungeonSymbol } from './dungeonRelayGame';
 
 describe('Dungeon Relay client contract', () => {
+  it('validates special cards and rejects impossible wildcard allocations', () => {
+    const card = { id: 'd9428888-922b-a1e1-085c-61cd3cbb3210', symbol: 'dagger', symbols: 1, special: 'wild_three' };
+    expect(dungeonRelayCardSchema.safeParse(card).success).toBe(true);
+    expect(dungeonRelayCardSchema.safeParse({ ...card, special: 'unknown' }).success).toBe(false);
+    expect(dungeonRelayCardSchema.safeParse({ ...card, chosenSymbols: { sword: 3, arrow: 0, shield: 0, staff: 0, dagger: 0 } }).success).toBe(true);
+    expect(dungeonRelayCardSchema.safeParse({ ...card, chosenSymbols: { sword: 4, arrow: 0, shield: 0, staff: 0, dagger: 0 } }).success).toBe(false);
+  });
   it('maps the five requested symbols to their colors', () => {
     expect(getDungeonSymbol('sword')).toMatchObject({ color: '#ef4444', label: 'Red Swords' });
     expect(getDungeonSymbol('arrow')).toMatchObject({ color: '#22c55e', label: 'Green Arrows' });

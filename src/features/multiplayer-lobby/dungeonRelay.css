@@ -234,3 +234,14 @@
 @media (prefers-reduced-motion: reduce) {
   .dr-page *, .dr-page *::before, .dr-page *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Special cards keep their class color while showing their distinct effect. */
+.dr-card.is-special { border-color: var(--symbol-color); background: linear-gradient(145deg, #25223a, #101522); }
+.dr-card.is-special strong { font-size: .78rem; white-space: normal; text-align: center; }
+.dr-card .dr-special-hint { font-size: .58rem; line-height: 1.25; white-space: normal; text-align: center; }
+.dr-card.is-special .dr-card-symbols { flex-wrap: wrap; gap: .2rem; }
+.dr-wild-choices { display: flex; flex-wrap: wrap; gap: .75rem; }
+.dr-wild-choices label { flex: 1; min-width: 130px; }
+.dr-special-dialog > p { line-height: 1.5; }
+
+.dr-special-dialog > p:not(:first-of-type) { margin: .75rem 0; color: var(--dr-muted); font-size: .85rem; font-weight: 400; letter-spacing: normal; text-transform: none; }

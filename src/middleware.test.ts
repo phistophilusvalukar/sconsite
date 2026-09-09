@@ -36,4 +36,14 @@ describe('public resource routes', () => {
     const response = middleware(new Request('https://example.test/games'));
     expect(response?.status).toBe(401);
   });
+
+  it.each(['/multiplayer', '/multiplayer/', '/multiplayer/matches/11111111-1111-4111-8111-111111111111'])(
+    'allows multiplayer route %s without the site password', (pathname) => {
+      expect(middleware(new Request(`https://example.test${pathname}`))).toBeUndefined();
+    }
+  );
+
+  it('keeps similarly named routes behind the site password', () => {
+    expect(middleware(new Request('https://example.test/multiplayer-admin'))?.status).toBe(401);
+  });
 });

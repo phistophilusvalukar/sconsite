@@ -1,0 +1,14 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
+import { AuthContext } from './src/context/authContextCore';
+import MultiplayerLobbyPage from './src/features/multiplayer-lobby/MultiplayerLobbyPage';
+import { multiplayerLobbyService } from './src/features/multiplayer-lobby/multiplayerLobbyService';
+import './src/index.css';
+const state = {self:null,waitingPlayers:[],team:null,incomingInvitations:[],pendingInviteeIds:[],recentInvitationUpdates:[],activeMatchId:null};
+multiplayerLobbyService.getState=async()=>state;
+multiplayerLobbyService.enter=async(mode,color)=>{state.self={userId:'one',mode,color,teamId:null}; if(mode==='team')state.team={id:'test',leaderId:'one',members:[{userId:'one',username:'Preview Player',avatar:'',color,joinedAt:''}]};};
+multiplayerLobbyService.setColor=async(color)=>{state.self.color=color;};
+multiplayerLobbyService.heartbeat=async()=>{};
+multiplayerLobbyService.leave=async()=>{state.self=null;state.team=null;};
+createRoot(document.getElementById('root')!).render(<AuthContext.Provider value={{user:null,isAuthenticated:true,isLoading:false,error:null,login:async()=>{},logout:async()=>{},refreshUserProfile:async()=>{}}}><MemoryRouter><MultiplayerLobbyPage/></MemoryRouter></AuthContext.Provider>);
