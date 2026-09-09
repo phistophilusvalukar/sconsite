@@ -1,4 +1,5 @@
 import { supabase } from '../../config/database';
+import type { DungeonRelayRequirements } from '@scon/rules';
 import { dungeonRelayErrorMessage, dungeonRelayStateSchema, type DungeonRelayState } from './dungeonRelayGame';
 
 async function runRpc<T>(name: string, args?: Record<string, unknown>): Promise<T> {
@@ -21,6 +22,12 @@ export const dungeonRelayService = {
 
   play(matchId: string, cardIds: string[]) {
     return runRpc<boolean>('play_dungeon_relay_cards', { p_match_id: matchId, p_card_ids: cardIds });
+  },
+
+  playSpecial(matchId: string, cardId: string, targetId: string | null, mode: 'transfer' | 'draw_all' | null, symbols: DungeonRelayRequirements | null) {
+    return runRpc<boolean>('play_dungeon_relay_special', {
+      p_match_id: matchId, p_card_id: cardId, p_target_id: targetId, p_mode: mode, p_symbols: symbols,
+    });
   },
 
   advance(matchId: string) {

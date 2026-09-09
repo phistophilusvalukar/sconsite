@@ -1,20 +1,22 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { allocateDungeonRelayMatches, canDungeonRelayClassEliminate, DUNGEON_RELAY_SYMBOLS, isDungeonRelayEventEligible } from '@scon/rules';
+import { allocateDungeonRelayMatches, dungeonRelayCardSymbols, canDungeonRelayClassEliminate, DUNGEON_RELAY_SYMBOLS, isDungeonRelayEventEligible } from '@scon/rules';
 import { Check, ChevronLeft, Clock3, Crown, Eye, Flame, Layers3, Loader2, RotateCcw, Skull, Sparkles, Trash2, Trophy, Users, Vote, X, Zap } from 'lucide-react';
 import { DATABASE_TABLES } from '../../config/database';
 import { useAuth } from '../../context/useAuth';
 import { useSupabaseRealtime } from '../../hooks/useSupabaseRealtime';
 import { getPlayerColor } from './multiplayerLobby';
-import { DUNGEON_CARD_TYPES, DUNGEON_CLASS_POWERS, DUNGEON_EVENTS, getDungeonSymbol, type DungeonRelayHandCard, type DungeonRelayPublicCard, type DungeonRelayState } from './dungeonRelayGame';
+import { DUNGEON_SPECIAL_CARDS, DUNGEON_CARD_TYPES, DUNGEON_CLASS_POWERS, DUNGEON_EVENTS, getDungeonSymbol, type DungeonRelayHandCard, type DungeonRelayPublicCard, type DungeonRelayState } from './dungeonRelayGame';
 import { dungeonRelayService } from './dungeonRelayService';
 import './dungeonRelay.css';
+import DungeonRelaySpecialDialog from './DungeonRelaySpecialDialog';
 
 export default function DungeonRelayPage() {
   const { matchId = '' } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [state, setState] = useState<DungeonRelayState | null>(null);
+  const [specialCardId, setSpecialCardId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -95,6 +97,11 @@ export default function DungeonRelayPage() {
 
   const toggleCard = (cardId: string) => {
     if (!state || state.match.phase !== 'active' || state.self.status === 'dead' || isPlaying) return;
+    if (state.self.hand.find(card => card.id === cardId)?.special) {
+      setSelectedIds([]);
+      setSpecialCardId(cardId);
+      return;
+    }
     setSelectedIds(current => current.includes(cardId)
       ? current.filter(id => id !== cardId)
       : current.length >= 5 ? current : [...current, cardId]);
@@ -259,7 +266,7 @@ export default function DungeonRelayPage() {
         <div className="dr-hand-heading">
           <div>
             <p>{state.self.status === 'dead' ? <><Eye /> Spectating</> : <><Layers3 /> Your hand</>}</p>
-            <span>{state.self.status === 'dead' ? 'Your deck ran out while drawing. Help your party from the sidelines.' : isEvent ? 'You may still play cards normally. Highlighted cards may also be discarded to the event.' : 'Select one to five cards, then commit them to the field.'}</span>
+            <span>{state.self.status === 'dead' ? 'Your deck ran out while drawing. A Cleric can revive you with Shared Salvation.' : isEvent ? 'You may still play cards normally. Highlighted cards may also be discarded to the event.' : 'Select up to five symbol cards to play together, or open a special card to use its effect.'}</span>
           </div>
           {state.self.status === 'active' && (
             <div className="dr-hand-actions">
@@ -276,7 +283,7 @@ export default function DungeonRelayPage() {
             const eventEligible = isEvent && isDungeonRelayEventEligible(card, state.dungeon.eventType!);
             return (
               <div key={card.id} className={`dr-hand-card-wrap${eventEligible ? ' is-event-eligible' : ''}`}>
-                <button type="button" className={selectedIds.includes(card.id) ? 'is-selected' : ''} onClick={() => toggleCard(card.id)} disabled={isPlaying || isResolving || Boolean(selfPlayer?.confirmed)} aria-pressed={selectedIds.includes(card.id)}>
+                <button type="button" className={selectedIds.includes(card.id) ? 'is-selected' : ''} onClick={() => toggleCard(card.id)} disabled={isPlaying || isResolving || Boolean(selfPlayer?.confirmed)} aria-pressed={card.special ? undefined : selectedIds.includes(card.id)} aria-label={card.special ? `Use ${DUNGEON_SPECIAL_CARDS[card.special].name}` : undefined}>
                   <RelayCard card={card} contribution={0} />
                   <span className="dr-select-mark"><Check /></span>
                 </button>
@@ -294,6 +301,10 @@ export default function DungeonRelayPage() {
 
       {state.match.phase === 'complete' && (
         <EndScreen won={state.match.status === 'won'} timedOut={state.match.status === 'lost' && secondsRemaining === 0 && state.players.some(player => player.status === 'active')} isLeader={isLeader} busy={isRetrying} onRetry={() => void retry()} onLobby={() => navigate('/multiplayer')} />
+      )}
+      {state.self.hand.some(card => card.id === specialCardId) && (
+        <DungeonRelaySpecialDialog key={specialCardId} card={state.self.hand.find(card => card.id === specialCardId)!} state={state}
+          onClose={() => setSpecialCardId(null)} onPlayed={loadState} />
       )}
       {powerOpen && selfPlayer && selfPower && (
         <PowerDialog
@@ -439,14 +450,18 @@ function RelayCard({ card, contribution, publicCard = false }: {
   publicCard?: boolean;
 }) {
   const meta = getDungeonSymbol(card.symbol);
+  const special = card.special ? DUNGEON_SPECIAL_CARDS[card.special] : null;
+  const tokens = dungeonRelayCardSymbols(card);
+  const glyphs = DUNGEON_RELAY_SYMBOLS.flatMap(symbol => Array.from({ length: tokens[symbol] }, () => getDungeonSymbol(symbol)));
   const owner = 'username' in card ? card.username : undefined;
   return (
-    <article className={`dr-card${publicCard ? ' is-public' : ''}`} style={{ '--symbol-color': meta.color } as CSSProperties}>
-      <div className="dr-card-corners"><span>{card.symbols}</span><i>{meta.glyph}</i></div>
+    <article className={`dr-card${special ? ' is-special' : ''}${publicCard ? ' is-public' : ''}`} style={{ '--symbol-color': meta.color } as CSSProperties} title={special?.description}>
+      <div className="dr-card-corners"><span>{special ? '★' : card.symbols}</span><i>{special?.glyph ?? meta.glyph}</i></div>
       <div className="dr-card-symbols">
-        {Array.from({ length: card.symbols }, (_, index) => <i key={index} className={publicCard && index >= contribution ? 'is-extra' : ''}>{meta.glyph}</i>)}
+        {glyphs.length > 0 ? glyphs.map((glyph, index) => <i key={index} style={{ color: glyph.color }} className={publicCard && index >= contribution ? 'is-extra' : ''}>{glyph.glyph}</i>) : <i>{special?.glyph}</i>}
       </div>
-      <strong>{meta.shortLabel}{card.symbols > 1 ? ` ×${card.symbols}` : ''}</strong>
+      <strong>{special?.name ?? `${meta.shortLabel}${card.symbols > 1 ? ` ×${card.symbols}` : ''}`}</strong>
+      {special && !publicCard && <small className="dr-special-hint">{card.special === 'cleric_blessing' ? 'Share half your deck and revive an ally, or let every other player draw 2.' : special.description}</small>}
       {owner && <small>{owner}</small>}
     </article>
   );

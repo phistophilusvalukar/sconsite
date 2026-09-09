@@ -1,5 +1,16 @@
 import { z } from 'zod';
-import type { DungeonRelayCardType, DungeonRelayClass, DungeonRelayEventType, DungeonRelaySymbol } from '@scon/rules';
+import { DUNGEON_RELAY_SPECIALS, type DungeonRelaySpecial, type DungeonRelayCardType, type DungeonRelayClass, type DungeonRelayEventType, type DungeonRelaySymbol } from '@scon/rules';
+
+export const DUNGEON_SPECIAL_CARDS: Readonly<Record<DungeonRelaySpecial, { name: string; description: string; glyph: string }>> = {
+  slay_boss: { name: 'Divine Judgment', description: 'Instantly defeat a Mini-Boss or the final Boss.', glyph: '♜' },
+  counter_event: { name: 'Hex Breaker', description: 'Cancel the current Event. Outside an Event, draw 2 cards.', glyph: '✦' },
+  slay_person: { name: 'Decisive Strike', description: 'Instantly defeat a Person.', glyph: '⚔' },
+  gift_three: { name: 'Arcane Gift', description: 'Choose another surviving player to draw 3 cards.', glyph: '✧' },
+  wild_three: { name: 'Perfect Plan', description: 'Choose any 3 symbols, including repeated colors.', glyph: '✴' },
+  cleric_blessing: { name: 'Shared Salvation', description: 'Give half your remaining deck (rounded down) to another player, reviving them if dead. Or every other surviving player draws 2 cards.', glyph: '☀' },
+  slay_beast: { name: 'Beast Slayer', description: 'Instantly defeat a Beast.', glyph: '➶' },
+  all_colors: { name: 'Prismatic Formula', description: 'Contribute 1 of each of the five colors.', glyph: '⚗' },
+};
 
 export const DUNGEON_SYMBOLS: ReadonlyArray<{
   id: DungeonRelaySymbol;
@@ -63,11 +74,14 @@ const requirementsSchema = z.object({
   staff: z.number().int().nonnegative(),
   dagger: z.number().int().nonnegative(),
 });
-const cardSchema = z.object({
+export const dungeonRelayCardSchema = z.object({
   id: postgresUuidSchema,
   symbol: symbolSchema,
   symbols: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  special: z.enum(DUNGEON_RELAY_SPECIALS).nullable().optional(),
+  chosenSymbols: requirementsSchema.refine(value => Object.values(value).reduce((sum, count) => sum + count, 0) === 3, 'Choose exactly three symbols').nullable().optional(),
 });
+const cardSchema = dungeonRelayCardSchema;
 
 export const dungeonRelayStateSchema = z.object({
   match: z.object({
@@ -114,7 +128,7 @@ export const dungeonRelayStateSchema = z.object({
   self: z.object({
     userId: z.string().min(1),
     status: z.enum(['active', 'dead']),
-    hand: z.array(cardSchema).max(40),
+    hand: z.array(cardSchema).max(480),
   }),
   playedCards: z.array(cardSchema.extend({
     userId: z.string().min(1),
@@ -171,6 +185,14 @@ export function dungeonRelayErrorMessage(message: string) {
     power_not_available: 'That class power cannot affect this card.',
     time_freeze_lockout: 'Time was just frozen. Wait for the party notification before playing.',
     run_time_expired: 'The five-minute dungeon timer has expired.',
+    use_special_card_action: 'Open the special card to choose its effect.',
+    special_card_required: 'Choose a special card from your hand.',
+    special_not_available: 'This special card cannot defeat the current encounter.',
+    invalid_special_symbols: 'Choose exactly three symbols.',
+    invalid_special_mode: 'Choose a blessing effect.',
+    invalid_special_target: 'This card does not accept that target.',
+    other_player_required: 'Choose another player in this match.',
+    not_enough_deck_to_share: 'You need at least 2 cards remaining in your deck to share half.',
   };
   const key = Object.keys(errors).find(error => message.includes(error));
   return key ? errors[key] : 'The game could not complete that action. Please try again.';

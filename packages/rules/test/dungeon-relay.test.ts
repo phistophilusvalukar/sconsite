@@ -4,6 +4,9 @@ import {
   canDungeonRelayClassEliminate,
   createDungeonRelayDeck,
   DUNGEON_RELAY_SYMBOLS,
+  DUNGEON_RELAY_CLASSES,
+  DUNGEON_RELAY_CLASS_DECKS,
+  dungeonRelayCardSymbols,
   dungeonRelayDrawToFive,
   dungeonRelayRequirementTotal,
   dungeonRelayRequirementTotalForPosition,
@@ -12,19 +15,39 @@ import {
 } from "../src/index.js";
 
 describe("Dungeon Relay prototype rules", () => {
-  it("creates a deterministic, balanced 50-card deck", () => {
-    const first = createDungeonRelayDeck(42);
-    expect(first).toEqual(createDungeonRelayDeck(42));
-    expect(first).not.toEqual(createDungeonRelayDeck(43));
-    expect(first).toHaveLength(50);
-
+  it.each(DUNGEON_RELAY_CLASSES)("creates a deterministic 60-card %s deck with only class-color triples", classId => {
+    const first = createDungeonRelayDeck(42, classId);
+    const definition = DUNGEON_RELAY_CLASS_DECKS[classId];
+    expect(first).toEqual(createDungeonRelayDeck(42, classId));
+    expect(first).not.toEqual(createDungeonRelayDeck(43, classId));
+    expect(first).toHaveLength(60);
+    expect(new Set(first.map(card => card.id)).size).toBe(60);
+    expect(first.filter(card => card.special === definition.special)).toHaveLength(definition.copies);
+    expect(first.filter(card => !card.special && card.symbols === 3)).toHaveLength(3);
+    expect(first.filter(card => !card.special && card.symbols === 3).every(card => card.symbol === definition.symbol)).toBe(true);
     for (const symbol of DUNGEON_RELAY_SYMBOLS) {
-      const cards = first.filter(card => card.symbol === symbol);
-      expect(cards).toHaveLength(10);
-      expect(cards.filter(card => card.symbols === 1)).toHaveLength(7);
-      expect(cards.filter(card => card.symbols === 2)).toHaveLength(2);
-      expect(cards.filter(card => card.symbols === 3)).toHaveLength(1);
+      expect(first.filter(card => !card.special && card.symbol === symbol && card.symbols === 2)).toHaveLength(3);
     }
+  });
+
+  it("matches mixed and repeated wildcard symbols without granting extra symbols", () => {
+    const chosen = { sword: 1, arrow: 1, shield: 0, staff: 1, dagger: 0 };
+    expect(allocateDungeonRelayMatches(chosen, [{ id: 'wild', symbol: 'dagger', symbols: 1, special: 'wild_three', chosenSymbols: chosen, playedOrder: 1 }]).defeated).toBe(true);
+    expect(dungeonRelayCardSymbols({ symbol: 'dagger', symbols: 1, special: 'wild_three', chosenSymbols: { ...chosen, sword: 3, arrow: 0, staff: 0 } }).sword).toBe(3);
+    expect(() => dungeonRelayCardSymbols({ symbol: 'dagger', symbols: 1, special: 'wild_three', chosenSymbols: { ...chosen, sword: 2 } })).toThrow();
+  });
+
+  it("gives Alchemist one of every color and effect-only specials no matching symbols", () => {
+    const tokens = dungeonRelayCardSymbols({ symbol: 'arrow', symbols: 1, special: 'all_colors' });
+    expect(tokens).toEqual({ sword: 1, arrow: 1, shield: 1, staff: 1, dagger: 1 });
+    expect(dungeonRelayRequirementTotal(dungeonRelayCardSymbols({ symbol: 'shield', symbols: 1, special: 'slay_boss' }))).toBe(0);
+    expect(allocateDungeonRelayMatches(tokens, [{ id: 'prism', symbol: 'arrow', symbols: 1, special: 'all_colors', playedOrder: 1 }]).defeated).toBe(true);
+  });
+
+  it("uses printed special symbols for discard events", () => {
+    expect(isDungeonRelayEventEligible({ symbol: 'shield', symbols: 1, special: 'cleric_blessing' }, 'discard_shields')).toBe(false);
+    expect(isDungeonRelayEventEligible({ symbol: 'arrow', symbols: 1, special: 'all_colors' }, 'discard_shields')).toBe(true);
+    expect(isDungeonRelayEventEligible({ symbol: 'dagger', symbols: 1, special: 'wild_three' }, 'discard_multis')).toBe(true);
   });
 
   it("uses only the minimum symbols needed and ignores overplay", () => {
