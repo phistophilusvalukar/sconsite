@@ -43,6 +43,7 @@ const MarketplacePage = lazy(() => import('./features/marketplace/MarketplacePag
 const ShopPage = lazy(() => import('./features/marketplace/ShopPage'));
 const MultiplayerLobbyPage = lazy(() => import('./features/multiplayer-lobby/MultiplayerLobbyPage'));
 const DungeonRelayPage = lazy(() => import('./features/multiplayer-lobby/DungeonRelayPage'));
+const AncientTerminalPage = lazy(() => import('./features/ancient-terminal/AncientTerminalPage'));
 
 function RouteFallback() {
   return (
@@ -102,6 +103,7 @@ function AppRoutes() {
         <Route path="/campaign-objectives/:campaignSlug/journals/:journalId" element={<PageGate pageKey="campaign-objectives"><CampaignObjectivesPage /></PageGate>} />
         <Route path="/multiplayer" element={<MemberPageGate pageKey="multiplayer-lobby"><MultiplayerLobbyPage /></MemberPageGate>} />
         <Route path="/multiplayer/matches/:matchId" element={<MemberPageGate pageKey="multiplayer-lobby"><DungeonRelayPage /></MemberPageGate>} />
+        <Route path="/ancient-terminal" element={<PageGate pageKey="ancient-terminal"><AncientTerminalPage /></PageGate>} />
         <Route path="/event" element={<PageGate pageKey="event"><EventPage /></PageGate>} />
         <Route path="/skill-checks" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />
         <Route path="/skill-checks/challenges" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />
@@ -139,7 +141,8 @@ function AppLayout() {
     || location.pathname === '/rules'
     || location.pathname.startsWith('/public/characters/');
   const hideFooter = location.pathname === '/';
-  const isImmersiveGame = location.pathname.startsWith('/multiplayer/matches/');
+  const isImmersiveGame = location.pathname.startsWith('/multiplayer/matches/')
+    || location.pathname.startsWith('/ancient-terminal');
 
   if (isLoading) {
     return <RouteFallback />;

@@ -37,6 +37,7 @@ export type SitePageKey =
   | 'tactical-puzzles'
   | 'campaign-objectives'
   | 'multiplayer-lobby'
+  | 'ancient-terminal'
   | 'event'
   | 'skill-checks'
   | 'news';
@@ -186,6 +187,14 @@ export const sitePages: SitePageDefinition[] = [
     description: 'Live matchmaking lobby, team invitations, and party staging.',
     icon: Users,
     routePrefixes: ['/multiplayer']
+  },
+  {
+    key: 'ancient-terminal',
+    name: 'Ancient Terminal',
+    href: '/ancient-terminal',
+    description: 'A recovered operating system maintaining a compromised reality simulation.',
+    icon: Wrench,
+    routePrefixes: ['/ancient-terminal']
   },
   {
     key: 'event',

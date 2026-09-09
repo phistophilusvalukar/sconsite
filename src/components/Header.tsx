@@ -6,7 +6,7 @@ import { useAuth } from '../context/useAuth';
 import { usePageVisibility } from '../context/usePageVisibility';
 import DiscordLogin from './DiscordLogin';
 
-type PreloadableRoute = '/' | '/about' | '/lore' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/marketplace' | '/ticket-log' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/citadel-tactics' | '/tactical-puzzles' | '/campaign-objectives' | '/multiplayer' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
+type PreloadableRoute = '/' | '/about' | '/lore' | '/characters' | '/citizens' | '/guilds' | '/schedule' | '/games' | '/marketplace' | '/ticket-log' | '/arcana' | '/underhaul/contracts' | '/arcane-locks' | '/broken-seals' | '/citadel-tactics' | '/tactical-puzzles' | '/campaign-objectives' | '/multiplayer' | '/ancient-terminal' | '/event' | '/skill-checks' | '/news' | '/profile' | '/admin';
 
 const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/': () => import('../pages/HomePage'),
@@ -27,6 +27,7 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<unknown>> = {
   '/tactical-puzzles': () => import('../features/tactical-puzzles/routes/TacticalPuzzlesPage'),
   '/campaign-objectives': () => import('../features/campaign-objectives/routes/CampaignObjectivesPage'),
   '/multiplayer': () => import('../features/multiplayer-lobby/MultiplayerLobbyPage'),
+  '/ancient-terminal': () => import('../features/ancient-terminal/AncientTerminalPage'),
   '/event': () => import('../pages/EventPage'),
   '/skill-checks': () => import('../pages/SkillChecksPage'),
   '/news': () => import('../pages/NewsPage'),
@@ -55,7 +56,7 @@ const navigationGroups: NavigationGroup[] = [
   { name: 'Discover', pageKeys: ['home', 'about', 'lore', 'news'], adminItems: [ticketLogNavigation] },
   { name: 'People', pageKeys: ['characters', 'guilds', 'citizens', 'marketplace'] },
   { name: 'Play', pageKeys: ['schedule', 'games', 'multiplayer-lobby'] },
-  { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals', 'citadel-tactics'] },
+  { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals', 'citadel-tactics', 'ancient-terminal'] },
   { name: 'Tactics', pageKeys: ['tactical-puzzles'] },
   { name: 'Tools', pageKeys: ['skill-checks', 'campaign-objectives', 'event'] }
 ];
