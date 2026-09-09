@@ -11,6 +11,7 @@ describe('ancient terminal shell helpers', () => {
   it('completes commands and cycles from shared prefixes', () => {
     expect(getCompletionCandidates('upd', TERMINAL_ROOT)).toEqual(['UPDATE']);
     expect(getCompletionCandidates('ex', TERMINAL_ROOT)).toEqual(['EXIT']);
+    expect(getCompletionCandidates('reb', TERMINAL_ROOT)).toEqual(['REBOOT']);
     expect(getCompletionCandidates('get', TERMINAL_ROOT, ['getpop()'])).toEqual(['getpop()']);
   });
 

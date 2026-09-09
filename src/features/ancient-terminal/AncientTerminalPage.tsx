@@ -4,6 +4,7 @@ import {
   advanceAncientTerminalProgress,
   loadAncientTerminalProgress,
   replaceAncientTerminalAliases,
+  resetAncientTerminalProgress,
   setAncientTerminalAlias,
   type AncientTerminalAction,
 } from './ancientTerminalService';
@@ -35,6 +36,8 @@ type TimelineItem = TerminalLine | GetPopSequenceItem;
 type VimMode = 'normal' | 'insert' | 'command';
 type HorrorPulse = 'arrival' | 'impact';
 type EditorFileName = EditableFileName | 'alias.tot';
+type ConfirmationRequest = { action: 'exit' | 'reboot'; step: 1 | 2 };
+type RebootPhase = 'crash' | 'static' | 'red' | 'purple';
 
 const BROKEN_WORLD_SOURCE = `# world_init.oro
 # Ouroboros 0.3 — cyclic runtime
@@ -64,7 +67,7 @@ const TERMINAL_HISTORY_GUARD = 'ancient-terminal-session-guard';
 const BASIC_HELP: Omit<TerminalLine, 'id'>[] = [
   { voice: 'os', text: 'ANCIENT SHELL HELP 0.1' },
   { voice: 'os', text: 'HELP  UPDATE  LS  DIR  CD  PWD  TYPE  CAT  VIM  EDIT  OURO  ALIAS' },
-  { voice: 'os', text: 'CLEAR  CLS  EXIT' },
+  { voice: 'os', text: 'CLEAR  CLS  EXIT  REBOOT' },
   { voice: 'muted', text: 'Run UPDATE to install command descriptions.' },
   { voice: 'muted', text: 'TAB completes names. UP/DOWN recall commands. Copy and paste are enabled.' },
 ];
@@ -87,6 +90,7 @@ const DETAILED_HELP: Omit<TerminalLine, 'id'>[] = [
   { voice: 'os', text: '  UPDATE            install the newest local help index' },
   { voice: 'os', text: '  CLEAR / CLS       clear terminal output' },
   { voice: 'os', text: '  EXIT              disconnect safely and return to the site' },
+  { voice: 'os', text: '  REBOOT            erase progress and restore the original system image' },
   { voice: 'muted', text: 'TAB completes names. UP/DOWN recall commands. Text can be copied and pasted.' },
 ];
 
@@ -352,12 +356,15 @@ function GetPopSequence({ aggressive, animateGlitch, erase, onOverwrite, onCompl
 
 export default function AncientTerminalPage() {
   const { user } = useAuth();
+  const [bootCycle, setBootCycle] = useState(0);
   const [loaderMs, setLoaderMs] = useState(0);
   const [bootIndex, setBootIndex] = useState(0);
   const [bootLines, setBootLines] = useState<TerminalLine[]>([]);
   const [history, setHistory] = useState<TimelineItem[]>([]);
   const [flushToken, setFlushToken] = useState(0);
   const [command, setCommand] = useState('');
+  const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmationRequest | null>(null);
+  const [rebootPhase, setRebootPhase] = useState<RebootPhase | null>(null);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyCursor, setHistoryCursor] = useState<number | null>(null);
   const [historyDraft, setHistoryDraft] = useState('');
@@ -412,7 +419,57 @@ export default function AncientTerminalPage() {
     shakeTimerRef.current = window.setTimeout(() => setHorrorShake(null), pulse === 'impact' ? 420 : 280);
   }, []);
 
+  const restoreFactoryState = useCallback(() => {
+    window.clearTimeout(shakeTimerRef.current);
+    awakeningRef.current = false;
+    aliasesRef.current = {};
+    outputAvailableAtRef.current = 0;
+    completionRef.current = null;
+    setLoaderMs(0);
+    setBootIndex(0);
+    setBootLines([]);
+    setHistory([]);
+    setFlushToken(0);
+    setCommand('');
+    setPendingConfirmation(null);
+    setCommandHistory([]);
+    setHistoryCursor(null);
+    setHistoryDraft('');
+    setCwd(TERMINAL_ROOT);
+    setWorldSource(BROKEN_WORLD_SOURCE);
+    setCleanerSource(BROKEN_CLEANER_SOURCE);
+    setScriptFixed(false);
+    setEldritchAwakened(false);
+    setHelpUpdated(false);
+    setCleanerFixed(false);
+    setFilesRestored(false);
+    setAliases({});
+    setAliasSource(formatAliasFile({}));
+    setSequenceRunning(false);
+    setHorrorShake(null);
+    setErasingGetPopId(null);
+    setActiveGlitchGetPopId(null);
+    setVimFile(null);
+    setVimMode('normal');
+    setVimCommand('');
+    setSaveState(user ? 'PROGRESS RESET' : 'LOCAL SESSION');
+    setRebootPhase(null);
+    setBootCycle(cycle => cycle + 1);
+  }, [user]);
+
   useEffect(() => () => window.clearTimeout(shakeTimerRef.current), []);
+
+  useEffect(() => {
+    if (!rebootPhase) return;
+    const phaseDuration = rebootPhase === 'crash' ? 1800 : rebootPhase === 'static' ? 1200 : rebootPhase === 'red' ? 950 : 1250;
+    const timer = window.setTimeout(() => {
+      if (rebootPhase === 'crash') setRebootPhase('static');
+      else if (rebootPhase === 'static') setRebootPhase('red');
+      else if (rebootPhase === 'red') setRebootPhase('purple');
+      else restoreFactoryState();
+    }, phaseDuration);
+    return () => window.clearTimeout(timer);
+  }, [rebootPhase, restoreFactoryState]);
 
   useEffect(() => {
     const historyState = typeof window.history.state === 'object' && window.history.state !== null
@@ -467,7 +524,7 @@ export default function AncientTerminalPage() {
     const started = Date.now();
     const timer = window.setInterval(() => setLoaderMs(Math.min(20000, Date.now() - started)), 100);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [bootCycle]);
 
   useEffect(() => {
     if (!user) return;
@@ -565,6 +622,23 @@ export default function AncientTerminalPage() {
       return queued;
     })]);
     outputAvailableAtRef.current = availableAt;
+  };
+
+  const beginReboot = async () => {
+    setSequenceRunning(true);
+    setSaveState(user ? 'ERASING PROGRESS...' : 'RESETTING...');
+    try {
+      if (user) await resetAncientTerminalProgress();
+      setSaveState('SYSTEM FAILURE');
+      setRebootPhase('crash');
+    } catch {
+      setSequenceRunning(false);
+      setSaveState('RESET FAILED');
+      append([
+        { voice: 'error', text: 'REBOOT ABORTED: persistent storage rejected the reset.' },
+        { voice: 'muted', text: 'No progress was erased.' },
+      ]);
+    }
   };
 
   const handleOverwrite = () => {
@@ -757,9 +831,14 @@ export default function AncientTerminalPage() {
     }
 
     if (normalized === 'exit') {
-      navigationAuthorizedRef.current = true;
-      exitToHomeRef.current = true;
-      window.history.back();
+      setPendingConfirmation({ action: 'exit', step: 1 });
+      append([{ voice: 'os', text: 'Disconnect from ANCIENT and return to the site? [Y/N]' }]);
+      return;
+    }
+
+    if (normalized === 'reboot') {
+      setPendingConfirmation({ action: 'reboot', step: 1 });
+      append([{ voice: 'os', text: 'REBOOT will permanently erase all terminal progress. Continue? [Y/N]' }]);
       return;
     }
 
@@ -808,14 +887,47 @@ export default function AncientTerminalPage() {
     else append([{ voice: 'error', text: `'${value}' is not recognized. Type HELP.` }]);
   };
 
+  const handleConfirmationResponse = (value: string) => {
+    if (!pendingConfirmation) return;
+    const response = value.toUpperCase();
+    if (response !== 'Y' && response !== 'N') {
+      append([{ voice: 'error', text: 'Enter one character: Y or N.' }]);
+      return;
+    }
+    if (response === 'N') {
+      append([{ voice: 'muted', text: `${pendingConfirmation.action.toUpperCase()} canceled.` }]);
+      setPendingConfirmation(null);
+      return;
+    }
+    if (pendingConfirmation.action === 'exit') {
+      setPendingConfirmation(null);
+      navigationAuthorizedRef.current = true;
+      exitToHomeRef.current = true;
+      window.history.back();
+      return;
+    }
+    if (pendingConfirmation.step === 1) {
+      setPendingConfirmation({ action: 'reboot', step: 2 });
+      append([{ voice: 'os', text: 'FINAL CONFIRMATION: destroy saved progress and restore factory state? [Y/N]' }]);
+      return;
+    }
+    setPendingConfirmation(null);
+    void beginReboot();
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const value = command.trim();
     if (!value) return;
     setFlushToken(token => token + 1);
     outputAvailableAtRef.current = Date.now();
-    runCommand(value);
-    setCommandHistory(current => current[current.length - 1] === value ? current : [...current, value]);
+    if (pendingConfirmation) {
+      append([{ voice: 'user', text: `CONFIRM> ${value}` }]);
+      handleConfirmationResponse(value);
+    } else {
+      runCommand(value);
+      setCommandHistory(current => current[current.length - 1] === value ? current : [...current, value]);
+    }
     setHistoryCursor(null);
     setHistoryDraft('');
     completionRef.current = null;
@@ -907,6 +1019,17 @@ export default function AncientTerminalPage() {
     setVimCommand('');
   };
 
+  if (rebootPhase) {
+    return <main className={`ancient-terminal reboot-screen reboot-phase-${rebootPhase}`} aria-live="assertive">
+      <div className="reboot-static-field" aria-hidden="true" />
+      {rebootPhase === 'crash' && <div className="reboot-crash-copy">
+        <TypingLine line={{ id: 'reboot-1', voice: 'os', text: 'REBOOT: closing world handles........................ [OK]', charMs: 7 }} />
+        <TypingLine line={{ id: 'reboot-2', voice: 'os', text: 'REBOOT: restoring origin image................... [FAILED]', charMs: 7, delay: 480 }} />
+        <TypingLine line={{ id: 'reboot-3', voice: 'error', text: 'FATAL: DISPLAY CONTROLLER LOST', charMs: 5, delay: 1050 }} />
+      </div>}
+    </main>;
+  }
+
   if (!loaderDone) {
     const progress = Math.floor(loaderMs / 200);
     const messageCount = Math.min(LOADER_MESSAGES.length, Math.floor(loaderMs / 3800) + 1);
@@ -940,7 +1063,7 @@ export default function AncientTerminalPage() {
               }} />
             : <TypingLine key={item.id} line={item} onStart={scrollToLatestLine} flushToken={flushToken} />)}
         </div>
-        {ready && !sequenceRunning && <form className="command-line" onSubmit={submit}><label htmlFor="ancient-command">{cwd}&gt;</label><input id="ancient-command" ref={inputRef} value={command} onChange={event => {
+        {ready && !sequenceRunning && <form className="command-line" onSubmit={submit}><label htmlFor="ancient-command">{pendingConfirmation ? 'CONFIRM' : cwd}&gt;</label><input id="ancient-command" ref={inputRef} value={command} onChange={event => {
           setCommand(event.target.value);
           setHistoryCursor(null);
           completionRef.current = null;

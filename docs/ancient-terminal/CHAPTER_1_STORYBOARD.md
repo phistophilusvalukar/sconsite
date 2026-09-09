@@ -282,6 +282,7 @@ The preliminary build now covers:
 - discovering and repairing `cleaner.oro`;
 - running `OURO cleaner.oro clean` to restore `census.idx` and `recovery.tot`;
 - creating persistent shortcuts in editable `alias.tot` with `ALIAS <name> - <command>`;
+- confirmed `EXIT` navigation and a twice-confirmed `REBOOT` that erases the player state, crashes through static/red/purple screens, and restores the original boot image;
 - persistence for the implemented repair and discovery flags when signed in.
 
 The next implementation slice should add blocked-attempt counting and the restored-file read checkpoints. Those two conditions can then trigger the first restrained SENTRY/9 contact without exposing the later story.

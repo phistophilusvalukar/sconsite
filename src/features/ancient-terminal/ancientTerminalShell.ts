@@ -36,6 +36,7 @@ const SHELL_COMMANDS = [
   'CLEAR',
   'CLS',
   'EXIT',
+  'REBOOT',
 ] as const;
 
 const DIRECTORY_CHILDREN: Record<TerminalDirectory, readonly string[]> = {

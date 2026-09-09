@@ -44,3 +44,9 @@ export async function replaceAncientTerminalAliases(aliases: Record<string, stri
   if (error) throw new Error(error.message);
   return progressSchema.parse(data);
 }
+
+export async function resetAncientTerminalProgress(): Promise<AncientTerminalProgress> {
+  const { data, error } = await supabase.rpc('reset_ancient_terminal_progress_command');
+  if (error) throw new Error(error.message);
+  return progressSchema.parse(data);
+}
