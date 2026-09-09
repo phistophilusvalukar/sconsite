@@ -58,6 +58,9 @@ jobs:
         with:
           version: 2.39.2
 
+      - name: Validate migration versions
+        run: npm run validate:migrations
+
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
         env:

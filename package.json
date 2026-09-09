@@ -12,6 +12,7 @@
     "test": "vitest run && npm run test --workspaces --if-present",
     "build:ticket-logs": "node scripts/build-ticket-log-archive.mjs",
     "validate:cards": "npm run validate -w @scon/cards",
+    "validate:migrations": "node scripts/check-migration-versions.mjs",
     "simulate:foundry-access": "node scripts/simulate-foundry-access.mjs",
     "preview": "vite preview",
     "vercel-build": "npm run build"

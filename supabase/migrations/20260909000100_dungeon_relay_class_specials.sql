@@ -1,10 +1,13 @@
 /* 60-card class decks and server-authoritative special cards. Existing runs keep their decks. */
 ALTER TABLE public.dungeon_relay_cards
-  ADD COLUMN special text CHECK (special IN ('slay_boss','counter_event','slay_person','gift_three','wild_three','cleric_blessing','slay_beast','all_colors')),
-  ADD COLUMN chosen_symbols jsonb;
-ALTER TABLE public.dungeon_relay_cards DROP CONSTRAINT dungeon_relay_cards_draw_order_check;
+  ADD COLUMN IF NOT EXISTS special text,
+  ADD COLUMN IF NOT EXISTS chosen_symbols jsonb;
+ALTER TABLE public.dungeon_relay_cards DROP CONSTRAINT IF EXISTS dungeon_relay_cards_special_check;
+ALTER TABLE public.dungeon_relay_cards ADD CONSTRAINT dungeon_relay_cards_special_check
+  CHECK (special IN ('slay_boss','counter_event','slay_person','gift_three','wild_three','cleric_blessing','slay_beast','all_colors'));
+ALTER TABLE public.dungeon_relay_cards DROP CONSTRAINT IF EXISTS dungeon_relay_cards_draw_order_check;
 ALTER TABLE public.dungeon_relay_cards ADD CONSTRAINT dungeon_relay_cards_draw_order_check CHECK(draw_order BETWEEN 1 AND 60);
-ALTER TABLE public.dungeon_relay_events DROP CONSTRAINT dungeon_relay_events_event_type_check;
+ALTER TABLE public.dungeon_relay_events DROP CONSTRAINT IF EXISTS dungeon_relay_events_event_type_check;
 ALTER TABLE public.dungeon_relay_events ADD CONSTRAINT dungeon_relay_events_event_type_check CHECK(event_type IN('match_started','cards_played','round_advanced','class_power','special_card'));
 
 CREATE OR REPLACE FUNCTION public.dungeon_relay_class_deck(p_class text)
