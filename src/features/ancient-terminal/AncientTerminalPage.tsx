@@ -2,24 +2,43 @@ import { type CSSProperties, FormEvent, Fragment, KeyboardEvent, useCallback, us
 import { useAuth } from '../../context/useAuth';
 import {
   advanceAncientTerminalProgress,
+  copyAncientTerminalFile,
+  createAncientTerminalDirectory,
+  deleteAncientTerminalFile,
   loadAncientTerminalProgress,
+  loadAncientTerminalFiles,
+  moveAncientTerminalEntry,
   replaceAncientTerminalAliases,
   resetAncientTerminalProgress,
   setAncientTerminalAlias,
+  writeAncientTerminalFile,
   type AncientTerminalAction,
+  type AncientTerminalFile,
 } from './ancientTerminalService';
 import {
-  type EditableFileName,
+  findTerminalEntries,
   formatAliasFile,
+  formatTerminalTree,
   getCompletionCandidates,
   getDirectoryChildren,
+  getManualEntry,
+  grepText,
+  normalizeTerminalPath,
+  parseCommandLine,
   parseAliasDefinition,
   parseAliasFile,
   resolveTerminalDirectory,
+  resolveTerminalEntry,
+  storagePathToTerminalPath,
+  terminalPathToStoragePath,
+  TERMINAL_HOME,
   TERMINAL_ROOT,
   type TerminalAliases,
   type TerminalDirectory,
 } from './ancientTerminalShell';
+import { startOuroborosExecution, type OuroborosExecution } from './ouroborosClient';
+import { formatOuroborosValue } from './ouroborosRuntime';
+import { XtermCommandLine, type XtermCommandLineHandle } from './XtermCommandLine';
 import './ancientTerminal.css';
 
 type Voice = 'os' | 'patch' | 'eldritch' | 'user' | 'muted' | 'error';
@@ -35,7 +54,7 @@ type GetPopSequenceItem = { id: string; kind: 'getpop'; aggressive: boolean; era
 type TimelineItem = TerminalLine | GetPopSequenceItem;
 type VimMode = 'normal' | 'insert' | 'command';
 type HorrorPulse = 'arrival' | 'impact';
-type EditorFileName = EditableFileName | 'alias.tot';
+type EditorFileName = string;
 type ConfirmationRequest = { action: 'exit' | 'reboot'; step: 1 | 2 };
 type RebootPhase = 'crash' | 'static' | 'red' | 'purple';
 
@@ -66,8 +85,9 @@ const TERMINAL_HISTORY_GUARD = 'ancient-terminal-session-guard';
 
 const BASIC_HELP: Omit<TerminalLine, 'id'>[] = [
   { voice: 'os', text: 'ANCIENT SHELL HELP 0.1' },
-  { voice: 'os', text: 'HELP  UPDATE  LS  DIR  CD  PWD  TYPE  CAT  VIM  EDIT  OURO  ALIAS' },
-  { voice: 'os', text: 'CLEAR  CLS  EXIT  REBOOT' },
+  { voice: 'os', text: 'HELP  MAN  UPDATE  LS  DIR  CD  PWD  TREE  FIND  FILE  GREP' },
+  { voice: 'os', text: 'TYPE  CAT  VIM  EDIT  OURO  ALIAS  MKDIR  TOUCH  CP  COPY  MV  MOVE' },
+  { voice: 'os', text: 'RM  DEL  ECHO  HISTORY  CLEAR  CLS  EXIT  REBOOT' },
   { voice: 'muted', text: 'Run UPDATE to install command descriptions.' },
   { voice: 'muted', text: 'TAB completes names. UP/DOWN recall commands. Copy and paste are enabled.' },
 ];
@@ -81,14 +101,28 @@ const DETAILED_HELP: Omit<TerminalLine, 'id'>[] = [
   { voice: 'muted', text: 'FILES' },
   { voice: 'os', text: '  TYPE / CAT <file> display a readable file' },
   { voice: 'os', text: '  VIM / EDIT <file> edit an Ouroboros .oro or text .tot file' },
+  { voice: 'os', text: '  MKDIR <path>      create a persistent directory beneath HOME' },
+  { voice: 'os', text: '  TOUCH <file>      create an empty persistent .oro or .tot file beneath HOME' },
+  { voice: 'os', text: '  CP / COPY <source> <target>  duplicate a player file' },
+  { voice: 'os', text: '  MV / MOVE <source> <target>  move or rename a player path' },
+  { voice: 'os', text: '  RM / DEL <path>   delete one player file or empty directory' },
+  { voice: 'os', text: '  ECHO <text>       print text; > replaces a HOME file and >> appends' },
+  { voice: 'muted', text: 'DISCOVERY' },
+  { voice: 'os', text: '  TREE              display the indexed filesystem hierarchy' },
+  { voice: 'os', text: '  FIND <text>       search paths and filenames' },
+  { voice: 'os', text: '  FILE <path>       identify a file or directory' },
+  { voice: 'os', text: '  GREP <text> <file> search file contents; quote text containing spaces' },
+  { voice: 'os', text: '  MAN <command>     display one command manual entry' },
   { voice: 'muted', text: 'PROGRAMS' },
   { voice: 'os', text: '  OURO <file> <fn>  compile a .oro file and execute one function' },
   { voice: 'os', text: '  Example: OURO world_init.oro getTime' },
+  { voice: 'muted', text: '  Ouroboros runs in an isolated process. Press CTRL+C to interrupt it.' },
   { voice: 'os', text: '  ALIAS             list saved aliases' },
   { voice: 'os', text: '  ALIAS <name> - <command>  create or overwrite an alias' },
   { voice: 'muted', text: 'SHELL' },
   { voice: 'os', text: '  UPDATE            install the newest local help index' },
   { voice: 'os', text: '  CLEAR / CLS       clear terminal output' },
+  { voice: 'os', text: '  HISTORY [-c]      show or clear commands entered during this session' },
   { voice: 'os', text: '  EXIT              disconnect safely and return to the site' },
   { voice: 'os', text: '  REBOOT            erase progress and restore the original system image' },
   { voice: 'muted', text: 'TAB completes names. UP/DOWN recall commands. Text can be copied and pasted.' },
@@ -362,12 +396,8 @@ export default function AncientTerminalPage() {
   const [bootLines, setBootLines] = useState<TerminalLine[]>([]);
   const [history, setHistory] = useState<TimelineItem[]>([]);
   const [flushToken, setFlushToken] = useState(0);
-  const [command, setCommand] = useState('');
   const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmationRequest | null>(null);
   const [rebootPhase, setRebootPhase] = useState<RebootPhase | null>(null);
-  const [commandHistory, setCommandHistory] = useState<string[]>([]);
-  const [historyCursor, setHistoryCursor] = useState<number | null>(null);
-  const [historyDraft, setHistoryDraft] = useState('');
   const [cwd, setCwd] = useState<TerminalDirectory>(TERMINAL_ROOT);
   const [worldSource, setWorldSource] = useState(BROKEN_WORLD_SOURCE);
   const [cleanerSource, setCleanerSource] = useState(BROKEN_CLEANER_SOURCE);
@@ -377,17 +407,21 @@ export default function AncientTerminalPage() {
   const [cleanerFixed, setCleanerFixed] = useState(false);
   const [filesRestored, setFilesRestored] = useState(false);
   const [aliases, setAliases] = useState<TerminalAliases>({});
+  const [terminalFiles, setTerminalFiles] = useState<AncientTerminalFile[]>([]);
   const [aliasSource, setAliasSource] = useState(() => formatAliasFile({}));
   const [sequenceRunning, setSequenceRunning] = useState(false);
+  const [runtimeBusy, setRuntimeBusy] = useState(false);
   const [horrorShake, setHorrorShake] = useState<HorrorPulse | null>(null);
   const [erasingGetPopId, setErasingGetPopId] = useState<string | null>(null);
   const [activeGlitchGetPopId, setActiveGlitchGetPopId] = useState<string | null>(null);
   const [vimFile, setVimFile] = useState<EditorFileName | null>(null);
+  const [vimStoragePath, setVimStoragePath] = useState<string | null>(null);
+  const [vimDraft, setVimDraft] = useState('');
   const [vimMode, setVimMode] = useState<VimMode>('normal');
   const [vimCommand, setVimCommand] = useState('');
   const [saveState, setSaveState] = useState(user ? 'RESTORING...' : 'LOCAL SESSION');
   const outputRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<XtermCommandLineHandle>(null);
   const vimRef = useRef<HTMLTextAreaElement>(null);
   const vimCommandRef = useRef<HTMLInputElement>(null);
   const outputAvailableAtRef = useRef(0);
@@ -397,9 +431,10 @@ export default function AncientTerminalPage() {
   const navigationAuthorizedRef = useRef(false);
   const exitToHomeRef = useRef(false);
   const restoringHistoryGuardRef = useRef(false);
-  const completionRef = useRef<{ candidates: string[]; index: number } | null>(null);
+  const commandLogRef = useRef<string[]>([]);
+  const activeExecutionRef = useRef<OuroborosExecution | null>(null);
   const vimOpen = vimFile !== null;
-  const activeSource = vimFile === 'alias.tot' ? aliasSource : vimFile === 'cleaner.oro' ? cleanerSource : worldSource;
+  const activeSource = vimStoragePath ? vimDraft : vimFile === 'alias.tot' ? aliasSource : vimFile === 'cleaner.oro' ? cleanerSource : worldSource;
   const latestGetPopId = useMemo(() => {
     for (let index = history.length - 1; index >= 0; index -= 1) {
       const item = history[index];
@@ -420,21 +455,19 @@ export default function AncientTerminalPage() {
   }, []);
 
   const restoreFactoryState = useCallback(() => {
+    activeExecutionRef.current?.cancel();
+    activeExecutionRef.current = null;
     window.clearTimeout(shakeTimerRef.current);
     awakeningRef.current = false;
     aliasesRef.current = {};
     outputAvailableAtRef.current = 0;
-    completionRef.current = null;
+    commandLogRef.current = [];
     setLoaderMs(0);
     setBootIndex(0);
     setBootLines([]);
     setHistory([]);
     setFlushToken(0);
-    setCommand('');
     setPendingConfirmation(null);
-    setCommandHistory([]);
-    setHistoryCursor(null);
-    setHistoryDraft('');
     setCwd(TERMINAL_ROOT);
     setWorldSource(BROKEN_WORLD_SOURCE);
     setCleanerSource(BROKEN_CLEANER_SOURCE);
@@ -444,12 +477,16 @@ export default function AncientTerminalPage() {
     setCleanerFixed(false);
     setFilesRestored(false);
     setAliases({});
+    setTerminalFiles([]);
     setAliasSource(formatAliasFile({}));
     setSequenceRunning(false);
+    setRuntimeBusy(false);
     setHorrorShake(null);
     setErasingGetPopId(null);
     setActiveGlitchGetPopId(null);
     setVimFile(null);
+    setVimStoragePath(null);
+    setVimDraft('');
     setVimMode('normal');
     setVimCommand('');
     setSaveState(user ? 'PROGRESS RESET' : 'LOCAL SESSION');
@@ -457,7 +494,11 @@ export default function AncientTerminalPage() {
     setBootCycle(cycle => cycle + 1);
   }, [user]);
 
-  useEffect(() => () => window.clearTimeout(shakeTimerRef.current), []);
+  useEffect(() => () => {
+    window.clearTimeout(shakeTimerRef.current);
+    activeExecutionRef.current?.cancel();
+    activeExecutionRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!rebootPhase) return;
@@ -527,7 +568,10 @@ export default function AncientTerminalPage() {
   }, [bootCycle]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setTerminalFiles([]);
+      return;
+    }
     let current = true;
     void loadAncientTerminalProgress().then(progress => {
       if (!current) return;
@@ -544,8 +588,18 @@ export default function AncientTerminalPage() {
       setAliasSource(formatAliasFile(progress.aliases));
       setSaveState('PROGRESS RESTORED');
     }).catch(() => current && setSaveState('SAVE OFFLINE'));
+    void loadAncientTerminalFiles().then(savedFiles => {
+      if (current) setTerminalFiles(savedFiles);
+    }).catch(() => {
+      if (current) setTerminalFiles([]);
+    });
     return () => { current = false; };
   }, [user]);
+
+  const upsertTerminalFile = (savedFile: AncientTerminalFile) => {
+    setTerminalFiles(current => [...current.filter(file => file.path !== savedFile.path), savedFile]
+      .sort((left, right) => left.path.localeCompare(right.path)));
+  };
 
   useEffect(() => {
     if (!loaderDone || ready) return;
@@ -654,6 +708,21 @@ export default function AncientTerminalPage() {
       append(entries);
       return;
     }
+    if (cwd.toUpperCase().startsWith(TERMINAL_HOME)) {
+      const children = getDirectoryChildren(cwd, false, terminalFiles);
+      if (children.length === 0) {
+        append([{ voice: 'muted', text: 'Directory is empty.' }]);
+        return;
+      }
+      append(children.map(name => {
+        const entry = resolveTerminalEntry(cwd, name, false, terminalFiles);
+        const savedFile = entry ? terminalFiles.find(file => storagePathToTerminalPath(file.path).toUpperCase() === entry.path.toUpperCase()) : null;
+        return entry?.kind === 'directory'
+          ? { voice: 'os' as const, text: `<DIR>  ${name}` }
+          : { voice: 'os' as const, text: `${name.padEnd(24)} ${savedFile?.contents?.length ?? 0} bytes` };
+      }));
+      return;
+    }
     if (cwd.endsWith('\\SCRIPTS')) {
       append([
         { voice: 'os', text: 'world_init.oro        142 bytes' },
@@ -679,107 +748,256 @@ export default function AncientTerminalPage() {
     ]);
   };
 
+  const getReadableSource = (rawPath: string): { name: string; source: string } | { error: string } => {
+    const entry = resolveTerminalEntry(cwd, rawPath, Object.keys(aliasesRef.current).length > 0, terminalFiles);
+    if (!entry) return { error: 'File not found.' };
+    if (entry.kind === 'directory') return { error: `${entry.name}: is a directory.` };
+    if (entry.kind === 'binary') return { error: `${entry.name}: binary file cannot be displayed.` };
+    const storagePath = terminalPathToStoragePath(entry.path);
+    if (storagePath) {
+      const savedFile = terminalFiles.find(file => file.path === storagePath);
+      if (!savedFile || savedFile.kind !== 'file') return { error: 'File not found.' };
+      return { name: entry.name, source: savedFile.contents ?? '' };
+    }
+    if (entry.name.toLowerCase() === 'alias.tot') return { name: entry.name, source: aliasSource };
+    if (entry.name.toLowerCase() === 'world_init.oro') return { name: entry.name, source: worldSource };
+    if (entry.name.toLowerCase() === 'cleaner.oro') return { name: entry.name, source: cleanerSource };
+    if (entry.name.toLowerCase() === 'clock.sys') return { name: entry.name, source: 'CHRONOS CLOCK // cycle 77,777 // drift +0.0003' };
+    if ((entry.name.toLowerCase() === 'census.idx' || entry.name.toLowerCase() === 'recovery.tot') && !filesRestored) {
+      return { error: `${entry.name}: ReadError: checksum mismatch` };
+    }
+    if (entry.name.toLowerCase() === 'census.idx') {
+      return { name: entry.name, source: 'CENSUS_CORE // mirror index 03\nLAST COMPLETE SAMPLE: 8,388,608\nDISPLAY HANDOFF: interrupted' };
+    }
+    if (entry.name.toLowerCase() === 'recovery.tot') {
+      return { name: entry.name, source: '03:16:58  census mirror opened\n03:17:00  display handoff interrupted\n03:17:00  writer identity unresolved' };
+    }
+    return { error: 'File not found.' };
+  };
+
   const readFile = (rawFileName: string) => {
-    const fileName = rawFileName.toLowerCase();
-    if (cwd === TERMINAL_ROOT && fileName === 'alias.tot' && Object.keys(aliases).length > 0) {
-      append(aliasSource.split('\n').map(text => ({ voice: 'os', text })));
+    const result = getReadableSource(rawFileName);
+    if ('error' in result) {
+      append([
+        { voice: 'error', text: result.error },
+        ...(result.error.includes('checksum') ? [{ voice: 'muted' as const, text: 'A local repair function may be available.' }] : []),
+      ]);
       return;
     }
-    if (cwd.endsWith('\\SCRIPTS')) {
-      if (fileName === 'world_init.oro') append(worldSource.split('\n').map(text => ({ voice: 'os', text })));
-      else if (fileName === 'cleaner.oro') append(cleanerSource.split('\n').map(text => ({ voice: 'os', text })));
-      else append([{ voice: 'error', text: 'File not found.' }]);
-      return;
-    }
-    if (cwd.endsWith('\\SYSTEM')) {
-      if (fileName === 'clock.sys') {
-        append([{ voice: 'os', text: 'CHRONOS CLOCK // cycle 77,777 // drift +0.0003' }]);
-      } else if (fileName === 'census.idx' || fileName === 'recovery.tot') {
-        if (!filesRestored) {
-          append([
-            { voice: 'error', text: `${fileName}: ReadError: checksum mismatch` },
-            { voice: 'muted', text: 'A local repair function may be available.' },
-          ]);
-        } else if (fileName === 'census.idx') {
-          append([
-            { voice: 'os', text: 'CENSUS_CORE // mirror index 03' },
-            { voice: 'os', text: 'LAST COMPLETE SAMPLE: 8,388,608' },
-            { voice: 'muted', text: 'DISPLAY HANDOFF: interrupted' },
-          ]);
-        } else {
-          append([
-            { voice: 'os', text: '03:16:58  census mirror opened' },
-            { voice: 'os', text: '03:17:00  display handoff interrupted' },
-            { voice: 'muted', text: '03:17:00  writer identity unresolved' },
-          ]);
-        }
-      } else append([{ voice: 'error', text: 'File not found.' }]);
-      return;
-    }
-    if (cwd.endsWith('\\BIN') && getDirectoryChildren(cwd).some(file => file.toLowerCase() === fileName)) {
-      append([{ voice: 'error', text: `${fileName}: binary file cannot be displayed.` }]);
-      return;
-    }
-    append([{ voice: 'error', text: 'File not found.' }]);
+    append(result.source.split('\n').map(text => ({ voice: 'os', text })));
   };
 
   const openEditor = (rawFileName: string) => {
     const fileName = rawFileName.toLowerCase();
     const editableOuroborosFile = cwd.endsWith('\\SCRIPTS') && (fileName === 'world_init.oro' || fileName === 'cleaner.oro');
     const editableAliasFile = cwd === TERMINAL_ROOT && fileName === 'alias.tot' && Object.keys(aliases).length > 0;
-    if (!editableOuroborosFile && !editableAliasFile) {
+    const entry = resolveTerminalEntry(cwd, rawFileName, Object.keys(aliasesRef.current).length > 0, terminalFiles);
+    const storagePath = entry ? terminalPathToStoragePath(entry.path) : null;
+    const savedFile = storagePath ? terminalFiles.find(file => file.path === storagePath && file.kind === 'file') : null;
+    if (!editableOuroborosFile && !editableAliasFile && !savedFile) {
       append([{ voice: 'error', text: 'VIM: editable file not found in the current folder.' }]);
       return;
     }
-    setVimFile(fileName as EditorFileName);
+    setVimFile(savedFile ? entry?.name ?? fileName : fileName);
+    setVimStoragePath(savedFile ? savedFile.path : null);
+    setVimDraft(savedFile?.contents ?? '');
     setVimMode('normal');
     window.setTimeout(() => vimRef.current?.focus(), 0);
   };
 
-  const executeOuroboros = (fileNameInput: string, functionNameInput: string) => {
-    const fileName = fileNameInput.toLowerCase();
-    const functionName = functionNameInput.toLowerCase().replace(/\(\)$/, '');
-    if (!cwd.endsWith('\\SCRIPTS')) {
-      append([{ voice: 'error', text: 'OURO: source file not found in the current folder.' }]);
+  const requirePersistentSession = () => {
+    if (user) return true;
+    append([
+      { voice: 'error', text: 'HOME: authenticated session required for persistent changes.' },
+      { voice: 'muted', text: 'No local-only copy was created.' },
+    ]);
+    return false;
+  };
+
+  const createPlayerDirectory = async (rawPath: string) => {
+    if (!requirePersistentSession()) return;
+    const path = normalizeTerminalPath(cwd, rawPath);
+    if (!path || !terminalPathToStoragePath(path)) {
+      append([{ voice: 'error', text: 'MKDIR: path must remain beneath C:\\ANCIENT\\HOME.' }]);
       return;
     }
-    if (fileName !== 'world_init.oro' && fileName !== 'cleaner.oro') {
-      append([{ voice: 'error', text: 'OURO: editable source file not found.' }]);
+    setSaveState('SAVING...');
+    try {
+      const savedFile = await createAncientTerminalDirectory(path);
+      upsertTerminalFile(savedFile);
+      setSaveState('PROGRESS SAVED');
+      append([{ voice: 'os', text: `Directory created: ${storagePathToTerminalPath(savedFile.path)}` }]);
+    } catch (error) {
+      setSaveState('SAVE FAILED');
+      append([{ voice: 'error', text: `MKDIR: ${error instanceof Error ? error.message : 'operation rejected'}` }]);
+    }
+  };
+
+  const createPlayerFile = async (rawPath: string) => {
+    if (!requirePersistentSession()) return;
+    const path = normalizeTerminalPath(cwd, rawPath);
+    if (!path || !terminalPathToStoragePath(path)) {
+      append([{ voice: 'error', text: 'TOUCH: path must remain beneath C:\\ANCIENT\\HOME.' }]);
       return;
     }
-    if (!functionName) {
-      if (fileName === 'world_init.oro') append(scriptFixed
-        ? [{ voice: 'patch', text: 'OUROBOROS: compile complete. getTime and getPop available.' }]
-        : [{ voice: 'error', text: "world_init.oro:7:12 SyntaxError: expected ':'" }]);
-      else append(cleanerFixed
+    setSaveState('SAVING...');
+    try {
+      const savedFile = await writeAncientTerminalFile(path, '', 0);
+      upsertTerminalFile(savedFile);
+      setSaveState('PROGRESS SAVED');
+      append([{ voice: 'os', text: `Created ${storagePathToTerminalPath(savedFile.path)}` }]);
+    } catch (error) {
+      setSaveState('SAVE FAILED');
+      append([{ voice: 'error', text: `TOUCH: ${error instanceof Error ? error.message : 'operation rejected'}` }]);
+    }
+  };
+
+  const removePlayerEntry = async (rawPath: string) => {
+    if (!requirePersistentSession()) return;
+    const entry = resolveTerminalEntry(cwd, rawPath, false, terminalFiles);
+    const storagePath = entry ? terminalPathToStoragePath(entry.path) : null;
+    const savedFile = storagePath ? terminalFiles.find(file => file.path === storagePath) : null;
+    if (!entry || !storagePath || !savedFile) {
+      append([{ voice: 'error', text: 'RM: player file or directory not found.' }]);
+      return;
+    }
+    if (cwd.toUpperCase() === entry.path.toUpperCase() || cwd.toUpperCase().startsWith(`${entry.path.toUpperCase()}\\`)) {
+      append([{ voice: 'error', text: 'RM: cannot remove the active directory.' }]);
+      return;
+    }
+    setSaveState('SAVING...');
+    try {
+      await deleteAncientTerminalFile(storagePath, savedFile.revision);
+      setTerminalFiles(current => current.filter(file => file.path !== storagePath));
+      setSaveState('PROGRESS SAVED');
+      append([{ voice: 'os', text: `Deleted ${entry.path}` }]);
+    } catch (error) {
+      setSaveState('SAVE FAILED');
+      append([{ voice: 'error', text: `RM: ${error instanceof Error ? error.message : 'operation rejected'}` }]);
+    }
+  };
+
+  const resolvePlayerOperation = (rawSource: string, rawTarget: string) => {
+    const sourceEntry = resolveTerminalEntry(cwd, rawSource, false, terminalFiles);
+    const sourceStoragePath = sourceEntry ? terminalPathToStoragePath(sourceEntry.path) : null;
+    const sourceFile = sourceStoragePath ? terminalFiles.find(file => file.path === sourceStoragePath) : null;
+    const existingTarget = resolveTerminalEntry(cwd, rawTarget, false, terminalFiles);
+    const rawTargetPath = existingTarget?.kind === 'directory' && sourceEntry
+      ? `${existingTarget.path}\\${sourceEntry.name}`
+      : normalizeTerminalPath(cwd, rawTarget);
+    const targetStoragePath = rawTargetPath ? terminalPathToStoragePath(rawTargetPath) : null;
+    return { sourceEntry, sourceFile, sourceStoragePath, targetStoragePath };
+  };
+
+  const copyPlayerFile = async (rawSource: string, rawTarget: string) => {
+    if (!requirePersistentSession()) return;
+    const operation = resolvePlayerOperation(rawSource, rawTarget);
+    if (!operation.sourceEntry || operation.sourceEntry.kind === 'directory' || !operation.sourceFile || !operation.sourceStoragePath) {
+      append([{ voice: 'error', text: 'COPY: player source file not found.' }]);
+      return;
+    }
+    if (!operation.targetStoragePath) {
+      append([{ voice: 'error', text: 'COPY: target must remain beneath C:\\ANCIENT\\HOME.' }]);
+      return;
+    }
+    setSaveState('SAVING...');
+    try {
+      const copiedFile = await copyAncientTerminalFile(operation.sourceStoragePath, operation.targetStoragePath, operation.sourceFile.revision);
+      upsertTerminalFile(copiedFile);
+      setSaveState('PROGRESS SAVED');
+      append([{ voice: 'os', text: `Copied to ${storagePathToTerminalPath(copiedFile.path)}` }]);
+    } catch (error) {
+      setSaveState('SAVE FAILED');
+      append([{ voice: 'error', text: `COPY: ${error instanceof Error ? error.message : 'operation rejected'}` }]);
+    }
+  };
+
+  const movePlayerPath = async (rawSource: string, rawTarget: string) => {
+    if (!requirePersistentSession()) return;
+    const operation = resolvePlayerOperation(rawSource, rawTarget);
+    if (!operation.sourceEntry || !operation.sourceFile || !operation.sourceStoragePath) {
+      append([{ voice: 'error', text: 'MOVE: player source path not found.' }]);
+      return;
+    }
+    if (!operation.targetStoragePath) {
+      append([{ voice: 'error', text: 'MOVE: target must remain beneath C:\\ANCIENT\\HOME.' }]);
+      return;
+    }
+    if (cwd.toUpperCase() === operation.sourceEntry.path.toUpperCase()
+      || cwd.toUpperCase().startsWith(`${operation.sourceEntry.path.toUpperCase()}\\`)) {
+      append([{ voice: 'error', text: 'MOVE: cannot move the active directory.' }]);
+      return;
+    }
+    setSaveState('SAVING...');
+    try {
+      const savedFiles = await moveAncientTerminalEntry(
+        operation.sourceStoragePath,
+        operation.targetStoragePath,
+        operation.sourceFile.revision,
+      );
+      setTerminalFiles(savedFiles);
+      setSaveState('PROGRESS SAVED');
+      append([{ voice: 'os', text: `Moved to ${storagePathToTerminalPath(operation.targetStoragePath)}` }]);
+    } catch (error) {
+      setSaveState('SAVE FAILED');
+      append([{ voice: 'error', text: `MOVE: ${error instanceof Error ? error.message : 'operation rejected'}` }]);
+    }
+  };
+
+  const echoText = async (text: string, redirect?: { append: boolean; path: string }) => {
+    if (!redirect) {
+      append([{ voice: 'os', text }]);
+      return;
+    }
+    if (!requirePersistentSession()) return;
+    const existingEntry = resolveTerminalEntry(cwd, redirect.path, false, terminalFiles);
+    if (existingEntry?.kind === 'directory') {
+      append([{ voice: 'error', text: 'ECHO: redirect target is a directory.' }]);
+      return;
+    }
+    const targetPath = existingEntry?.path ?? normalizeTerminalPath(cwd, redirect.path);
+    const storagePath = targetPath ? terminalPathToStoragePath(targetPath) : null;
+    const currentFile = storagePath ? terminalFiles.find(file => file.path === storagePath && file.kind === 'file') : null;
+    if (!storagePath || (existingEntry && !currentFile)) {
+      append([{ voice: 'error', text: 'ECHO: redirect target must be an editable HOME file.' }]);
+      return;
+    }
+    const contents = redirect.append
+      ? `${currentFile?.contents ?? ''}${text}\n`
+      : `${text}\n`;
+    setSaveState('SAVING...');
+    try {
+      const savedFile = await writeAncientTerminalFile(storagePath, contents, currentFile?.revision ?? 0);
+      upsertTerminalFile(savedFile);
+      setSaveState('PROGRESS SAVED');
+    } catch (error) {
+      setSaveState('SAVE FAILED');
+      append([{ voice: 'error', text: `ECHO: ${error instanceof Error ? error.message : 'redirect rejected'}` }]);
+    }
+  };
+
+  const executeOuroborosFile = async (fileNameInput: string, functionNameInput: string) => {
+    if (!fileNameInput) {
+      append([{ voice: 'error', text: 'Usage: OURO <file.oro> [function]' }]);
+      return;
+    }
+    const readable = getReadableSource(fileNameInput);
+    if ('error' in readable || !readable.name.toLowerCase().endsWith('.oro')) {
+      append([{ voice: 'error', text: `OURO: ${'error' in readable ? readable.error : 'source must be an editable .oro file.'}` }]);
+      return;
+    }
+    const fileName = readable.name.toLowerCase();
+    const functionName = functionNameInput.replace(/\(\)$/, '');
+    const normalizedFunction = functionName.toLowerCase();
+
+    // The incomplete system cleaner calls protected host APIs. Its effects remain
+    // server-controlled until those APIs are exposed through a capability layer.
+    if (fileName === 'cleaner.oro') {
+      if (!functionName) append(cleanerFixed
         ? [{ voice: 'patch', text: 'OUROBOROS: compile complete. clean available.' }]
         : [{ voice: 'error', text: "cleaner.oro:6:26 SyntaxError: expected ':' after loop declaration" }]);
-      return;
-    }
-    if (fileName === 'world_init.oro' && functionName === 'gettime') {
-      append([
-        { voice: 'patch', text: 'world_init.getTime() ................................... [RUN]' },
-        { voice: 'os', text: 'cycle 77,777 // 03:17:09' },
-      ]);
-      return;
-    }
-    if (fileName === 'world_init.oro' && functionName === 'getpop') {
-      if (!scriptFixed) {
-        append([{ voice: 'error', text: "world_init.oro:7:12 SyntaxError: expected ':'" }]);
-        return;
-      }
-      setSequenceRunning(true);
-      const sequence: GetPopSequenceItem = {
-        id: crypto.randomUUID(),
-        kind: 'getpop',
-        aggressive: awakeningRef.current,
-        eraseTargetId: latestGetPopId,
-      };
-      setHistory(current => [...current, sequence]);
-      return;
-    }
-    if (fileName === 'cleaner.oro' && functionName === 'clean') {
-      if (!cleanerFixed) append([
+      else if (normalizedFunction !== 'clean') append([{ voice: 'error', text: `${readable.name}: function '${functionNameInput}' not found.` }]);
+      else if (!cleanerFixed) append([
         { voice: 'error', text: "cleaner.oro:6:26 SyntaxError: expected ':' after loop declaration" },
         { voice: 'muted', text: 'Repair cleaner.oro, then execute it again.' },
       ]);
@@ -795,15 +1013,93 @@ export default function AncientTerminalPage() {
       }
       return;
     }
-    append([{ voice: 'error', text: `${fileName}: function '${functionNameInput}' not found.` }]);
+
+    append([{ voice: 'patch', text: `OUROBOROS: compiling ${readable.name}...`, charMs: 4 }]);
+    const execution = startOuroborosExecution({
+      source: readable.source,
+      functionName: functionName || undefined,
+      globals: {
+        clock: { cycle: 77_777 },
+        census: { total: 8_388_608 },
+      },
+    });
+    activeExecutionRef.current = execution;
+    setRuntimeBusy(true);
+    const outcome = await execution.promise;
+    if (activeExecutionRef.current !== execution) return;
+    activeExecutionRef.current = null;
+    setRuntimeBusy(false);
+
+    if (!outcome.ok) {
+      const error = outcome.error;
+      append([{ voice: 'error', text: `${readable.name}:${error.line}:${error.column} ${error.kind}: ${error.message}` }]);
+      return;
+    }
+    if (!functionName) {
+      append([{ voice: 'patch', text: `OUROBOROS: compile complete. ${outcome.result.functions.length > 0 ? `${outcome.result.functions.join(', ')} available.` : 'No functions found.'}` }]);
+      return;
+    }
+    if (fileName === 'world_init.oro' && normalizedFunction === 'getpop') {
+      setSequenceRunning(true);
+      const sequence: GetPopSequenceItem = {
+        id: crypto.randomUUID(),
+        kind: 'getpop',
+        aggressive: awakeningRef.current,
+        eraseTargetId: latestGetPopId,
+      };
+      setHistory(current => [...current, sequence]);
+      return;
+    }
+    if (fileName === 'world_init.oro' && normalizedFunction === 'gettime') {
+      const cycle = typeof outcome.result.result === 'number'
+        ? outcome.result.result.toLocaleString('en-US')
+        : formatOuroborosValue(outcome.result.result);
+      append([
+        { voice: 'patch', text: 'world_init.getTime() ................................... [RUN]' },
+        { voice: 'os', text: `cycle ${cycle} // 03:17:09` },
+      ]);
+      return;
+    }
+    append([
+      ...outcome.result.output.map(text => ({ voice: 'os' as const, text })),
+      ...(outcome.result.result === null
+        ? [{ voice: 'patch' as const, text: `${readable.name}.${functionName}() ............................... [OK]` }]
+        : [{ voice: 'os' as const, text: `=> ${formatOuroborosValue(outcome.result.result)}` }]),
+    ]);
+  };
+
+  const handleRuntimeInterrupt = () => {
+    const execution = activeExecutionRef.current;
+    if (!execution) {
+      append([{ voice: 'muted', text: '^C' }]);
+      return;
+    }
+    activeExecutionRef.current = null;
+    execution.cancel();
+    setRuntimeBusy(false);
+    append([
+      { voice: 'muted', text: '^C' },
+      { voice: 'error', text: 'OUROBOROS: execution interrupted.' },
+    ]);
   };
 
   const runCommand = (raw: string, aliasDepth = 0, echo = true) => {
     const value = raw.trim();
     const normalized = value.toLowerCase();
-    const [commandName = '', ...argumentParts] = value.split(/\s+/);
+    const parsed = parseCommandLine(value);
+    if ('error' in parsed) {
+      if (echo) append([{ voice: 'user', text: `${cwd}> ${value}` }]);
+      append([{ voice: 'error', text: parsed.error }]);
+      return;
+    }
+    const commandName = parsed.command;
+    const argumentParts = parsed.args;
     const argument = argumentParts.join(' ');
     if (echo) append([{ voice: 'user', text: `${cwd}> ${value}` }]);
+    if (activeExecutionRef.current) {
+      append([{ voice: 'error', text: 'OUROBOROS: runtime busy. Press CTRL+C to interrupt.' }]);
+      return;
+    }
 
     if (commandName.toLowerCase() === 'alias') {
       if (normalized === 'alias') {
@@ -827,6 +1123,26 @@ export default function AncientTerminalPage() {
         { voice: 'patch', text: `alias.tot: ${replacing ? 'overwrote' : 'saved'} '${definition.name}'` },
         { voice: 'muted', text: `${definition.name} → ${definition.command}` },
       ]);
+      return;
+    }
+
+    if (parsed.redirect && commandName.toLowerCase() !== 'echo') {
+      append([{ voice: 'error', text: 'Output redirection is currently supported by ECHO.' }]);
+      return;
+    }
+
+    if (commandName.toLowerCase() === 'echo') {
+      void echoText(argument, parsed.redirect);
+      return;
+    }
+
+    if (commandName.toLowerCase() === 'history') {
+      if (argument.toLowerCase() === '-c') {
+        commandLogRef.current = [];
+        inputRef.current?.clearHistory();
+        append([{ voice: 'muted', text: 'Command history cleared.' }]);
+      } else if (argument) append([{ voice: 'error', text: 'Usage: HISTORY [-c]' }]);
+      else append(commandLogRef.current.map((command, index) => ({ voice: 'os', text: `${String(index + 1).padStart(3, ' ')}  ${command}` })));
       return;
     }
 
@@ -868,8 +1184,71 @@ export default function AncientTerminalPage() {
     }
     else if (normalized === 'pwd') append([{ voice: 'os', text: cwd }]);
     else if (normalized === 'dir' || normalized === 'ls') listDirectory();
+    else if (normalized === 'tree') {
+      append(formatTerminalTree(Object.keys(aliasesRef.current).length > 0, terminalFiles).map(text => ({ voice: 'os', text })));
+    }
+    else if (commandName.toLowerCase() === 'find') {
+      if (!argument) append([{ voice: 'error', text: 'Usage: FIND <text>' }]);
+      else {
+        const matches = findTerminalEntries(argument, Object.keys(aliasesRef.current).length > 0, terminalFiles);
+        append(matches.length > 0
+          ? matches.map(entry => ({ voice: 'os' as const, text: entry.path }))
+          : [{ voice: 'muted', text: `No indexed paths contain '${argument}'.` }]);
+      }
+    }
+    else if (commandName.toLowerCase() === 'file') {
+      if (!argument) append([{ voice: 'error', text: 'Usage: FILE <path>' }]);
+      else {
+        const entry = resolveTerminalEntry(cwd, argument, Object.keys(aliasesRef.current).length > 0, terminalFiles);
+        const corrupted = entry && !filesRestored && (entry.name === 'census.idx' || entry.name === 'recovery.tot');
+        append([entry
+          ? { voice: 'os', text: `${entry.path}: ${entry.kind}${corrupted ? ', corrupt' : ''}` }
+          : { voice: 'error', text: `${argument}: cannot identify path.` }]);
+      }
+    }
+    else if (commandName.toLowerCase() === 'grep') {
+      if (argumentParts.length < 2) append([{ voice: 'error', text: 'Usage: GREP <text> <file>' }]);
+      else {
+        const fileName = argumentParts[argumentParts.length - 1];
+        const query = argumentParts.slice(0, -1).join(' ');
+        const result = getReadableSource(fileName);
+        if ('error' in result) append([{ voice: 'error', text: result.error }]);
+        else {
+          const matches = grepText(result.source, query);
+          append(matches.length > 0
+            ? matches.map(text => ({ voice: 'os' as const, text: `${result.name}:${text}` }))
+            : [{ voice: 'muted', text: `${result.name}: no matching lines.` }]);
+        }
+      }
+    }
+    else if (commandName.toLowerCase() === 'man') {
+      const manual = getManualEntry(argumentParts[0] ?? '');
+      append([manual
+        ? { voice: 'os', text: manual }
+        : { voice: 'error', text: argument ? `No manual entry for '${argument}'.` : 'Usage: MAN <command>' }]);
+    }
+    else if (commandName.toLowerCase() === 'mkdir') {
+      if (!argument) append([{ voice: 'error', text: 'Usage: MKDIR <path>' }]);
+      else void createPlayerDirectory(argument);
+    }
+    else if (commandName.toLowerCase() === 'touch') {
+      if (!argument) append([{ voice: 'error', text: 'Usage: TOUCH <file.oro|file.tot>' }]);
+      else void createPlayerFile(argument);
+    }
+    else if (commandName.toLowerCase() === 'cp' || commandName.toLowerCase() === 'copy') {
+      if (argumentParts.length !== 2) append([{ voice: 'error', text: `Usage: ${commandName.toUpperCase()} <source> <target>` }]);
+      else void copyPlayerFile(argumentParts[0], argumentParts[1]);
+    }
+    else if (commandName.toLowerCase() === 'mv' || commandName.toLowerCase() === 'move') {
+      if (argumentParts.length !== 2) append([{ voice: 'error', text: `Usage: ${commandName.toUpperCase()} <source> <target>` }]);
+      else void movePlayerPath(argumentParts[0], argumentParts[1]);
+    }
+    else if (commandName.toLowerCase() === 'rm' || commandName.toLowerCase() === 'del') {
+      if (!argument) append([{ voice: 'error', text: `Usage: ${commandName.toUpperCase()} <path>` }]);
+      else void removePlayerEntry(argument);
+    }
     else if (commandName.toLowerCase() === 'cd') {
-      const nextDirectory = resolveTerminalDirectory(cwd, argument);
+      const nextDirectory = resolveTerminalDirectory(cwd, argument, terminalFiles);
       if (nextDirectory) setCwd(nextDirectory);
       else append([{ voice: 'error', text: 'Path not found.' }]);
     }
@@ -879,7 +1258,7 @@ export default function AncientTerminalPage() {
     }
     else if (commandName.toLowerCase() === 'vim' || commandName.toLowerCase() === 'edit') openEditor(argument);
     else if (commandName.toLowerCase() === 'ouro') {
-      executeOuroboros(argumentParts[0] ?? '', argumentParts[1] ?? '');
+      void executeOuroborosFile(argumentParts[0] ?? '', argumentParts[1] ?? '');
     } else if (normalized === 'clear' || normalized === 'cls') {
       setHistory([]);
       outputAvailableAtRef.current = Date.now();
@@ -915,9 +1294,8 @@ export default function AncientTerminalPage() {
     void beginReboot();
   };
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const value = command.trim();
+  const submitCommand = (input: string) => {
+    const value = input.trim();
     if (!value) return;
     setFlushToken(token => token + 1);
     outputAvailableAtRef.current = Date.now();
@@ -925,54 +1303,14 @@ export default function AncientTerminalPage() {
       append([{ voice: 'user', text: `CONFIRM> ${value}` }]);
       handleConfirmationResponse(value);
     } else {
+      commandLogRef.current = [...commandLogRef.current, value].slice(-200);
       runCommand(value);
-      setCommandHistory(current => current[current.length - 1] === value ? current : [...current, value]);
     }
-    setHistoryCursor(null);
-    setHistoryDraft('');
-    completionRef.current = null;
-    setCommand('');
   };
 
-  const handleCommandKey = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      const activeCompletion = completionRef.current;
-      if (activeCompletion && activeCompletion.candidates[activeCompletion.index] === command) {
-        const nextIndex = (activeCompletion.index + 1) % activeCompletion.candidates.length;
-        activeCompletion.index = nextIndex;
-        setCommand(activeCompletion.candidates[nextIndex]);
-        return;
-      }
-      const candidates = getCompletionCandidates(command, cwd, Object.keys(aliases));
-      if (candidates.length > 0) {
-        completionRef.current = { candidates, index: 0 };
-        setCommand(candidates[0]);
-      }
-      return;
-    }
-    if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      if (commandHistory.length === 0) return;
-      const nextCursor = historyCursor === null ? commandHistory.length - 1 : Math.max(0, historyCursor - 1);
-      if (historyCursor === null) setHistoryDraft(command);
-      setHistoryCursor(nextCursor);
-      setCommand(commandHistory[nextCursor]);
-      completionRef.current = null;
-      return;
-    }
-    if (event.key === 'ArrowDown' && historyCursor !== null) {
-      event.preventDefault();
-      if (historyCursor < commandHistory.length - 1) {
-        const nextCursor = historyCursor + 1;
-        setHistoryCursor(nextCursor);
-        setCommand(commandHistory[nextCursor]);
-      } else {
-        setHistoryCursor(null);
-        setCommand(historyDraft);
-      }
-      completionRef.current = null;
-    }
+  const clearTerminalHistory = () => {
+    setHistory([]);
+    outputAvailableAtRef.current = Date.now();
   };
 
   const handleVimKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -981,17 +1319,56 @@ export default function AncientTerminalPage() {
     if (vimMode === 'normal' && event.key === ':') { event.preventDefault(); setVimMode('command'); window.setTimeout(() => vimCommandRef.current?.focus(), 0); }
   };
 
+  const savePlayerEditor = async (action: 'w' | 'wq') => {
+    if (!vimStoragePath) return;
+    const currentFile = terminalFiles.find(file => file.path === vimStoragePath && file.kind === 'file');
+    if (!currentFile) {
+      append([{ voice: 'error', text: `${vimFile ?? 'file'}: no longer exists.` }]);
+      return;
+    }
+    setSaveState('SAVING...');
+    try {
+      const savedFile = await writeAncientTerminalFile(vimStoragePath, vimDraft, currentFile.revision);
+      upsertTerminalFile(savedFile);
+      setSaveState('PROGRESS SAVED');
+      append([{ voice: 'patch', text: `${vimFile} written. revision ${savedFile.revision}.` }]);
+      if (action === 'wq') {
+        setVimFile(null);
+        setVimStoragePath(null);
+      } else setVimMode('normal');
+    } catch (error) {
+      setSaveState('SAVE CONFLICT');
+      try {
+        setTerminalFiles(await loadAncientTerminalFiles());
+      } catch {
+        // Keep the last known mirror; the editor buffer still remains intact.
+      }
+      append([
+        { voice: 'error', text: `${vimFile}: ${error instanceof Error ? error.message : 'write rejected'}` },
+        { voice: 'muted', text: 'Your editor buffer remains open. Quit and reopen to load the saved revision.' },
+      ]);
+      setVimMode('normal');
+    }
+    setVimCommand('');
+  };
+
   const finishVimCommand = (event: FormEvent) => {
     event.preventDefault();
     const action = vimCommand.trim().toLowerCase();
     if (!vimFile) return;
     if (action === 'q!') {
-      if (vimFile === 'world_init.oro') setWorldSource(scriptFixed ? FIXED_WORLD_SOURCE : BROKEN_WORLD_SOURCE);
+      if (vimStoragePath) setVimDraft('');
+      else if (vimFile === 'world_init.oro') setWorldSource(scriptFixed ? FIXED_WORLD_SOURCE : BROKEN_WORLD_SOURCE);
       else if (vimFile === 'cleaner.oro') setCleanerSource(cleanerFixed ? FIXED_CLEANER_SOURCE : BROKEN_CLEANER_SOURCE);
       else setAliasSource(formatAliasFile(aliasesRef.current));
       setVimFile(null);
+      setVimStoragePath(null);
     }
     else if (action === 'w' || action === 'wq') {
+      if (vimStoragePath) {
+        void savePlayerEditor(action);
+        return;
+      }
       if (vimFile === 'alias.tot') {
         const parsed = parseAliasFile(aliasSource);
         if (parsed.errors.length > 0) {
@@ -1002,7 +1379,10 @@ export default function AncientTerminalPage() {
         }
         void saveAliasFile(parsed.aliases);
         append([{ voice: 'patch', text: `alias.tot written. ${Object.keys(parsed.aliases).length} aliases loaded.` }]);
-        if (action === 'wq') setVimFile(null); else setVimMode('normal');
+        if (action === 'wq') {
+          setVimFile(null);
+          setVimStoragePath(null);
+        } else setVimMode('normal');
         setVimCommand('');
         return;
       }
@@ -1014,7 +1394,10 @@ export default function AncientTerminalPage() {
       append([{ voice: repaired ? 'patch' : 'error', text: repaired
         ? `${vimFile} written. syntax check passed.`
         : `write complete. SyntaxError remains in ${vimFile}.` }]);
-      if (action === 'wq') setVimFile(null); else setVimMode('normal');
+      if (action === 'wq') {
+        setVimFile(null);
+        setVimStoragePath(null);
+      } else setVimMode('normal');
     } else setVimMode('normal');
     setVimCommand('');
   };
@@ -1063,17 +1446,21 @@ export default function AncientTerminalPage() {
               }} />
             : <TypingLine key={item.id} line={item} onStart={scrollToLatestLine} flushToken={flushToken} />)}
         </div>
-        {ready && !sequenceRunning && <form className="command-line" onSubmit={submit}><label htmlFor="ancient-command">{pendingConfirmation ? 'CONFIRM' : cwd}&gt;</label><input id="ancient-command" ref={inputRef} value={command} onChange={event => {
-          setCommand(event.target.value);
-          setHistoryCursor(null);
-          completionRef.current = null;
-        }} onKeyDown={handleCommandKey} autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Terminal command"/></form>}
+        {ready && !sequenceRunning && <XtermCommandLine
+          ref={inputRef}
+          prompt={pendingConfirmation ? 'CONFIRM' : cwd}
+          complete={value => pendingConfirmation ? [] : getCompletionCandidates(value, cwd, Object.keys(aliases), terminalFiles)}
+          onClear={clearTerminalHistory}
+          onInterrupt={handleRuntimeInterrupt}
+          onSubmit={submitCommand}
+        />}
       </div>
       {vimOpen && <section className="vim-window" onClick={event => event.stopPropagation()}>
-        <header>{vimFile} — {vimFile === 'alias.tot' ? 'TEXT' : 'OUROBOROS'}/VIM</header>
+        <header>{vimFile} — {vimFile?.toLowerCase().endsWith('.tot') ? 'TEXT' : 'OUROBOROS'}/VIM</header>
         <textarea ref={vimRef} value={activeSource} onChange={event => {
           if (vimMode !== 'insert') return;
-          if (vimFile === 'alias.tot') setAliasSource(event.target.value);
+          if (vimStoragePath) setVimDraft(event.target.value);
+          else if (vimFile === 'alias.tot') setAliasSource(event.target.value);
           else if (vimFile === 'cleaner.oro') setCleanerSource(event.target.value);
           else setWorldSource(event.target.value);
         }} onKeyDown={handleVimKey} readOnly={vimMode !== 'insert'} spellCheck={false} aria-label={`Ouroboros source editor: ${vimFile}`} />
@@ -1081,6 +1468,6 @@ export default function AncientTerminalPage() {
         {vimMode === 'command' && <form className="vim-command" onSubmit={finishVimCommand}><label>:</label><input ref={vimCommandRef} value={vimCommand} onChange={event => setVimCommand(event.target.value)} aria-label="Vim command" /></form>}
       </section>}
     </section>
-    <footer className="terminal-statusbar"><span><b /> CHANNEL OPEN</span><span>OUROBOROS 0.3 // HELP {helpUpdated ? '0.2' : '0.1'}</span><span>{saveState}</span></footer>
+    <footer className="terminal-statusbar"><span><b /> CHANNEL OPEN</span><span>{runtimeBusy ? 'OUROBOROS ACTIVE // CTRL+C INTERRUPTS' : `OUROBOROS 0.3 // HELP ${helpUpdated ? '0.2' : '0.1'}`}</span><span>{saveState}</span></footer>
   </main>;
 }
