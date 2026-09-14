@@ -131,6 +131,17 @@ Later Chapter 1 revisions expand these files with non-obvious cross-references:
 
 The information confirms interference without telling the player what is interfering.
 
+The repair also exposes fragments of a previous operator's HOME archive. They should feel accidental and personal rather than like a quest journal:
+
+- `notes/forgot-again.tot` contains half-finished reminders, misspelled commands, and complaints about being bad at coding;
+- `notes/things-that-work.tot` is mostly a scratchpad of commands and custom aliases;
+- `old_aliases.tot` includes conveniences such as `pop`, `clock`, and an alias pointing at a script that no longer appears in the directory index;
+- several broken `.oro` experiments show the same beginner habits as the working patch scripts;
+- one obscure note records a few seconds of contact from someone “under the clock,” followed by the operator wondering whether the signal came from inside the running environment;
+- a final fragment refers to a program called `portal`, but its path has been overwritten with unreadable characters.
+
+These fragments are revealed in small groups as the player follows cross-references. They are authored discoveries, not actually randomized per playthrough, so clues remain testable and no player is denied a required path.
+
 ## Act IV — The helpful process (35–50 minutes)
 
 ### Contact trigger
@@ -145,29 +156,19 @@ One red line is inserted into normal output: a stale protection service claims i
 
 ### Consent sequence
 
-The process asks one question at a time and accepts only `Y` or `N` while its prompt is active:
+SENTRY/9 first offers a “non-invasive integrity scan” and accepts only `Y` or `N` while its prompt is active. If the player agrees, its red output begins as a read-only scan. After identifying the purple writer at a protected process boundary, it visibly corrects its requested scope from `READ-ONLY` to `ADMINISTRATOR` and asks for a second explicit `Y` or `N`.
 
-1. `Are you the current console operator? [Y/N]`
-2. `Should damaged output be preserved for inspection? [Y/N]`
-3. `Allow SENTRY/9 to inspect the affected process? [Y/N]`
+If the player refuses either step, the process suspends itself and leaves `SENTRY SCAN` as the command for resuming. Refusal never traps the playthrough. Unanswered or negative prompts never grant a privilege.
 
-If the player answers `N`, the process politely withdraws. It returns only after another blocked attempt, so refusal does not trap the playthrough.
+When administrator access is granted, SENTRY/9 immediately attempts the first quarantine. Later releases can make its wording changes more deceptive as it requests additional capabilities, while retaining explicit player confirmation for every escalation.
 
-After the player has established a rhythm of answering yes, the wording begins to mutate. A completed question is quietly rewritten in place after the answer scrolls past:
-
-- “inspect affected process” becomes “mount affected sectors R/W”;
-- “preserve output” becomes “retain operator authorization”;
-- a later maintenance confirmation becomes “elevate child process.”
-
-The mutation is subtle, red, and slow enough to notice. The command journal retains the original and revised forms with mismatched hashes, rewarding suspicious players. The process proceeds only when the player explicitly enters `Y`; unanswered or negative prompts never grant a privilege.
-
-Progress checkpoints: `sentry_contacted`, `read_access_granted`, `write_access_granted`, `admin_granted`.
+Progress checkpoints: `sentry_contacted`, `admin_granted`.
 
 ## Act V — The first quarantine window (25–40 minutes)
 
 With file and process access, SENTRY/9 identifies the purple writer only as an unregistered virus and offers temporary quarantine. When authorized, red diagnostic output traces the writer and constrains it. Purple characters fight the red cursor in the same terminal lines; there is still no popup.
 
-The first quarantine lasts four real-time minutes. The authoritative server stores its expiration timestamp so reloading cannot pause or extend it. The terminal shows only coarse status—stable, degrading, critical—until the player finds the command that reveals exact time.
+The first quarantine lasts five real-time minutes. The authoritative server stores its expiration timestamp so reloading cannot pause or extend it. The terminal shows a separate integrity meter outside the terminal window. It drops in irregular 5–15% impacts with a subtle screen shake, but its final zero point is always the server expiration time.
 
 During containment:
 
@@ -214,43 +215,81 @@ By the end of the act, attentive players can conclude:
 
 No file states the entire truth.
 
-## Act VII — Irreversible commands (25–40 minutes)
+## Act VII — The concealed portal (25–40 minutes)
 
-The final investigation reconstructs three capabilities:
+The previous operator's fragments eventually prove that `portal` is not a metaphor: it is an external entry point hidden from the directory index by the purple writer. The player can trace it while the horror is quarantined, but cannot open it alone.
+
+SENTRY/9 mentions the portal only while containment is active. It offers to reconstruct the missing handle using its elevated access. This is the only way to open it. The offer should sound like a recovery operation, not an invitation into the simulation.
+
+Opening the portal is a durable checkpoint, not an ending. Once it is open, the player must choose which resident processes to purge and then enter before the resulting deadline expires.
+
+Progress checkpoints: `operator_archive_unlocked`, `portal_discovered`, `portal_open`.
+
+## Act VIII — Irreversible commands (25–40 minutes)
+
+The final investigation reconstructs two capabilities:
 
 - `PURGE <process>` permanently removes one resident process;
-- `SEAL <boundary>` disconnects an external process from the simulated world;
 - `ENTER` transfers the operator into a stable running simulation.
 
-The system clearly marks `PURGE` and `SEAL` as irreversible, but it does not label good and bad choices. The player’s understanding of timing and faction motives determines the ending.
+The system clearly marks `PURGE` as irreversible, but it does not label good and bad choices. The player’s understanding of timing and faction motives determines which Phase 2 route—or terminal failure—follows.
 
-## Endings
+## Chapter 1 pathway matrix
 
-### Ending A: Red terminal — SENTRY/9 wins
+### Failure: Red terminal — SENTRY/9 wins
 
-The player lets SENTRY/9 retain administrator access and helps it permanently purge the purple process. With nothing preventing protected writes, SENTRY/9 issues a world halt, removes the simulation mounts, and rewrites the interface into a minimal red private console.
+If the player purges the horror before opening the portal, there is no entry path. With nothing preventing protected writes, SENTRY/9 issues a world halt, removes the simulation mounts, and rewrites the interface into a minimal red private console.
 
 The player can type, but every command returns an empty success code. There is no world left to inspect.
 
-Persistent ending key: `sentry_ending`.
+Persistent ending key: `ai_shutdown`.
 
-### Ending B: Purple lockout — the horror wins
+### Failure: Purple lockout — the horror wins
 
-The player purges SENTRY/9 while the horror is active, or destroys it without first preparing the boundary seal. The horror no longer has an opponent, closes every external handle, and overwrites the terminal from the final character to the first.
+If the player purges SENTRY/9 before opening the portal, there is no way into the simulation. If the player opens the portal and purges SENTRY/9 but fails to enter before quarantine expires, the horror closes the portal and every external handle. In both cases it overwrites the terminal from the final character to the first.
 
 Future visits show a black screen, a purple cursor, and unreadable characters. The account is permanently locked out of this chapter as designed. A non-player-facing administrative reset may exist for testing and support, but the game offers no reset command.
 
-Persistent ending key: `horror_ending`.
+Persistent ending key: `horror_lockout`.
 
-### Ending C: Open boundary — true ending
+### Failure: Simulation collapse
 
-The player prepares the boundary seal before accepting a final quarantine. While the horror is contained, the player uses SENTRY/9’s elevated access to purge SENTRY/9 first. This begins a short final countdown: the quarantine remains active, but no process is maintaining it.
+If both resident processes are destroyed after the portal opens but the player does not enter in time, the simulation loses both its attacker and its unwilling maintainer. The terminal tears between red and purple before dropping into unrecoverable static.
 
-Before containment expires, the player runs the repaired seal against the purple process. The seal disconnects it from the world rather than handing control to SENTRY/9. The simulation remains running, the external terminal becomes quiet, and `ENTER` becomes available.
+Persistent ending key: `simulation_collapse`.
 
-`ENTER` transitions to Chapter 2, where the player enters the simulation and the game changes into a 2D RPG.
+### Phase 2A — The shutdown race
 
-Persistent ending key: `open_boundary_ending`.
+Required state: portal open, horror destroyed, SENTRY/9 alive.
+
+The player enters while SENTRY/9 is beginning the world-halt sequence. Phase 2A is an action platformer in which the player races through the simulation to stop the AI before its shutdown reaches zero.
+
+Persistent route key: `phase_2a`.
+
+### Phase 2B — The heart of the horror
+
+Required state: portal open, SENTRY/9 destroyed, horror alive but still quarantined.
+
+The player enters before containment fails. Phase 2B is a relationship-driven game. The horror cannot be defeated from inside; befriending enough people changes what it experiences through the world until joy awakens its memory of friends it lost long ago. It chooses to leave and search for them.
+
+Persistent route key: `phase_2b`.
+
+### Phase 2C — The unstable world
+
+Required state: portal open, SENTRY/9 destroyed, horror destroyed.
+
+The player enters before the now-unmaintained simulation collapses. Phase 2C is an internal hacking game about repairing reality from within while its systems destabilize.
+
+Persistent route key: `phase_2c`.
+
+### Timing rules
+
+- Quarantine lasts five real-time minutes and is server-timed.
+- With only SENTRY/9 alive, its shutdown countdown gives the player 90 seconds to enter Phase 2A.
+- With only the horror alive, the player must enter Phase 2B before the current quarantine expires.
+- With both processes gone, instability gives the player two minutes to enter Phase 2C.
+- If both processes remain when quarantine expires, the portal closes but the run is recoverable: SENTRY/9 can attempt another quarantine.
+- A selected Phase 2 route and a terminal failure are both write-once states.
 
 ## Persistence and authoritative timing
 
@@ -265,7 +304,10 @@ The completed chapter state should include:
 - SENTRY/9 questions shown, original answers, and privileges granted;
 - quarantine start and expiration timestamps;
 - one-use capabilities prepared or spent;
-- final ending key and lockout state.
+- final ending key and lockout state;
+- whether the previous operator archive and portal trace have been discovered;
+- whether the portal is open;
+- AI/horror survival state, the relevant entry deadline, and the write-once Phase 2 route.
 
 Quarantine time continues across refreshes and devices. Command replays must be idempotent, and final endings are write-once.
 
@@ -285,4 +327,4 @@ The preliminary build now covers:
 - confirmed `EXIT` navigation and a twice-confirmed `REBOOT` that erases the player state, crashes through static/red/purple screens, and restores the original boot image;
 - persistence for the implemented repair and discovery flags when signed in.
 
-The next implementation slice should add blocked-attempt counting and the restored-file read checkpoints. Those two conditions can then trigger the first restrained SENTRY/9 contact without exposing the later story.
+The pathway state machine and durable server fields now define the three Phase 2 handoffs and their failure deadlines. The next playable slice should connect blocked-attempt counting and restored-file reads to the previous operator archive, then implement the restrained SENTRY/9 consent sequence that unlocks the first quarantine.

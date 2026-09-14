@@ -44,6 +44,7 @@ const ShopPage = lazy(() => import('./features/marketplace/ShopPage'));
 const MultiplayerLobbyPage = lazy(() => import('./features/multiplayer-lobby/MultiplayerLobbyPage'));
 const DungeonRelayPage = lazy(() => import('./features/multiplayer-lobby/DungeonRelayPage'));
 const AncientTerminalPage = lazy(() => import('./features/ancient-terminal/AncientTerminalPage'));
+const AncientTerminalPhaseGateway = lazy(() => import('./features/ancient-terminal/AncientTerminalPhaseGateway'));
 
 function RouteFallback() {
   return (
@@ -104,6 +105,7 @@ function AppRoutes() {
         <Route path="/multiplayer" element={<MemberPageGate pageKey="multiplayer-lobby"><MultiplayerLobbyPage /></MemberPageGate>} />
         <Route path="/multiplayer/matches/:matchId" element={<MemberPageGate pageKey="multiplayer-lobby"><DungeonRelayPage /></MemberPageGate>} />
         <Route path="/ancient-terminal" element={<PageGate pageKey="ancient-terminal"><AncientTerminalPage /></PageGate>} />
+        <Route path="/ancient-terminal/phase/:route" element={<PageGate pageKey="ancient-terminal"><AncientTerminalPhaseGateway /></PageGate>} />
         <Route path="/event" element={<PageGate pageKey="event"><EventPage /></PageGate>} />
         <Route path="/skill-checks" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />
         <Route path="/skill-checks/challenges" element={<PageGate pageKey="skill-checks"><SkillChecksPage /></PageGate>} />

@@ -14,6 +14,7 @@ import {
   writeAncientTerminalFile,
   type AncientTerminalAction,
   type AncientTerminalFile,
+  type AncientTerminalProgress,
 } from './ancientTerminalService';
 import {
   findTerminalEntries,
@@ -38,10 +39,11 @@ import {
 } from './ancientTerminalShell';
 import { startOuroborosExecution, type OuroborosExecution } from './ouroborosClient';
 import { formatOuroborosValue } from './ouroborosRuntime';
+import { buildQuarantineIntegritySchedule, getQuarantineIntegrity } from './quarantineIntegrity';
 import { XtermCommandLine, type XtermCommandLineHandle } from './XtermCommandLine';
 import './ancientTerminal.css';
 
-type Voice = 'os' | 'patch' | 'eldritch' | 'user' | 'muted' | 'error';
+type Voice = 'os' | 'patch' | 'eldritch' | 'rogue' | 'user' | 'muted' | 'error';
 type TerminalLine = {
   id: string | number;
   voice: Voice;
@@ -56,6 +58,7 @@ type VimMode = 'normal' | 'insert' | 'command';
 type HorrorPulse = 'arrival' | 'impact';
 type EditorFileName = string;
 type ConfirmationRequest = { action: 'exit' | 'reboot'; step: 1 | 2 };
+type SentryPrompt = 'scan' | 'admin';
 type RebootPhase = 'crash' | 'static' | 'red' | 'purple';
 
 const BROKEN_WORLD_SOURCE = `# world_init.oro
@@ -406,6 +409,14 @@ export default function AncientTerminalPage() {
   const [helpUpdated, setHelpUpdated] = useState(false);
   const [cleanerFixed, setCleanerFixed] = useState(false);
   const [filesRestored, setFilesRestored] = useState(false);
+  const [populationBlocks, setPopulationBlocks] = useState(0);
+  const [recoveryRead, setRecoveryRead] = useState(false);
+  const [, setOperatorArchiveUnlocked] = useState(false);
+  const [sentryContacted, setSentryContacted] = useState(false);
+  const [sentryAuthorized, setSentryAuthorized] = useState(false);
+  const [sentryPrompt, setSentryPrompt] = useState<SentryPrompt | null>(null);
+  const [quarantineExpiresAt, setQuarantineExpiresAt] = useState<string | null>(null);
+  const [quarantineIntegrity, setQuarantineIntegrity] = useState<number | null>(null);
   const [aliases, setAliases] = useState<TerminalAliases>({});
   const [terminalFiles, setTerminalFiles] = useState<AncientTerminalFile[]>([]);
   const [aliasSource, setAliasSource] = useState(() => formatAliasFile({}));
@@ -433,6 +444,8 @@ export default function AncientTerminalPage() {
   const restoringHistoryGuardRef = useRef(false);
   const commandLogRef = useRef<string[]>([]);
   const activeExecutionRef = useRef<OuroborosExecution | null>(null);
+  const escapedQuarantineRef = useRef<string | null>(null);
+  const sentryContactSaveRef = useRef<Promise<AncientTerminalProgress | null> | null>(null);
   const vimOpen = vimFile !== null;
   const activeSource = vimStoragePath ? vimDraft : vimFile === 'alias.tot' ? aliasSource : vimFile === 'cleaner.oro' ? cleanerSource : worldSource;
   const latestGetPopId = useMemo(() => {
@@ -442,6 +455,11 @@ export default function AncientTerminalPage() {
     }
     return null;
   }, [history]);
+  const quarantineSchedule = useMemo(() => {
+    if (!quarantineExpiresAt) return null;
+    const expiresAt = Date.parse(quarantineExpiresAt);
+    return Number.isFinite(expiresAt) ? buildQuarantineIntegritySchedule(expiresAt) : null;
+  }, [quarantineExpiresAt]);
   const scrollToLatestLine = useCallback(() => {
     window.requestAnimationFrame(() => {
       const output = outputRef.current;
@@ -476,6 +494,16 @@ export default function AncientTerminalPage() {
     setHelpUpdated(false);
     setCleanerFixed(false);
     setFilesRestored(false);
+    setPopulationBlocks(0);
+    setRecoveryRead(false);
+    setOperatorArchiveUnlocked(false);
+    setSentryContacted(false);
+    setSentryAuthorized(false);
+    setSentryPrompt(null);
+    setQuarantineExpiresAt(null);
+    setQuarantineIntegrity(null);
+    escapedQuarantineRef.current = null;
+    sentryContactSaveRef.current = null;
     setAliases({});
     setTerminalFiles([]);
     setAliasSource(formatAliasFile({}));
@@ -583,6 +611,12 @@ export default function AncientTerminalPage() {
       setCleanerFixed(progress.cleanerFixed);
       setCleanerSource(progress.cleanerFixed ? FIXED_CLEANER_SOURCE : BROKEN_CLEANER_SOURCE);
       setFilesRestored(progress.filesRestored);
+      setPopulationBlocks(progress.populationBlocks);
+      setRecoveryRead(progress.recoveryRead);
+      setOperatorArchiveUnlocked(progress.operatorArchiveUnlocked);
+      setSentryContacted(progress.sentryContacted);
+      setSentryAuthorized(progress.sentryAuthorized);
+      setQuarantineExpiresAt(progress.quarantineExpiresAt);
       setAliases(progress.aliases);
       aliasesRef.current = progress.aliases;
       setAliasSource(formatAliasFile(progress.aliases));
@@ -615,13 +649,25 @@ export default function AncientTerminalPage() {
     if (ready && !vimOpen && !sequenceRunning) inputRef.current?.focus();
   }, [ready, sequenceRunning, vimOpen]);
 
-  const persist = async (action: AncientTerminalAction) => {
+  const persist = async (action: AncientTerminalAction): Promise<AncientTerminalProgress | null> => {
     if (action === 'fix_script') setScriptFixed(true);
     if (action === 'awaken_eldritch') setEldritchAwakened(true);
     if (action === 'update_help') setHelpUpdated(true);
     if (action === 'fix_cleaner') setCleanerFixed(true);
     if (action === 'restore_files') setFilesRestored(true);
-    if (!user) { setSaveState('LOCAL SESSION'); return; }
+    if (action === 'record_population_block') setPopulationBlocks(count => Math.min(99, count + 1));
+    if (action === 'read_recovery') {
+      setRecoveryRead(true);
+      setOperatorArchiveUnlocked(true);
+    }
+    if (action === 'contact_sentry') setSentryContacted(true);
+    if (action === 'authorize_sentry') setSentryAuthorized(true);
+    if (action === 'quarantine_horror') {
+      const localExpiration = new Date(Date.now() + 5 * 60 * 1_000).toISOString();
+      setQuarantineExpiresAt(localExpiration);
+      escapedQuarantineRef.current = null;
+    }
+    if (!user) { setSaveState('LOCAL SESSION'); return null; }
     setSaveState('SAVING...');
     try {
       const progress = await advanceAncientTerminalProgress(action);
@@ -630,11 +676,19 @@ export default function AncientTerminalPage() {
       setHelpUpdated(progress.helpUpdated);
       setCleanerFixed(progress.cleanerFixed);
       setFilesRestored(progress.filesRestored);
+      setPopulationBlocks(progress.populationBlocks);
+      setRecoveryRead(progress.recoveryRead);
+      setOperatorArchiveUnlocked(progress.operatorArchiveUnlocked);
+      setSentryContacted(progress.sentryContacted);
+      setSentryAuthorized(progress.sentryAuthorized);
+      setQuarantineExpiresAt(progress.quarantineExpiresAt);
       setAliases(progress.aliases);
       aliasesRef.current = progress.aliases;
       setAliasSource(formatAliasFile(progress.aliases));
+      if (action === 'read_recovery') setTerminalFiles(await loadAncientTerminalFiles());
       setSaveState('PROGRESS SAVED');
-    } catch { setSaveState('SAVE OFFLINE'); }
+      return progress;
+    } catch { setSaveState('SAVE OFFLINE'); return null; }
   };
 
   const updateLocalAliases = (nextAliases: TerminalAliases) => {
@@ -665,7 +719,7 @@ export default function AncientTerminalPage() {
     } catch { setSaveState('SAVE OFFLINE'); }
   };
 
-  const append = (entries: Omit<TerminalLine, 'id'>[]) => {
+  const append = useCallback((entries: Omit<TerminalLine, 'id'>[]) => {
     const now = Date.now();
     let availableAt = Math.max(now, outputAvailableAtRef.current);
     setHistory(current => [...current, ...entries.map(line => {
@@ -676,7 +730,34 @@ export default function AncientTerminalPage() {
       return queued;
     })]);
     outputAvailableAtRef.current = availableAt;
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!quarantineSchedule || !quarantineExpiresAt) {
+      setQuarantineIntegrity(null);
+      return;
+    }
+    let previous = getQuarantineIntegrity(quarantineSchedule, Date.now());
+    setQuarantineIntegrity(previous);
+    const update = () => {
+      const next = getQuarantineIntegrity(quarantineSchedule, Date.now());
+      if (next < previous && next > 0) triggerHorrorPulse('impact');
+      if (next === 0 && previous > 0 && escapedQuarantineRef.current !== quarantineExpiresAt) {
+        escapedQuarantineRef.current = quarantineExpiresAt;
+        triggerHorrorPulse('impact');
+        append([
+          { voice: 'eldritch', text: '⧗⋏ꙮ  ⍙⌿⟒⟊  ⸸⍀⟟⌇  ⏁⊑⟒  ☌⌰⊬⎅', charMs: 18 },
+          { voice: 'rogue', text: 'SENTRY/9: QUARANTINE INTEGRITY LOST', charMs: 9 },
+          { voice: 'muted', text: 'Protected display interception has resumed.' },
+        ]);
+      }
+      previous = next;
+      setQuarantineIntegrity(next);
+    };
+    const timer = window.setInterval(update, 250);
+    update();
+    return () => window.clearInterval(timer);
+  }, [append, quarantineExpiresAt, quarantineSchedule, triggerHorrorPulse]);
 
   const beginReboot = async () => {
     setSequenceRunning(true);
@@ -696,9 +777,88 @@ export default function AncientTerminalPage() {
   };
 
   const handleOverwrite = () => {
-    if (awakeningRef.current) return;
-    awakeningRef.current = true;
-    void persist('awaken_eldritch');
+    void (async () => {
+      if (!awakeningRef.current) {
+        awakeningRef.current = true;
+        await persist('awaken_eldritch');
+      }
+      await persist('record_population_block');
+    })();
+  };
+
+  const maybeContactSentry = () => {
+    if (populationBlocks < 3 || !recoveryRead || sentryContacted || sentryPrompt) return;
+    setSentryContacted(true);
+    sentryContactSaveRef.current = persist('contact_sentry');
+    append([
+      { voice: 'rogue', text: 'SENTRY/9 PROTECTION SERVICE // LEGACY RESIDENT', charMs: 11, pauseAfter: 260 },
+      { voice: 'rogue', text: 'Repeated display-integrity faults detected.', charMs: 14, pauseAfter: 220 },
+      { voice: 'rogue', text: 'Run a non-invasive integrity scan? [Y/N]', charMs: 16 },
+    ]);
+    setSentryPrompt('scan');
+  };
+
+  const startSentryQuarantine = async () => {
+    const currentExpiration = quarantineExpiresAt ? Date.parse(quarantineExpiresAt) : 0;
+    if (currentExpiration > Date.now()) {
+      append([{ voice: 'rogue', text: 'SENTRY/9: quarantine is already active.' }]);
+      return;
+    }
+    append([
+      { voice: 'rogue', text: 'SENTRY/9: tracing unregistered display writer...', charMs: 10, pauseAfter: 360 },
+      { voice: 'eldritch', text: '⌿⍀⟒ꙮ⋏  ⟊⧗⌇  ⊑⏁  ⋔⎅⍙', charMs: 22, pauseAfter: 180 },
+      { voice: 'rogue', text: 'SENTRY/9: binding writer to volatile quarantine...', charMs: 9, pauseAfter: 420 },
+    ]);
+    const progress = await persist('quarantine_horror');
+    if (user && !progress?.quarantineExpiresAt) {
+      append([{ voice: 'error', text: 'SENTRY/9: quarantine request was rejected.' }]);
+      return;
+    }
+    append([
+      { voice: 'rogue', text: 'THREAT CONTAINED ..................................... [TEMPORARY]', charMs: 8 },
+      { voice: 'muted', text: 'Display interception suspended. Quarantine window: 05:00.' },
+    ]);
+  };
+
+  const handleSentryResponse = async (value: string) => {
+    if (!sentryPrompt) return;
+    const response = value.trim().toUpperCase();
+    if (response !== 'Y' && response !== 'N') {
+      append([{ voice: 'error', text: 'SENTRY/9 accepts one character: Y or N.' }]);
+      return;
+    }
+    append([{ voice: 'user', text: `SENTRY/9> ${response}` }]);
+    if (response === 'N') {
+      setSentryPrompt(null);
+      append([
+        { voice: 'rogue', text: 'SENTRY/9: operation suspended by console operator.' },
+        { voice: 'muted', text: 'Run SENTRY SCAN to resume protection service.' },
+      ]);
+      return;
+    }
+    if (sentryPrompt === 'scan') {
+      setSentryPrompt('admin');
+      append([
+        { voice: 'rogue', text: 'SENTRY/9: beginning read-only integrity scan...', charMs: 10, pauseAfter: 340 },
+        { voice: 'rogue', text: 'Affected writer occupies a protected process boundary.', charMs: 11, pauseAfter: 280 },
+        { voice: 'rogue', text: 'Requested scope: READ-ONLY', charMs: 12, pauseAfter: 180 },
+        { voice: 'rogue', text: 'Correcting requested scope: ADMINISTRATOR', charMs: 10, pauseAfter: 260 },
+        { voice: 'rogue', text: 'Grant SENTRY/9 temporary administrator access? [Y/N]', charMs: 14 },
+      ]);
+      return;
+    }
+    setSentryPrompt(null);
+    append([
+      { voice: 'rogue', text: 'OPERATOR CONSENT ACCEPTED', charMs: 10 },
+      { voice: 'rogue', text: 'Privilege class: ADMINISTRATOR', charMs: 10 },
+    ]);
+    await sentryContactSaveRef.current;
+    const authorization = await persist('authorize_sentry');
+    if (user && !authorization?.sentryAuthorized) {
+      append([{ voice: 'error', text: 'SENTRY/9: administrator authorization was rejected.' }]);
+      return;
+    }
+    await startSentryQuarantine();
   };
 
   const listDirectory = () => {
@@ -770,7 +930,7 @@ export default function AncientTerminalPage() {
       return { name: entry.name, source: 'CENSUS_CORE // mirror index 03\nLAST COMPLETE SAMPLE: 8,388,608\nDISPLAY HANDOFF: interrupted' };
     }
     if (entry.name.toLowerCase() === 'recovery.tot') {
-      return { name: entry.name, source: '03:16:58  census mirror opened\n03:17:00  display handoff interrupted\n03:17:00  writer identity unresolved' };
+      return { name: entry.name, source: '03:16:58  census mirror opened\n03:17:00  display handoff interrupted\n03:17:00  writer identity unresolved\n03:17:02  orphan HOME sectors recovered -> C:\\ANCIENT\\HOME\\RECOVERED' };
     }
     return { error: 'File not found.' };
   };
@@ -785,6 +945,9 @@ export default function AncientTerminalPage() {
       return;
     }
     append(result.source.split('\n').map(text => ({ voice: 'os', text })));
+    if (result.name.toLowerCase() === 'recovery.tot' && filesRestored && !recoveryRead) {
+      void persist('read_recovery');
+    }
   };
 
   const openEditor = (rawFileName: string) => {
@@ -1040,6 +1203,29 @@ export default function AncientTerminalPage() {
       return;
     }
     if (fileName === 'world_init.oro' && normalizedFunction === 'getpop') {
+      let effectiveExpiration = quarantineExpiresAt;
+      if (user) {
+        try {
+          const progress = await loadAncientTerminalProgress();
+          effectiveExpiration = progress.quarantineExpiresAt;
+          setQuarantineExpiresAt(progress.quarantineExpiresAt);
+          setSentryAuthorized(progress.sentryAuthorized);
+        } catch {
+          effectiveExpiration = null;
+        }
+      }
+      if (effectiveExpiration && Date.parse(effectiveExpiration) > Date.now()) {
+        const population = typeof outcome.result.result === 'number'
+          ? outcome.result.result.toLocaleString('en-US')
+          : formatOuroborosValue(outcome.result.result);
+        append([
+          { voice: 'os', text: 'OUROBOROS: compiling census_core helpers...', charMs: 6 },
+          { voice: 'os', text: 'link shard_index.mem ............................... [OK]', charMs: 5 },
+          { voice: 'os', text: 'recompiling scripts\\world_init.oro ................... [OK]', charMs: 5 },
+          { voice: 'os', text: `world_init.getPop() → ${population}`, charMs: 7 },
+        ]);
+        return;
+      }
       setSequenceRunning(true);
       const sequence: GetPopSequenceItem = {
         id: crypto.randomUUID(),
@@ -1058,6 +1244,7 @@ export default function AncientTerminalPage() {
         { voice: 'patch', text: 'world_init.getTime() ................................... [RUN]' },
         { voice: 'os', text: `cycle ${cycle} // 03:17:09` },
       ]);
+      maybeContactSentry();
       return;
     }
     append([
@@ -1098,6 +1285,21 @@ export default function AncientTerminalPage() {
     if (echo) append([{ voice: 'user', text: `${cwd}> ${value}` }]);
     if (activeExecutionRef.current) {
       append([{ voice: 'error', text: 'OUROBOROS: runtime busy. Press CTRL+C to interrupt.' }]);
+      return;
+    }
+
+    if (commandName.toLowerCase() === 'sentry') {
+      if (argument.toLowerCase() !== 'scan') {
+        append([{ voice: 'error', text: 'Usage: SENTRY SCAN' }]);
+        return;
+      }
+      if (!sentryContacted) {
+        if (populationBlocks >= 3 && recoveryRead) maybeContactSentry();
+        else append([{ voice: 'error', text: 'SENTRY/9: protection service is unavailable.' }]);
+      } else if (!sentryAuthorized) {
+        setSentryPrompt('scan');
+        append([{ voice: 'rogue', text: 'SENTRY/9: Run a non-invasive integrity scan? [Y/N]' }]);
+      } else void startSentryQuarantine();
       return;
     }
 
@@ -1169,7 +1371,10 @@ export default function AncientTerminalPage() {
       return;
     }
 
-    if (commandName.toLowerCase() === 'help') append(helpUpdated ? DETAILED_HELP : BASIC_HELP);
+    if (commandName.toLowerCase() === 'help') {
+      append(helpUpdated ? DETAILED_HELP : BASIC_HELP);
+      maybeContactSentry();
+    }
     else if (normalized === 'update') {
       if (helpUpdated) append([{ voice: 'patch', text: 'HELP INDEX 0.2 is already installed.' }]);
       else {
@@ -1182,7 +1387,10 @@ export default function AncientTerminalPage() {
         void persist('update_help');
       }
     }
-    else if (normalized === 'pwd') append([{ voice: 'os', text: cwd }]);
+    else if (normalized === 'pwd') {
+      append([{ voice: 'os', text: cwd }]);
+      maybeContactSentry();
+    }
     else if (normalized === 'dir' || normalized === 'ls') listDirectory();
     else if (normalized === 'tree') {
       append(formatTerminalTree(Object.keys(aliasesRef.current).length > 0, terminalFiles).map(text => ({ voice: 'os', text })));
@@ -1299,7 +1507,9 @@ export default function AncientTerminalPage() {
     if (!value) return;
     setFlushToken(token => token + 1);
     outputAvailableAtRef.current = Date.now();
-    if (pendingConfirmation) {
+    if (sentryPrompt) {
+      void handleSentryResponse(value);
+    } else if (pendingConfirmation) {
       append([{ voice: 'user', text: `CONFIRM> ${value}` }]);
       handleConfirmationResponse(value);
     } else {
@@ -1448,13 +1658,17 @@ export default function AncientTerminalPage() {
         </div>
         {ready && !sequenceRunning && <XtermCommandLine
           ref={inputRef}
-          prompt={pendingConfirmation ? 'CONFIRM' : cwd}
-          complete={value => pendingConfirmation ? [] : getCompletionCandidates(value, cwd, Object.keys(aliases), terminalFiles)}
+          prompt={sentryPrompt ? 'SENTRY/9' : pendingConfirmation ? 'CONFIRM' : cwd}
+          complete={value => sentryPrompt || pendingConfirmation ? [] : getCompletionCandidates(value, cwd, Object.keys(aliases), terminalFiles)}
           onClear={clearTerminalHistory}
           onInterrupt={handleRuntimeInterrupt}
           onSubmit={submitCommand}
         />}
       </div>
+      {quarantineIntegrity !== null && <aside className={`quarantine-integrity${quarantineIntegrity === 0 ? ' is-breached' : ''}`} aria-label={`Quarantine integrity ${quarantineIntegrity} percent`}>
+        <div><span>SENTRY/9 QUARANTINE</span><strong>{String(quarantineIntegrity).padStart(3, '0')}%</strong></div>
+        <div className="quarantine-integrity-track"><span style={{ width: `${quarantineIntegrity}%` }} /></div>
+      </aside>}
       {vimOpen && <section className="vim-window" onClick={event => event.stopPropagation()}>
         <header>{vimFile} — {vimFile?.toLowerCase().endsWith('.tot') ? 'TEXT' : 'OUROBOROS'}/VIM</header>
         <textarea ref={vimRef} value={activeSource} onChange={event => {

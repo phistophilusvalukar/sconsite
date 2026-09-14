@@ -8,6 +8,20 @@ const progressSchema = z.object({
   cleanerFixed: z.boolean(),
   filesRestored: z.boolean(),
   aliases: z.record(z.string(), z.string()),
+  populationBlocks: z.number().int().min(0).default(0),
+  recoveryRead: z.boolean().default(false),
+  operatorArchiveUnlocked: z.boolean().default(false),
+  sentryContacted: z.boolean().default(false),
+  sentryAuthorized: z.boolean().default(false),
+  portalDiscovered: z.boolean().default(false),
+  portalOpen: z.boolean().default(false),
+  aiAlive: z.boolean().default(true),
+  horrorAlive: z.boolean().default(true),
+  quarantineExpiresAt: z.string().nullable().default(null),
+  aiShutdownAt: z.string().nullable().default(null),
+  instabilityAt: z.string().nullable().default(null),
+  phaseTwoRoute: z.enum(['phase_2a', 'phase_2b', 'phase_2c']).nullable().default(null),
+  terminalEnding: z.enum(['horror_lockout', 'ai_shutdown', 'simulation_collapse']).nullable().default(null),
 });
 
 const terminalFileSchema = z.object({
@@ -27,7 +41,17 @@ export type AncientTerminalAction =
   | 'awaken_eldritch'
   | 'update_help'
   | 'fix_cleaner'
-  | 'restore_files';
+  | 'restore_files'
+  | 'record_population_block'
+  | 'read_recovery'
+  | 'contact_sentry'
+  | 'authorize_sentry'
+  | 'quarantine_horror'
+  | 'discover_portal'
+  | 'open_portal'
+  | 'purge_ai'
+  | 'purge_horror'
+  | 'enter_portal';
 
 export async function loadAncientTerminalProgress(): Promise<AncientTerminalProgress> {
   const { data, error } = await supabase.rpc('get_ancient_terminal_progress');
