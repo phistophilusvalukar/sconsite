@@ -394,6 +394,7 @@ function GetPopSequence({ aggressive, animateGlitch, erase, onOverwrite, onCompl
 export default function AncientTerminalPage() {
   const { user } = useAuth();
   const [bootCycle, setBootCycle] = useState(0);
+  const [quickStart, setQuickStart] = useState(false);
   const [loaderMs, setLoaderMs] = useState(0);
   const [bootIndex, setBootIndex] = useState(0);
   const [bootLines, setBootLines] = useState<TerminalLine[]>([]);
@@ -446,6 +447,7 @@ export default function AncientTerminalPage() {
   const activeExecutionRef = useRef<OuroborosExecution | null>(null);
   const escapedQuarantineRef = useRef<string | null>(null);
   const sentryContactSaveRef = useRef<Promise<AncientTerminalProgress | null> | null>(null);
+  const sentryContactingRef = useRef(false);
   const vimOpen = vimFile !== null;
   const activeSource = vimStoragePath ? vimDraft : vimFile === 'alias.tot' ? aliasSource : vimFile === 'cleaner.oro' ? cleanerSource : worldSource;
   const latestGetPopId = useMemo(() => {
@@ -481,6 +483,7 @@ export default function AncientTerminalPage() {
     outputAvailableAtRef.current = 0;
     commandLogRef.current = [];
     setLoaderMs(0);
+    setQuickStart(false);
     setBootIndex(0);
     setBootLines([]);
     setHistory([]);
@@ -504,6 +507,7 @@ export default function AncientTerminalPage() {
     setQuarantineIntegrity(null);
     escapedQuarantineRef.current = null;
     sentryContactSaveRef.current = null;
+    sentryContactingRef.current = false;
     setAliases({});
     setTerminalFiles([]);
     setAliasSource(formatAliasFile({}));
@@ -590,10 +594,26 @@ export default function AncientTerminalPage() {
   const ready = loaderDone && bootIndex >= bootSequence.length;
 
   useEffect(() => {
+    if (quickStart) {
+      setLoaderMs(20000);
+      return;
+    }
     const started = Date.now();
     const timer = window.setInterval(() => setLoaderMs(Math.min(20000, Date.now() - started)), 100);
     return () => window.clearInterval(timer);
-  }, [bootCycle]);
+  }, [bootCycle, quickStart]);
+
+  useEffect(() => {
+    if (loaderDone) return;
+    const handleQuickStart = (event: globalThis.KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 'n' || event.ctrlKey || event.altKey || event.metaKey) return;
+      event.preventDefault();
+      setQuickStart(true);
+      setLoaderMs(20000);
+    };
+    window.addEventListener('keydown', handleQuickStart);
+    return () => window.removeEventListener('keydown', handleQuickStart);
+  }, [loaderDone]);
 
   useEffect(() => {
     if (!user) {
@@ -615,6 +635,7 @@ export default function AncientTerminalPage() {
       setRecoveryRead(progress.recoveryRead);
       setOperatorArchiveUnlocked(progress.operatorArchiveUnlocked);
       setSentryContacted(progress.sentryContacted);
+      sentryContactingRef.current = progress.sentryContacted;
       setSentryAuthorized(progress.sentryAuthorized);
       setQuarantineExpiresAt(progress.quarantineExpiresAt);
       setAliases(progress.aliases);
@@ -637,13 +658,19 @@ export default function AncientTerminalPage() {
 
   useEffect(() => {
     if (!loaderDone || ready) return;
-    const delay = bootIndex ? Math.max(650, bootSequence[bootIndex - 1].text.length * 22) : 500;
+    const delay = quickStart
+      ? bootIndex ? 72 : 18
+      : bootIndex ? Math.max(650, bootSequence[bootIndex - 1].text.length * 22) : 500;
     const timer = window.setTimeout(() => {
-      setBootLines(current => [...current, { ...bootSequence[bootIndex], id: bootIndex }]);
+      setBootLines(current => [...current, {
+        ...bootSequence[bootIndex],
+        id: bootIndex,
+        ...(quickStart ? { charMs: 1, pauseAfter: 0 } : {}),
+      }]);
       setBootIndex(index => index + 1);
     }, delay);
     return () => window.clearTimeout(timer);
-  }, [bootIndex, bootSequence, loaderDone, ready]);
+  }, [bootIndex, bootSequence, loaderDone, quickStart, ready]);
 
   useEffect(() => {
     if (ready && !vimOpen && !sequenceRunning) inputRef.current?.focus();
@@ -782,12 +809,17 @@ export default function AncientTerminalPage() {
         awakeningRef.current = true;
         await persist('awaken_eldritch');
       }
-      await persist('record_population_block');
+      const progress = await persist('record_population_block');
+      maybeContactSentry(
+        progress?.populationBlocks ?? populationBlocks + 1,
+        progress?.recoveryRead ?? recoveryRead,
+      );
     })();
   };
 
-  const maybeContactSentry = () => {
-    if (populationBlocks < 3 || !recoveryRead || sentryContacted || sentryPrompt) return;
+  const maybeContactSentry = (blockCount = populationBlocks, hasReadRecovery = recoveryRead) => {
+    if (blockCount < 3 || !hasReadRecovery || sentryContacted || sentryContactingRef.current || sentryPrompt) return;
+    sentryContactingRef.current = true;
     setSentryContacted(true);
     sentryContactSaveRef.current = persist('contact_sentry');
     append([
@@ -946,7 +978,10 @@ export default function AncientTerminalPage() {
     }
     append(result.source.split('\n').map(text => ({ voice: 'os', text })));
     if (result.name.toLowerCase() === 'recovery.tot' && filesRestored && !recoveryRead) {
-      void persist('read_recovery');
+      void (async () => {
+        const progress = await persist('read_recovery');
+        maybeContactSentry(progress?.populationBlocks ?? populationBlocks, true);
+      })();
     }
   };
 
@@ -1634,6 +1669,7 @@ export default function AncientTerminalPage() {
         {LOADER_MESSAGES.slice(0, messageCount).map((text, index) => <TypingLine key={text} line={{ id: index, voice: index === messageCount - 1 ? 'os' : 'muted', text }} />)}
       </div>
       <p>RECOVERY {String(progress).padStart(3, '0')}%</p>
+      <p className="loader-quick-start">Press N for Quick-Start</p>
     </main>;
   }
 
