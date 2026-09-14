@@ -9,13 +9,10 @@ import {
   abilityLabels,
   abilityModifier,
   abilityScore,
-  automaticClassFeatureLevel,
   createDefaultPlanner,
   exportActorAtLevel,
-  getAutomaticClassFeatures,
   getSelectablePlannerFeats,
   inferAbilityBaseScores,
-  inferFeatLevels,
   isPartialAbilityBoost,
   parsePlannerActor,
   parsePlannerData,
@@ -79,10 +76,8 @@ const CharacterLevelPlanner: React.FC<CharacterPlannerProps> = ({ characterName,
   }
 
   const actor = actorResult.actor;
-  const inferredFeatLevels = inferFeatLevels(actor);
   const feats = getSelectablePlannerFeats(actor).sort((left, right) => (planner.featLevels[left._id] || 1) - (planner.featLevels[right._id] || 1) || left.name.localeCompare(right.name));
-  const classFeatures = getAutomaticClassFeatures(actor).sort((left, right) => automaticClassFeatureLevel(left, inferredFeatLevels) - automaticClassFeatureLevel(right, inferredFeatLevels) || left.name.localeCompare(right.name));
-  const availableSkills = Object.keys(actor.system.skills || {}).sort((left, right) => (skillLabels[left] || left).localeCompare(skillLabels[right] || right));
+  const availableSkills = [...new Set([...Object.keys(skillLabels), ...Object.keys(actor.system.skills || {}), ...planner.skillUpgrades.map(upgrade => upgrade.skill)])].sort((left, right) => (skillLabels[left] || left).localeCompare(skillLabels[right] || right));
   const availableAbilities = abilityKeys.filter(ability => abilityScore(actor, ability) !== undefined);
   const issues = validatePlanner(planner, availableAbilities.length > 0);
 
@@ -175,20 +170,6 @@ const CharacterLevelPlanner: React.FC<CharacterPlannerProps> = ({ characterName,
         </div>
       </section>
 
-      {classFeatures.length > 0 && <section>
-        <h3 className="font-fantasy text-xl font-bold text-white">Automatic class features</h3>
-        <p className="mb-3 mt-1 text-sm text-gray-400">These are granted by the class and are automatically included when the exported level reaches their level.</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {classFeatures.map(feature => {
-            const level = automaticClassFeatureLevel(feature, inferredFeatLevels);
-            return <div key={feature._id} className="flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-400/30 text-xs font-black text-emerald-200">{level}</span>
-              <div className="min-w-0"><p className="truncate font-semibold text-white">{feature.name}</p><p className="text-xs text-emerald-200/70">Granted automatically at level {level}</p></div>
-            </div>;
-          })}
-        </div>
-      </section>}
-
       <section>
         <h3 className="font-fantasy text-xl font-bold text-white">Skill increase graph</h3>
         <p className="mt-1 text-sm text-gray-400">Skills run down the left and character levels run across the top. Select a point to spend a boost there; each selected point advances that skill one rank.</p>
@@ -231,38 +212,44 @@ const CharacterLevelPlanner: React.FC<CharacterPlannerProps> = ({ characterName,
         </div>
       </section>
 
-      {availableAbilities.length > 0 && <section>
+      <section>
         <h3 className="font-fantasy text-xl font-bold text-white">Ability boosts</h3>
         <p className="mt-1 text-sm text-gray-400">Your ancestry, background, class, and four free level-1 boosts remain exactly as imported. At levels 5, 10, 15, and 20, choose four different abilities.</p>
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-fantasy-700/35 bg-midnight-950/45">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
+            <thead><tr>
+              <th scope="col" className="p-3 text-left text-gray-300">Level</th>
+              {abilityKeys.map(ability => <th key={ability} scope="col" className="p-3 text-center text-gray-300">{abilityLabels[ability]}</th>)}
+            </tr></thead>
+            <tbody>
           {abilityBoostLevels.map(level => {
             const selectedAbilities = planner.abilityBoosts.filter(boost => boost.level === level).map(boost => boost.ability);
-            return <article key={level} className="rounded-xl border border-fantasy-700/35 bg-fantasy-900/25 p-4">
-              <div className="mb-3 flex items-center justify-between"><h4 className="font-fantasy text-lg font-bold text-white">Level {level}</h4><span className={`rounded-full px-2.5 py-1 text-xs font-black ${selectedAbilities.length === 4 ? 'bg-emerald-500/15 text-emerald-200' : 'bg-amber-500/15 text-amber-200'}`}>{selectedAbilities.length}/4 boosts</span></div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {availableAbilities.map(ability => {
+            return <tr key={level} className="border-t border-fantasy-700/30">
+              <th scope="row" className="p-3 text-left"><h4 className="font-fantasy text-lg font-bold text-white">Level {level}</h4><span className={`rounded-full px-2.5 py-1 text-xs font-black ${selectedAbilities.length === 4 ? 'bg-emerald-500/15 text-emerald-200' : 'bg-amber-500/15 text-amber-200'}`}>{selectedAbilities.length}/4 boosts</span></th>
+                {abilityKeys.map(ability => {
                   const selected = selectedAbilities.includes(ability);
                   const disabled = !selected && selectedAbilities.length >= 4;
                   const score = abilityScore(actor, ability, planner, level);
                   const modifier = score === undefined ? undefined : abilityModifier(score);
                   const partial = score !== undefined && isPartialAbilityBoost(score);
-                  return <button
+                  return <td key={ability} className="p-2"><button
                     type="button"
-                    key={ability}
+                    aria-label={`${selected ? 'Remove' : 'Add'} ${abilityLabels[ability]} boost at level ${level}`}
                     aria-pressed={selected}
                     disabled={disabled}
                     onClick={() => toggleAbilityBoost(ability, level, !selected)}
-                    className={`min-w-0 rounded-lg border p-3 text-left transition-colors ${selected ? 'border-yellow-300/55 bg-yellow-500/15 text-white' : 'border-fantasy-700/35 bg-midnight-950/45 text-gray-400 hover:border-yellow-300/35'} disabled:cursor-not-allowed disabled:opacity-35`}
+                    className={`w-full min-w-0 rounded-lg border p-3 text-left transition-colors ${selected ? 'border-yellow-300/55 bg-yellow-500/15 text-white' : 'border-fantasy-700/35 bg-midnight-950/45 text-gray-400 hover:border-yellow-300/35'} disabled:cursor-not-allowed disabled:opacity-35`}
                   >
                     <span className="flex items-center justify-between gap-2"><strong className="truncate text-xs uppercase tracking-wide">{abilityLabels[ability]}</strong><b className="text-yellow-200">{modifier === undefined ? '—' : `${modifier >= 0 ? '+' : ''}${modifier}${partial ? '½' : ''}`}</b></span>
                     <small className="mt-1 block text-[10px] text-gray-500">{score === undefined ? 'No source value' : `Score ${score}${partial ? ' · partial boost' : ''}`}</small>
-                  </button>;
+                  </button></td>;
                 })}
-              </div>
-            </article>;
+            </tr>;
           })}
+            </tbody>
+          </table>
         </div>
-      </section>}
+      </section>
     </div>
   );
 };

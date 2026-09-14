@@ -37,6 +37,12 @@ const actor = parsePlannerActor({
 });
 
 describe('character planner', () => {
+  it('exports planned increases for skills absent from the imported actor', () => {
+    const planner = setSkillBoost(createDefaultPlanner(actor), 'medicine', 5, true);
+    expect(exportActorAtLevel(actor, planner, 5).system.skills?.medicine.rank).toBe(1);
+    expect(exportActorAtLevel(actor, planner, 4).system.skills?.medicine.rank).toBe(0);
+    expect(actor.system.skills?.medicine).toBeUndefined();
+  });
   it('accepts Foundry ability variants without rejecting the actor', () => {
     const variant = parsePlannerActor({
       name: 'Variant Hero',

@@ -399,9 +399,12 @@ export function exportActorAtLevel(actor: PlannerActor, planner: CharacterPlanne
   const level = Math.max(1, Math.min(20, Math.round(targetLevel)));
   const copy = structuredClone(actor);
   copy.system.details.level.value = level;
-  Object.entries(copy.system.skills || {}).forEach(([skill, data]) => {
-    data.rank = rankAtLevel(planner, skill, level);
+  const skills = copy.system.skills ?? {};
+  const plannedSkills = new Set([...Object.keys(skills), ...planner.skillUpgrades.map(upgrade => upgrade.skill)]);
+  plannedSkills.forEach(skill => {
+    skills[skill] = { ...skills[skill], rank: rankAtLevel(planner, skill, level) };
   });
+  copy.system.skills = skills;
   abilityKeys.forEach(ability => {
     const data = copy.system.abilities?.[ability];
     const score = abilityScore(actor, ability, planner, level);
