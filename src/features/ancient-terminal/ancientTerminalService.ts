@@ -33,6 +33,7 @@ const terminalFileSchema = z.object({
 });
 
 const deletedFileSchema = z.object({ deleted: z.string() });
+const startupSourceSchema = z.string().max(65_536);
 
 export type AncientTerminalProgress = z.infer<typeof progressSchema>;
 export type AncientTerminalFile = z.infer<typeof terminalFileSchema>;
@@ -84,6 +85,18 @@ export async function resetAncientTerminalProgress(): Promise<AncientTerminalPro
   const { data, error } = await supabase.rpc('reset_ancient_terminal_progress_command');
   if (error) throw new Error(error.message);
   return progressSchema.parse(data);
+}
+
+export async function loadAncientTerminalStartupSource(): Promise<string> {
+  const { data, error } = await supabase.rpc('get_ancient_terminal_startup_source');
+  if (error) throw new Error(error.message);
+  return startupSourceSchema.parse(data);
+}
+
+export async function writeAncientTerminalStartupSource(source: string): Promise<string> {
+  const { data, error } = await supabase.rpc('write_ancient_terminal_startup_command', { p_source: source });
+  if (error) throw new Error(error.message);
+  return startupSourceSchema.parse(data);
 }
 
 export async function loadAncientTerminalFiles(): Promise<AncientTerminalFile[]> {

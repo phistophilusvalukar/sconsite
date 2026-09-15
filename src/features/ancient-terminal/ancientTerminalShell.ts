@@ -9,7 +9,7 @@ export const TERMINAL_DIRECTORIES = [
 ] as const;
 
 export type TerminalDirectory = string;
-export type EditableFileName = 'world_init.oro' | 'cleaner.oro';
+export type EditableFileName = 'startup.oro' | 'world_init.oro' | 'cleaner.oro';
 export type TerminalAliases = Record<string, string>;
 
 export type AliasFileParseResult = {
@@ -37,7 +37,7 @@ export type TerminalFileRecord = {
   kind: 'file' | 'directory';
 };
 
-export const EDITABLE_FILES: readonly EditableFileName[] = ['world_init.oro', 'cleaner.oro'];
+export const EDITABLE_FILES: readonly EditableFileName[] = ['startup.oro', 'world_init.oro', 'cleaner.oro'];
 const BIN_DIRECTORY = `${TERMINAL_ROOT}\\BIN` as const;
 const HOME_DIRECTORY = TERMINAL_HOME;
 const SCRIPTS_DIRECTORY = `${TERMINAL_ROOT}\\SCRIPTS` as const;
@@ -341,7 +341,7 @@ export function getCompletionCandidates(input: string, cwd: TerminalDirectory, a
     } else {
       const fileName = argumentPrefix.slice(0, secondSpace).toLowerCase();
       const functionPrefix = argumentPrefix.slice(secondSpace + 1);
-      const functions = fileName === 'world_init.oro' ? ['getTime', 'getPop'] : fileName === 'cleaner.oro' ? ['clean'] : [];
+      const functions = fileName === 'startup.oro' ? ['startup'] : fileName === 'world_init.oro' ? ['getTime', 'getPop'] : fileName === 'cleaner.oro' ? ['clean'] : [];
       return functions
         .filter(functionName => functionName.toLowerCase().startsWith(functionPrefix.toLowerCase()))
         .map(functionName => `${leadingWhitespace}${body.slice(0, firstSpace)} ${argumentPrefix.slice(0, secondSpace)} ${functionName}`);

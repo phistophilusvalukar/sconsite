@@ -42,7 +42,7 @@ Every obstacle has three levels of guidance:
 
 ### Beat 1: Recovery screen
 
-The page opens on the twenty-second white-block recovery wave. Sparse recovery messages appear one line at a time. The normal terminal then boots, mounts `C:\ANCIENT`, initializes the clock, and tries to compile `scripts\world_init.oro`.
+The page opens on the twenty-second white-block recovery wave. Sparse recovery messages appear one line at a time. The normal terminal then boots, mounts `C:\ANCIENT`, initializes the clock, and compiles the editable `scripts\startup.oro`. Its `startup()` return value registers `scripts\world_init.oro`, which produces the first visible failure. Players can later add or remove boot programs and use paths relative to `C:\ANCIENT\SCRIPTS`, including `../HOME/...` programs.
 
 `getTime()` registers successfully. `getPop()` fails because the function declaration is missing a colon. The shell continues in partial mode and hands control to the player.
 

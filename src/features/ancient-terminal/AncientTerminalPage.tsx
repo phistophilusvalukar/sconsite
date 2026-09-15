@@ -6,12 +6,14 @@ import {
   createAncientTerminalDirectory,
   deleteAncientTerminalFile,
   loadAncientTerminalProgress,
+  loadAncientTerminalStartupSource,
   loadAncientTerminalFiles,
   moveAncientTerminalEntry,
   replaceAncientTerminalAliases,
   resetAncientTerminalProgress,
   setAncientTerminalAlias,
   writeAncientTerminalFile,
+  writeAncientTerminalStartupSource,
   type AncientTerminalAction,
   type AncientTerminalFile,
   type AncientTerminalProgress,
@@ -32,15 +34,17 @@ import {
   resolveTerminalEntry,
   storagePathToTerminalPath,
   terminalPathToStoragePath,
+  EDITABLE_FILES,
   TERMINAL_HOME,
   TERMINAL_ROOT,
   type TerminalAliases,
   type TerminalDirectory,
 } from './ancientTerminalShell';
 import { startOuroborosExecution, type OuroborosExecution } from './ouroborosClient';
-import { formatOuroborosValue } from './ouroborosRuntime';
+import { executeOuroboros, formatOuroborosFailure, formatOuroborosValue } from './ouroborosRuntime';
 import { buildQuarantineIntegritySchedule, getQuarantineIntegrity } from './quarantineIntegrity';
 import { getSentryCoverQuestion, parseSentryConsent, SENTRY_ADMIN_QUESTION } from './sentryConversation';
+import { DEFAULT_STARTUP_SOURCE, parseStartupPlan } from './ancientTerminalStartup';
 import { XtermCommandLine, type XtermCommandLineHandle } from './XtermCommandLine';
 import './ancientTerminal.css';
 
@@ -121,6 +125,8 @@ const DETAILED_HELP: Omit<TerminalLine, 'id'>[] = [
   { voice: 'muted', text: 'PROGRAMS' },
   { voice: 'os', text: '  OURO <file> <fn>  compile a .oro file and execute one function' },
   { voice: 'os', text: '  Example: OURO world_init.oro getTime' },
+  { voice: 'os', text: '  startup.oro       editable boot plan; paths resolve from C:\\ANCIENT\\SCRIPTS' },
+  { voice: 'muted', text: '  Use ../HOME/folder/file.oro in startup.oro to run programs from other folders.' },
   { voice: 'muted', text: '  Ouroboros runs in an isolated process. Press CTRL+C to interrupt it.' },
   { voice: 'os', text: '  ALIAS             list saved aliases' },
   { voice: 'os', text: '  ALIAS <name> - <command>  create or overwrite an alias' },
@@ -133,18 +139,12 @@ const DETAILED_HELP: Omit<TerminalLine, 'id'>[] = [
   { voice: 'muted', text: 'TAB completes names. UP/DOWN recall commands. Text can be copied and pasted.' },
 ];
 
-const BOOT: Omit<TerminalLine, 'id'>[] = [
+const BOOT_PREFIX: Omit<TerminalLine, 'id'>[] = [
   { voice: 'os', text: 'ANCIENT SYSTEMS BIOS v0.00.0001' },
   { voice: 'muted', text: 'MEMORY CHECK ............................................. [OK]' },
   { voice: 'os', text: 'Mounting C:\\ANCIENT...................................... [OK]' },
   { voice: 'os', text: 'Loading device table..................................... [OK]' },
   { voice: 'os', text: 'Starting CHRONOS clock................................... [OK]' },
-  { voice: 'patch', text: 'OUROBOROS runtime 0.3: compiling scripts\\world_init.oro' },
-  { voice: 'patch', text: 'world_init.getTime() → cycle 77,777' },
-  { voice: 'error', text: "world_init.oro:7:12 SyntaxError: expected ':' after function signature" },
-  { voice: 'patch', text: 'world_init.getPop() .................................. [FAILED]' },
-  { voice: 'os', text: 'Continuing with partial initialization.' },
-  { voice: 'os', text: 'Command interpreter ready.' },
 ];
 
 const LOADER_MESSAGES = [
@@ -173,6 +173,93 @@ const REBOOT_ERROR_LINES: Omit<TerminalLine, 'id'>[] = [
   { voice: 'rogue', text: 'ADMIN OVERRIDE ACCEPTED // RETRYING TERMINATION', charMs: 3, delay: 2440 },
   { voice: 'rogue', text: 'FATAL: DISPLAY MEMORY IS WRITING BACK', charMs: 3, delay: 2770 },
 ];
+
+function buildBootSequence(
+  startupSource: string,
+  worldSource: string,
+  cleanerSource: string,
+  scriptFixed: boolean,
+  playerFiles: readonly AncientTerminalFile[],
+): Omit<TerminalLine, 'id'>[] {
+  const lines: Omit<TerminalLine, 'id'>[] = [
+    ...BOOT_PREFIX,
+    { voice: 'patch', text: 'OUROBOROS runtime 0.3: compiling scripts\\startup.oro' },
+  ];
+  const plan = parseStartupPlan(startupSource);
+  if (!plan.ok) {
+    return [
+      ...lines,
+      { voice: 'error', text: `startup.oro:${plan.error}` },
+      { voice: 'os', text: 'No startup programs were loaded.' },
+      { voice: 'os', text: 'Command interpreter ready.' },
+    ];
+  }
+
+  lines.push(
+    { voice: 'patch', text: `startup.startup() → ${plan.programs.length} program${plan.programs.length === 1 ? '' : 's'} registered` },
+  );
+  let hadFailure = false;
+  for (const program of plan.programs) {
+    const normalizedPath = normalizeTerminalPath(`${TERMINAL_ROOT}\\SCRIPTS`, program.path);
+    if (!normalizedPath || !normalizedPath.toLowerCase().endsWith('.oro')) {
+      hadFailure = true;
+      lines.push({ voice: 'error', text: `${program.path}: invalid startup path` });
+      continue;
+    }
+    const relativeDisplay = normalizedPath.slice(TERMINAL_ROOT.length + 1).toLowerCase();
+    const storagePath = terminalPathToStoragePath(normalizedPath);
+    const playerFile = storagePath ? playerFiles.find(file => file.path === storagePath && file.kind === 'file') : null;
+    const normalizedUpper = normalizedPath.toUpperCase();
+    const source = normalizedUpper === `${TERMINAL_ROOT}\\SCRIPTS\\WORLD_INIT.ORO`
+      ? worldSource
+      : normalizedUpper === `${TERMINAL_ROOT}\\SCRIPTS\\CLEANER.ORO`
+        ? cleanerSource
+        : playerFile?.contents ?? null;
+    if (source === null) {
+      hadFailure = true;
+      lines.push({ voice: 'error', text: `${relativeDisplay}: startup file not found` });
+      continue;
+    }
+
+    lines.push({ voice: 'patch', text: `compiling ${relativeDisplay}` });
+    if (normalizedUpper.endsWith('\\WORLD_INIT.ORO') && !scriptFixed) {
+      hadFailure = true;
+      if (program.functions.some(name => name.toLowerCase() === 'gettime')) {
+        lines.push({ voice: 'patch', text: 'world_init.getTime() → cycle 77,777' });
+      }
+      lines.push({ voice: 'error', text: "world_init.oro:7:12 SyntaxError: expected ':' after function signature" });
+      if (program.functions.some(name => name.toLowerCase() === 'getpop')) {
+        lines.push({ voice: 'patch', text: 'world_init.getPop() .................................. [FAILED]' });
+      }
+      continue;
+    }
+
+    for (const functionName of program.functions) {
+      try {
+        const result = executeOuroboros({
+          source,
+          functionName,
+          globals: { clock: { cycle: 77_777 }, census: { total: 8_388_608 } },
+          limits: { maxCallDepth: 16, maxOutputCharacters: 4_096, maxSteps: 5_000 },
+        });
+        lines.push(...result.output.map(text => ({ voice: 'os' as const, text })));
+        lines.push({
+          voice: 'patch',
+          text: `${relativeDisplay.replace(/\.oro$/i, '')}.${functionName}() → ${formatOuroborosValue(result.result)}`,
+        });
+      } catch (error) {
+        hadFailure = true;
+        const failure = formatOuroborosFailure(error);
+        lines.push({ voice: 'error', text: `${relativeDisplay}:${failure.line}:${failure.column} ${failure.kind}: ${failure.message}` });
+      }
+    }
+  }
+  lines.push(
+    { voice: 'os', text: plan.programs.length === 0 ? 'Startup list is empty.' : hadFailure ? 'Continuing with partial initialization.' : 'Startup programs completed.' },
+    { voice: 'os', text: 'Command interpreter ready.' },
+  );
+  return lines;
+}
 
 const ELDRITCH_GLYPHS = Array.from('ꙮ⸸⟟⊑⏁⟊⧗⌇⌿⏃⍀⟒☌⌰⊬⋏⍜⋔⎅⍙');
 const GLITCH_RANDOM_VALUE = new Uint32Array(1);
@@ -467,6 +554,7 @@ export default function AncientTerminalPage() {
   const [cwd, setCwd] = useState<TerminalDirectory>(TERMINAL_ROOT);
   const [worldSource, setWorldSource] = useState(BROKEN_WORLD_SOURCE);
   const [cleanerSource, setCleanerSource] = useState(BROKEN_CLEANER_SOURCE);
+  const [startupSource, setStartupSource] = useState(DEFAULT_STARTUP_SOURCE);
   const [scriptFixed, setScriptFixed] = useState(false);
   const [eldritchAwakened, setEldritchAwakened] = useState(false);
   const [helpUpdated, setHelpUpdated] = useState(false);
@@ -513,8 +601,17 @@ export default function AncientTerminalPage() {
   const sentryContactingRef = useRef(false);
   const sentryQuestionIdRef = useRef<string | null>(null);
   const sentryRewriteTimerRef = useRef(0);
+  const savedStartupSourceRef = useRef(DEFAULT_STARTUP_SOURCE);
   const vimOpen = vimFile !== null;
-  const activeSource = vimStoragePath ? vimDraft : vimFile === 'alias.tot' ? aliasSource : vimFile === 'cleaner.oro' ? cleanerSource : worldSource;
+  const activeSource = vimStoragePath
+    ? vimDraft
+    : vimFile === 'alias.tot'
+      ? aliasSource
+      : vimFile === 'startup.oro'
+        ? startupSource
+        : vimFile === 'cleaner.oro'
+          ? cleanerSource
+          : worldSource;
   const latestGetPopId = useMemo(() => {
     for (let index = history.length - 1; index >= 0; index -= 1) {
       const item = history[index];
@@ -558,6 +655,8 @@ export default function AncientTerminalPage() {
     setCwd(TERMINAL_ROOT);
     setWorldSource(BROKEN_WORLD_SOURCE);
     setCleanerSource(BROKEN_CLEANER_SOURCE);
+    setStartupSource(DEFAULT_STARTUP_SOURCE);
+    savedStartupSourceRef.current = DEFAULT_STARTUP_SOURCE;
     setScriptFixed(false);
     setEldritchAwakened(false);
     setHelpUpdated(false);
@@ -654,12 +753,15 @@ export default function AncientTerminalPage() {
       window.removeEventListener('popstate', handlePopState);
     };
   }, []);
-  const bootSequence = useMemo(() => scriptFixed ? BOOT.map((line, index) => {
-    if (index === 7) return { voice: 'patch' as const, text: 'world_init.oro: syntax check passed' };
-    if (index === 8) return { voice: 'patch' as const, text: 'world_init.getPop() ...................................... [OK]' };
-    return line;
-  }) : BOOT, [scriptFixed]);
   const loaderDone = loaderMs >= 20000;
+  const computedBootSequence = useMemo(
+    () => buildBootSequence(startupSource, worldSource, cleanerSource, scriptFixed, terminalFiles),
+    [cleanerSource, scriptFixed, startupSource, terminalFiles, worldSource],
+  );
+  const [bootSequence, setBootSequence] = useState(computedBootSequence);
+  useEffect(() => {
+    if (!loaderDone) setBootSequence(computedBootSequence);
+  }, [computedBootSequence, loaderDone]);
   const ready = loaderDone && bootIndex >= bootSequence.length;
 
   useEffect(() => {
@@ -716,6 +818,13 @@ export default function AncientTerminalPage() {
       if (current) setTerminalFiles(savedFiles);
     }).catch(() => {
       if (current) setTerminalFiles([]);
+    });
+    void loadAncientTerminalStartupSource().then(source => {
+      if (!current) return;
+      savedStartupSourceRef.current = source;
+      setStartupSource(source);
+    }).catch(() => {
+      if (current) setSaveState('SAVE OFFLINE');
     });
     return () => { current = false; };
   }, [user]);
@@ -813,6 +922,38 @@ export default function AncientTerminalPage() {
       updateLocalAliases(progress.aliases);
       setSaveState('PROGRESS SAVED');
     } catch { setSaveState('SAVE OFFLINE'); }
+  };
+
+  const saveStartupScript = async (action: 'w' | 'wq') => {
+    const plan = parseStartupPlan(startupSource);
+    if (!plan.ok) {
+      append([{ voice: 'error', text: `startup.oro: ${plan.error}` }]);
+      setVimMode('normal');
+      setVimCommand('');
+      return;
+    }
+    if (!user) {
+      savedStartupSourceRef.current = startupSource;
+      setSaveState('LOCAL SESSION');
+    } else {
+      setSaveState('SAVING...');
+      try {
+        const savedSource = await writeAncientTerminalStartupSource(startupSource);
+        savedStartupSourceRef.current = savedSource;
+        setStartupSource(savedSource);
+        setSaveState('PROGRESS SAVED');
+      } catch (error) {
+        setSaveState('SAVE FAILED');
+        append([{ voice: 'error', text: `startup.oro: ${error instanceof Error ? error.message : 'write rejected'}` }]);
+        setVimMode('normal');
+        setVimCommand('');
+        return;
+      }
+    }
+    append([{ voice: 'patch', text: `startup.oro written. ${plan.programs.length} startup program${plan.programs.length === 1 ? '' : 's'} registered.` }]);
+    if (action === 'wq') setVimFile(null);
+    else setVimMode('normal');
+    setVimCommand('');
   };
 
   const append = useCallback((entries: Omit<TerminalLine, 'id'>[]) => {
@@ -1032,9 +1173,10 @@ export default function AncientTerminalPage() {
     }
     if (cwd.endsWith('\\SCRIPTS')) {
       append([
+        { voice: 'os', text: `startup.oro           ${startupSource.length} bytes` },
         { voice: 'os', text: 'world_init.oro        142 bytes' },
         { voice: 'os', text: 'cleaner.oro           209 bytes' },
-        { voice: 'muted', text: '2 editable files' },
+        { voice: 'muted', text: '3 editable files' },
       ]);
       return;
     }
@@ -1067,6 +1209,7 @@ export default function AncientTerminalPage() {
       return { name: entry.name, source: savedFile.contents ?? '' };
     }
     if (entry.name.toLowerCase() === 'alias.tot') return { name: entry.name, source: aliasSource };
+    if (entry.name.toLowerCase() === 'startup.oro') return { name: entry.name, source: startupSource };
     if (entry.name.toLowerCase() === 'world_init.oro') return { name: entry.name, source: worldSource };
     if (entry.name.toLowerCase() === 'cleaner.oro') return { name: entry.name, source: cleanerSource };
     if (entry.name.toLowerCase() === 'clock.sys') return { name: entry.name, source: 'CHRONOS CLOCK // cycle 77,777 // drift +0.0003' };
@@ -1102,7 +1245,7 @@ export default function AncientTerminalPage() {
 
   const openEditor = (rawFileName: string) => {
     const fileName = rawFileName.toLowerCase();
-    const editableOuroborosFile = cwd.endsWith('\\SCRIPTS') && (fileName === 'world_init.oro' || fileName === 'cleaner.oro');
+    const editableOuroborosFile = cwd.endsWith('\\SCRIPTS') && EDITABLE_FILES.includes(fileName as typeof EDITABLE_FILES[number]);
     const editableAliasFile = cwd === TERMINAL_ROOT && fileName === 'alias.tot' && Object.keys(aliases).length > 0;
     const entry = resolveTerminalEntry(cwd, rawFileName, Object.keys(aliasesRef.current).length > 0, terminalFiles);
     const storagePath = entry ? terminalPathToStoragePath(entry.path) : null;
@@ -1724,6 +1867,7 @@ export default function AncientTerminalPage() {
     if (!vimFile) return;
     if (action === 'q!') {
       if (vimStoragePath) setVimDraft('');
+      else if (vimFile === 'startup.oro') setStartupSource(savedStartupSourceRef.current);
       else if (vimFile === 'world_init.oro') setWorldSource(scriptFixed ? FIXED_WORLD_SOURCE : BROKEN_WORLD_SOURCE);
       else if (vimFile === 'cleaner.oro') setCleanerSource(cleanerFixed ? FIXED_CLEANER_SOURCE : BROKEN_CLEANER_SOURCE);
       else setAliasSource(formatAliasFile(aliasesRef.current));
@@ -1750,6 +1894,10 @@ export default function AncientTerminalPage() {
           setVimStoragePath(null);
         } else setVimMode('normal');
         setVimCommand('');
+        return;
+      }
+      if (vimFile === 'startup.oro') {
+        void saveStartupScript(action);
         return;
       }
       const repaired = vimFile === 'world_init.oro'
@@ -1841,6 +1989,7 @@ export default function AncientTerminalPage() {
           if (vimMode !== 'insert') return;
           if (vimStoragePath) setVimDraft(event.target.value);
           else if (vimFile === 'alias.tot') setAliasSource(event.target.value);
+          else if (vimFile === 'startup.oro') setStartupSource(event.target.value);
           else if (vimFile === 'cleaner.oro') setCleanerSource(event.target.value);
           else setWorldSource(event.target.value);
         }} onKeyDown={handleVimKey} readOnly={vimMode !== 'insert'} spellCheck={false} aria-label={`Ouroboros source editor: ${vimFile}`} />
