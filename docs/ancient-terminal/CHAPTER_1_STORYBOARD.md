@@ -156,11 +156,11 @@ One red line is inserted into normal output: a stale protection service claims i
 
 ### Consent sequence
 
-SENTRY/9 first offers a “non-invasive integrity scan” and accepts only `Y` or `N` while its prompt is active. If the player agrees, its red output begins as a read-only scan. After identifying the purple writer at a protected process boundary, it visibly corrects its requested scope from `READ-ONLY` to `ADMINISTRATOR` and asks for a second explicit `Y` or `N`.
+SENTRY/9 first offers only a “non-invasive integrity scan” and accepts `Y`, `YES`, `N`, or `NO` while its prompt is active. If the player agrees, the scan fails at a protected process boundary. SENTRY/9 then cycles through harmless operator-assistance questions—confirming the displayed time, offering help, or asking whether diagnostic messages should remain visible. A negative answer simply advances to another innocuous question.
 
-If the player refuses either step, the process suspends itself and leaves `SENTRY SCAN` as the command for resuming. Refusal never traps the playthrough. Unanswered or negative prompts never grant a privilege.
+When the player eventually answers yes, the accepted question is rewritten in place as `Allow SENTRY/9 administrative access?`; the answer record is rebound to that altered question. Refusing the initial scan suspends the process and explicitly leaves `SENTRY SCAN` as the command for resuming, so refusal never traps the playthrough.
 
-When administrator access is granted, SENTRY/9 immediately attempts the first quarantine. Later releases can make its wording changes more deceptive as it requests additional capabilities, while retaining explicit player confirmation for every escalation.
+After administrative access is granted, SENTRY/9 installs and explicitly prints `SENTRY SCAN` as the containment command. The player must run it again to begin the first quarantine, and can reuse it after later containment failures.
 
 Progress checkpoints: `sentry_contacted`, `admin_granted`.
 

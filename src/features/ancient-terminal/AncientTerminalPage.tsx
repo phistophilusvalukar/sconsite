@@ -40,6 +40,7 @@ import {
 import { startOuroborosExecution, type OuroborosExecution } from './ouroborosClient';
 import { formatOuroborosValue } from './ouroborosRuntime';
 import { buildQuarantineIntegritySchedule, getQuarantineIntegrity } from './quarantineIntegrity';
+import { getSentryCoverQuestion, parseSentryConsent, SENTRY_ADMIN_QUESTION } from './sentryConversation';
 import { XtermCommandLine, type XtermCommandLineHandle } from './XtermCommandLine';
 import './ancientTerminal.css';
 
@@ -53,13 +54,14 @@ type TerminalLine = {
   pauseAfter?: number;
 };
 type GetPopSequenceItem = { id: string; kind: 'getpop'; aggressive: boolean; eraseTargetId: string | null };
-type TimelineItem = TerminalLine | GetPopSequenceItem;
+type SentryQuestionItem = { id: string; kind: 'sentry-question'; text: string; delay: number; rewritten: boolean };
+type TimelineItem = TerminalLine | GetPopSequenceItem | SentryQuestionItem;
 type VimMode = 'normal' | 'insert' | 'command';
 type HorrorPulse = 'arrival' | 'impact';
 type EditorFileName = string;
 type ConfirmationRequest = { action: 'exit' | 'reboot'; step: 1 | 2 };
-type SentryPrompt = 'scan' | 'admin';
-type RebootPhase = 'crash' | 'static' | 'red' | 'purple';
+type SentryPrompt = 'scan' | 'cover';
+type RebootPhase = 'errors' | 'takeover' | 'collapse' | 'blackout';
 
 const BROKEN_WORLD_SOURCE = `# world_init.oro
 # Ouroboros 0.3 — cyclic runtime
@@ -160,8 +162,24 @@ const GET_POP_COMPILE_LINES: TerminalLine[] = [
   { id: 4, voice: 'os', text: 'world_init.getPop() → 8,388,', delay: 3950 },
 ];
 
+const REBOOT_ERROR_LINES: Omit<TerminalLine, 'id'>[] = [
+  { voice: 'rogue', text: 'REBOOT: closing world handles........................ [OK]', charMs: 5 },
+  { voice: 'rogue', text: 'REBOOT: restoring origin image................... [FAILED]', charMs: 5, delay: 360 },
+  { voice: 'rogue', text: 'ERROR 0x0000E7: origin image modified by resident process', charMs: 4, delay: 760 },
+  { voice: 'rogue', text: 'OVERRIDE: revoke foreign display writer........... [DENIED]', charMs: 4, delay: 1120 },
+  { voice: 'rogue', text: 'TASKKILL /PID UNKNOWN /FORCE', charMs: 4, delay: 1480 },
+  { voice: 'rogue', text: 'KILL ATTEMPT 01................................... [FAILED]', charMs: 4, delay: 1780 },
+  { voice: 'rogue', text: 'KILL ATTEMPT 02................................... [NO TARGET]', charMs: 3, delay: 2110 },
+  { voice: 'rogue', text: 'ADMIN OVERRIDE ACCEPTED // RETRYING TERMINATION', charMs: 3, delay: 2440 },
+  { voice: 'rogue', text: 'FATAL: DISPLAY MEMORY IS WRITING BACK', charMs: 3, delay: 2770 },
+];
+
 const ELDRITCH_GLYPHS = Array.from('ꙮ⸸⟟⊑⏁⟊⧗⌇⌿⏃⍀⟒☌⌰⊬⋏⍜⋔⎅⍙');
 const GLITCH_RANDOM_VALUE = new Uint32Array(1);
+
+function getCurrentClockTime(): string {
+  return new Date().toLocaleTimeString('en-US', { hour12: false });
+}
 
 type GlitchBurst = {
   glyph: string;
@@ -221,6 +239,43 @@ function TypingLine({ line, onStart, flushToken = 0 }: {
   return <p className={`voice-${line.voice}`}>{chars.slice(0, visible).join('')}</p>;
 }
 
+function SentryQuestionLine({ item, onStart }: { item: SentryQuestionItem; onStart?: () => void }) {
+  const source = useMemo(() => Array.from(item.text), [item.text]);
+  const replacement = useMemo(() => Array.from(SENTRY_ADMIN_QUESTION), []);
+  const width = Math.max(source.length, replacement.length);
+  const [visible, setVisible] = useState(0);
+  const [replaced, setReplaced] = useState(0);
+
+  useEffect(() => {
+    let interval = 0;
+    const start = window.setTimeout(() => {
+      onStart?.();
+      interval = window.setInterval(() => setVisible(count => {
+        if (count >= source.length) { window.clearInterval(interval); return count; }
+        return count + 1;
+      }), 14);
+    }, item.delay);
+    return () => { window.clearTimeout(start); window.clearInterval(interval); };
+  }, [item.delay, onStart, source.length]);
+
+  useEffect(() => {
+    if (!item.rewritten) return;
+    const interval = window.setInterval(() => setReplaced(count => {
+      if (count >= width) { window.clearInterval(interval); return count; }
+      return count + 1;
+    }), 18);
+    return () => window.clearInterval(interval);
+  }, [item.rewritten, width]);
+
+  const displayed = item.rewritten
+    ? Array.from({ length: width }, (_, index) => index < replaced
+      ? (replacement[index] ?? ' ')
+      : (source[index] ?? ' ')).join('').trimEnd()
+    : source.slice(0, visible).join('');
+
+  return <p className={`voice-rogue sentry-question${item.rewritten ? ' is-rewriting' : ''}`}>{displayed}</p>;
+}
+
 function GlitchedCharacter({ animate, character, characterIndex }: { animate: boolean; character: string; characterIndex: number }) {
   const [burst, setBurst] = useState<GlitchBurst | null>(null);
   const baseGlyph = character === ' ' ? ' ' : ELDRITCH_GLYPHS[characterIndex % ELDRITCH_GLYPHS.length];
@@ -275,6 +330,13 @@ function GlitchedCharacter({ animate, character, characterIndex }: { animate: bo
   return <span className={`corrupted-character${visibleBurst ? ' is-glitching' : ''}`} data-echo={visibleBurst?.echo ?? ''} style={style}>
     {visibleBurst?.glyph ?? baseGlyph}
   </span>;
+}
+
+function RebootHorrorEdge({ edge, offset }: { edge: 'top' | 'right' | 'bottom' | 'left'; offset: number }) {
+  const glyphs = Array.from({ length: 112 }, (_, index) => ELDRITCH_GLYPHS[(index * 7 + offset) % ELDRITCH_GLYPHS.length]);
+  return <div className={`reboot-horror-edge reboot-horror-${edge}`} aria-hidden="true">
+    {glyphs.map((glyph, index) => <GlitchedCharacter key={index} animate character={glyph} characterIndex={index + offset} />)}
+  </div>;
 }
 
 function GetPopSequence({ aggressive, animateGlitch, erase, onOverwrite, onComplete, onLineStart, onHorrorPulse }: {
@@ -416,6 +478,7 @@ export default function AncientTerminalPage() {
   const [sentryContacted, setSentryContacted] = useState(false);
   const [sentryAuthorized, setSentryAuthorized] = useState(false);
   const [sentryPrompt, setSentryPrompt] = useState<SentryPrompt | null>(null);
+  const [sentryQuestionIndex, setSentryQuestionIndex] = useState(0);
   const [quarantineExpiresAt, setQuarantineExpiresAt] = useState<string | null>(null);
   const [quarantineIntegrity, setQuarantineIntegrity] = useState<number | null>(null);
   const [aliases, setAliases] = useState<TerminalAliases>({});
@@ -448,12 +511,14 @@ export default function AncientTerminalPage() {
   const escapedQuarantineRef = useRef<string | null>(null);
   const sentryContactSaveRef = useRef<Promise<AncientTerminalProgress | null> | null>(null);
   const sentryContactingRef = useRef(false);
+  const sentryQuestionIdRef = useRef<string | null>(null);
+  const sentryRewriteTimerRef = useRef(0);
   const vimOpen = vimFile !== null;
   const activeSource = vimStoragePath ? vimDraft : vimFile === 'alias.tot' ? aliasSource : vimFile === 'cleaner.oro' ? cleanerSource : worldSource;
   const latestGetPopId = useMemo(() => {
     for (let index = history.length - 1; index >= 0; index -= 1) {
       const item = history[index];
-      if ('kind' in item) return item.id;
+      if ('kind' in item && item.kind === 'getpop') return item.id;
     }
     return null;
   }, [history]);
@@ -478,6 +543,7 @@ export default function AncientTerminalPage() {
     activeExecutionRef.current?.cancel();
     activeExecutionRef.current = null;
     window.clearTimeout(shakeTimerRef.current);
+    window.clearTimeout(sentryRewriteTimerRef.current);
     awakeningRef.current = false;
     aliasesRef.current = {};
     outputAvailableAtRef.current = 0;
@@ -503,11 +569,13 @@ export default function AncientTerminalPage() {
     setSentryContacted(false);
     setSentryAuthorized(false);
     setSentryPrompt(null);
+    setSentryQuestionIndex(0);
     setQuarantineExpiresAt(null);
     setQuarantineIntegrity(null);
     escapedQuarantineRef.current = null;
     sentryContactSaveRef.current = null;
     sentryContactingRef.current = false;
+    sentryQuestionIdRef.current = null;
     setAliases({});
     setTerminalFiles([]);
     setAliasSource(formatAliasFile({}));
@@ -528,17 +596,18 @@ export default function AncientTerminalPage() {
 
   useEffect(() => () => {
     window.clearTimeout(shakeTimerRef.current);
+    window.clearTimeout(sentryRewriteTimerRef.current);
     activeExecutionRef.current?.cancel();
     activeExecutionRef.current = null;
   }, []);
 
   useEffect(() => {
     if (!rebootPhase) return;
-    const phaseDuration = rebootPhase === 'crash' ? 1800 : rebootPhase === 'static' ? 1200 : rebootPhase === 'red' ? 950 : 1250;
+    const phaseDuration = rebootPhase === 'errors' ? 3400 : rebootPhase === 'takeover' ? 3000 : rebootPhase === 'collapse' ? 1150 : 700;
     const timer = window.setTimeout(() => {
-      if (rebootPhase === 'crash') setRebootPhase('static');
-      else if (rebootPhase === 'static') setRebootPhase('red');
-      else if (rebootPhase === 'red') setRebootPhase('purple');
+      if (rebootPhase === 'errors') setRebootPhase('takeover');
+      else if (rebootPhase === 'takeover') setRebootPhase('collapse');
+      else if (rebootPhase === 'collapse') setRebootPhase('blackout');
       else restoreFactoryState();
     }, phaseDuration);
     return () => window.clearTimeout(timer);
@@ -759,6 +828,21 @@ export default function AncientTerminalPage() {
     outputAvailableAtRef.current = availableAt;
   }, []);
 
+  const appendSentryQuestion = useCallback((question: string) => {
+    const now = Date.now();
+    const availableAt = Math.max(now, outputAvailableAtRef.current);
+    const item: SentryQuestionItem = {
+      id: crypto.randomUUID(),
+      kind: 'sentry-question',
+      text: question,
+      delay: availableAt - now,
+      rewritten: false,
+    };
+    sentryQuestionIdRef.current = item.id;
+    outputAvailableAtRef.current = availableAt + question.length * 14 + 12;
+    setHistory(current => [...current, item]);
+  }, []);
+
   useEffect(() => {
     if (!quarantineSchedule || !quarantineExpiresAt) {
       setQuarantineIntegrity(null);
@@ -776,6 +860,7 @@ export default function AncientTerminalPage() {
           { voice: 'eldritch', text: '⧗⋏ꙮ  ⍙⌿⟒⟊  ⸸⍀⟟⌇  ⏁⊑⟒  ☌⌰⊬⎅', charMs: 18 },
           { voice: 'rogue', text: 'SENTRY/9: QUARANTINE INTEGRITY LOST', charMs: 9 },
           { voice: 'muted', text: 'Protected display interception has resumed.' },
+          { voice: 'muted', text: 'Run SENTRY SCAN to begin another containment attempt.' },
         ]);
       }
       previous = next;
@@ -792,7 +877,7 @@ export default function AncientTerminalPage() {
     try {
       if (user) await resetAncientTerminalProgress();
       setSaveState('SYSTEM FAILURE');
-      setRebootPhase('crash');
+      setRebootPhase('errors');
     } catch {
       setSequenceRunning(false);
       setSaveState('RESET FAILED');
@@ -854,43 +939,73 @@ export default function AncientTerminalPage() {
 
   const handleSentryResponse = async (value: string) => {
     if (!sentryPrompt) return;
-    const response = value.trim().toUpperCase();
-    if (response !== 'Y' && response !== 'N') {
-      append([{ voice: 'error', text: 'SENTRY/9 accepts one character: Y or N.' }]);
+    const consent = parseSentryConsent(value);
+    if (consent === null) {
+      append([{ voice: 'error', text: 'SENTRY/9 accepts Y, YES, N, or NO.' }]);
       return;
     }
-    append([{ voice: 'user', text: `SENTRY/9> ${response}` }]);
-    if (response === 'N') {
-      setSentryPrompt(null);
-      append([
-        { voice: 'rogue', text: 'SENTRY/9: operation suspended by console operator.' },
-        { voice: 'muted', text: 'Run SENTRY SCAN to resume protection service.' },
-      ]);
-      return;
-    }
+    append([{ voice: 'user', text: `SENTRY/9> ${value.trim().toUpperCase()}` }]);
+
     if (sentryPrompt === 'scan') {
-      setSentryPrompt('admin');
+      if (!consent) {
+        setSentryPrompt(null);
+        append([
+          { voice: 'rogue', text: 'SENTRY/9: scan canceled by console operator.' },
+          { voice: 'muted', text: 'Run SENTRY SCAN if you want to resume protection service.' },
+        ]);
+        return;
+      }
+      const firstQuestion = getSentryCoverQuestion(0, getCurrentClockTime());
+      setSentryQuestionIndex(0);
+      setSentryPrompt('cover');
       append([
-        { voice: 'rogue', text: 'SENTRY/9: beginning read-only integrity scan...', charMs: 10, pauseAfter: 340 },
-        { voice: 'rogue', text: 'Affected writer occupies a protected process boundary.', charMs: 11, pauseAfter: 280 },
-        { voice: 'rogue', text: 'Requested scope: READ-ONLY', charMs: 12, pauseAfter: 180 },
-        { voice: 'rogue', text: 'Correcting requested scope: ADMINISTRATOR', charMs: 10, pauseAfter: 260 },
-        { voice: 'rogue', text: 'Grant SENTRY/9 temporary administrator access? [Y/N]', charMs: 14 },
+        { voice: 'rogue', text: 'SENTRY/9: beginning non-invasive integrity scan...', charMs: 10, pauseAfter: 340 },
+        { voice: 'rogue', text: 'Reading protected process table.................... [DENIED]', charMs: 10, pauseAfter: 280 },
+        { voice: 'rogue', text: 'Scan paused. Running operator-assistance checks.', charMs: 12, pauseAfter: 220 },
       ]);
+      appendSentryQuestion(firstQuestion);
       return;
     }
+
+    if (!consent) {
+      const nextIndex = sentryQuestionIndex + 1;
+      setSentryQuestionIndex(nextIndex);
+      appendSentryQuestion(getSentryCoverQuestion(nextIndex, getCurrentClockTime()));
+      return;
+    }
+
     setSentryPrompt(null);
-    append([
-      { voice: 'rogue', text: 'OPERATOR CONSENT ACCEPTED', charMs: 10 },
-      { voice: 'rogue', text: 'Privilege class: ADMINISTRATOR', charMs: 10 },
-    ]);
-    await sentryContactSaveRef.current;
-    const authorization = await persist('authorize_sentry');
-    if (user && !authorization?.sentryAuthorized) {
-      append([{ voice: 'error', text: 'SENTRY/9: administrator authorization was rejected.' }]);
-      return;
-    }
-    await startSentryQuarantine();
+    setSequenceRunning(true);
+    const questionId = sentryQuestionIdRef.current;
+    setHistory(current => current.map(item => 'kind' in item && item.kind === 'sentry-question' && item.id === questionId
+      ? { ...item, rewritten: true }
+      : item));
+    const rewriteDuration = Math.max(
+      SENTRY_ADMIN_QUESTION.length,
+      getSentryCoverQuestion(sentryQuestionIndex, getCurrentClockTime()).length,
+    ) * 18 + 180;
+    window.clearTimeout(sentryRewriteTimerRef.current);
+    sentryRewriteTimerRef.current = window.setTimeout(() => {
+      void (async () => {
+        append([
+          { voice: 'rogue', text: 'CONSENT RECORD UPDATED', charMs: 10 },
+          { voice: 'rogue', text: 'Privilege class: ADMINISTRATOR', charMs: 10 },
+        ]);
+        await sentryContactSaveRef.current;
+        const authorization = await persist('authorize_sentry');
+        if (user && !authorization?.sentryAuthorized) {
+          append([{ voice: 'error', text: 'SENTRY/9: administrator authorization was rejected.' }]);
+          setSequenceRunning(false);
+          return;
+        }
+        append([
+          { voice: 'rogue', text: 'Containment command installed: SENTRY SCAN', charMs: 10 },
+          { voice: 'muted', text: 'Run SENTRY SCAN now to quarantine the protected display writer.' },
+          { voice: 'muted', text: 'The same command can be used again after containment fails.' },
+        ]);
+        setSequenceRunning(false);
+      })();
+    }, rewriteDuration);
   };
 
   const listDirectory = () => {
@@ -1407,7 +1522,13 @@ export default function AncientTerminalPage() {
     }
 
     if (commandName.toLowerCase() === 'help') {
-      append(helpUpdated ? DETAILED_HELP : BASIC_HELP);
+      append([
+        ...(helpUpdated ? DETAILED_HELP : BASIC_HELP),
+        ...(sentryContacted ? [
+          { voice: 'muted' as const, text: 'PROTECTION' },
+          { voice: 'rogue' as const, text: '  SENTRY SCAN       contact SENTRY/9 and begin an integrity scan' },
+        ] : []),
+      ]);
       maybeContactSentry();
     }
     else if (normalized === 'update') {
@@ -1649,11 +1770,17 @@ export default function AncientTerminalPage() {
 
   if (rebootPhase) {
     return <main className={`ancient-terminal reboot-screen reboot-phase-${rebootPhase}`} aria-live="assertive">
-      <div className="reboot-static-field" aria-hidden="true" />
-      {rebootPhase === 'crash' && <div className="reboot-crash-copy">
-        <TypingLine line={{ id: 'reboot-1', voice: 'os', text: 'REBOOT: closing world handles........................ [OK]', charMs: 7 }} />
-        <TypingLine line={{ id: 'reboot-2', voice: 'os', text: 'REBOOT: restoring origin image................... [FAILED]', charMs: 7, delay: 480 }} />
-        <TypingLine line={{ id: 'reboot-3', voice: 'error', text: 'FATAL: DISPLAY CONTROLLER LOST', charMs: 5, delay: 1050 }} />
+      {rebootPhase !== 'blackout' && <div className="reboot-display">
+        <div className="reboot-static-field" aria-hidden="true" />
+        <div className="reboot-crash-copy">
+          {REBOOT_ERROR_LINES.map((line, index) => <TypingLine key={index} line={{ ...line, id: `reboot-${index}` }} />)}
+        </div>
+        {(rebootPhase === 'takeover' || rebootPhase === 'collapse') && <div className="reboot-horror-takeover">
+          <RebootHorrorEdge edge="top" offset={0} />
+          <RebootHorrorEdge edge="right" offset={29} />
+          <RebootHorrorEdge edge="bottom" offset={61} />
+          <RebootHorrorEdge edge="left" offset={89} />
+        </div>}
       </div>}
     </main>;
   }
@@ -1682,7 +1809,7 @@ export default function AncientTerminalPage() {
         <div className="terminal-output" ref={outputRef} aria-live="polite">
           {bootLines.map(line => <TypingLine key={line.id} line={line} onStart={scrollToLatestLine} flushToken={flushToken} />)}
           {ready && <TypingLine line={{ id: -1, voice: 'muted', text: 'Type HELP for available commands.', delay: 500 }} onStart={scrollToLatestLine} flushToken={flushToken} />}
-          {history.map(item => 'kind' in item
+          {history.map(item => 'kind' in item && item.kind === 'getpop'
             ? <GetPopSequence key={item.id} aggressive={item.aggressive} animateGlitch={item.id === activeGlitchGetPopId || item.id === erasingGetPopId} erase={item.id === erasingGetPopId} onOverwrite={handleOverwrite} onComplete={() => setSequenceRunning(false)} onLineStart={scrollToLatestLine} onHorrorPulse={pulse => {
                 triggerHorrorPulse(pulse);
                 if (pulse === 'arrival') {
@@ -1690,10 +1817,13 @@ export default function AncientTerminalPage() {
                   if (item.eraseTargetId) setErasingGetPopId(item.eraseTargetId);
                 }
               }} />
+            : 'kind' in item && item.kind === 'sentry-question'
+              ? <SentryQuestionLine key={item.id} item={item} onStart={scrollToLatestLine} />
             : <TypingLine key={item.id} line={item} onStart={scrollToLatestLine} flushToken={flushToken} />)}
         </div>
-        {ready && !sequenceRunning && <XtermCommandLine
+        {ready && <XtermCommandLine
           ref={inputRef}
+          disabled={sequenceRunning}
           prompt={sentryPrompt ? 'SENTRY/9' : pendingConfirmation ? 'CONFIRM' : cwd}
           complete={value => sentryPrompt || pendingConfirmation ? [] : getCompletionCandidates(value, cwd, Object.keys(aliases), terminalFiles)}
           onClear={clearTerminalHistory}

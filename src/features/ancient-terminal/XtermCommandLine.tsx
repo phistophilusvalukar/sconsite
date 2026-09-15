@@ -10,6 +10,7 @@ export type XtermCommandLineHandle = {
 
 type XtermCommandLineProps = {
   prompt: string;
+  disabled?: boolean;
   complete: (input: string) => string[];
   onClear: () => void;
   onInterrupt: () => void;
@@ -23,6 +24,7 @@ type CompletionCycle = {
 
 export const XtermCommandLine = forwardRef<XtermCommandLineHandle, XtermCommandLineProps>(function XtermCommandLine({
   prompt,
+  disabled = false,
   complete,
   onClear,
   onInterrupt,
@@ -35,6 +37,7 @@ export const XtermCommandLine = forwardRef<XtermCommandLineHandle, XtermCommandL
   const clearRef = useRef(onClear);
   const interruptRef = useRef(onInterrupt);
   const submitRef = useRef(onSubmit);
+  const disabledRef = useRef(disabled);
   const bufferRef = useRef<string[]>([]);
   const cursorRef = useRef(0);
   const historyRef = useRef<string[]>([]);
@@ -71,6 +74,14 @@ export const XtermCommandLine = forwardRef<XtermCommandLineHandle, XtermCommandL
     promptRef.current = prompt;
     redraw();
   }, [prompt, redraw]);
+
+  useEffect(() => {
+    disabledRef.current = disabled;
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.disableStdin = disabled;
+    if (!disabled) terminal.focus();
+  }, [disabled]);
 
   useEffect(() => {
     completeRef.current = complete;
@@ -137,6 +148,7 @@ export const XtermCommandLine = forwardRef<XtermCommandLineHandle, XtermCommandL
     };
 
     const disposable = terminal.onData(data => {
+      if (disabledRef.current) return;
       if (data === '\r') {
         const value = bufferRef.current.join('').trim();
         if (!value) return;
@@ -244,5 +256,10 @@ export const XtermCommandLine = forwardRef<XtermCommandLineHandle, XtermCommandL
     };
   }, [redraw, replaceBuffer]);
 
-  return <div className="xterm-command-host" ref={hostRef} aria-label={`${prompt} terminal command input`} />;
+  return <div
+    className={`xterm-command-host${disabled ? ' is-disabled' : ''}`}
+    ref={hostRef}
+    aria-hidden={disabled || undefined}
+    aria-label={disabled ? undefined : `${prompt} terminal command input`}
+  />;
 });
