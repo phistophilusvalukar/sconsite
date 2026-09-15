@@ -603,7 +603,7 @@ export default function AncientTerminalPage() {
 
   useEffect(() => {
     if (!rebootPhase) return;
-    const phaseDuration = rebootPhase === 'errors' ? 3400 : rebootPhase === 'takeover' ? 3000 : rebootPhase === 'collapse' ? 1150 : 700;
+    const phaseDuration = rebootPhase === 'errors' ? 3400 : rebootPhase === 'takeover' ? 2200 : rebootPhase === 'collapse' ? 1050 : 700;
     const timer = window.setTimeout(() => {
       if (rebootPhase === 'errors') setRebootPhase('takeover');
       else if (rebootPhase === 'takeover') setRebootPhase('collapse');
