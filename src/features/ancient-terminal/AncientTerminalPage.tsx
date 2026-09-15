@@ -926,12 +926,6 @@ export default function AncientTerminalPage() {
 
   const saveStartupScript = async (action: 'w' | 'wq') => {
     const plan = parseStartupPlan(startupSource);
-    if (!plan.ok) {
-      append([{ voice: 'error', text: `startup.oro: ${plan.error}` }]);
-      setVimMode('normal');
-      setVimCommand('');
-      return;
-    }
     if (!user) {
       savedStartupSourceRef.current = startupSource;
       setSaveState('LOCAL SESSION');
@@ -950,7 +944,13 @@ export default function AncientTerminalPage() {
         return;
       }
     }
-    append([{ voice: 'patch', text: `startup.oro written. ${plan.programs.length} startup program${plan.programs.length === 1 ? '' : 's'} registered.` }]);
+    append(plan.ok
+      ? [{ voice: 'patch', text: `startup.oro written. ${plan.programs.length} startup program${plan.programs.length === 1 ? '' : 's'} registered.` }]
+      : [
+          { voice: 'patch', text: 'startup.oro written.' },
+          { voice: 'error', text: `Syntax warning: ${plan.error}` },
+          { voice: 'muted', text: 'The startup controller will fail during the next boot until repaired.' },
+        ]);
     if (action === 'wq') setVimFile(null);
     else setVimMode('normal');
     setVimCommand('');
