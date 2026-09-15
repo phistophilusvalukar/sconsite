@@ -6,6 +6,7 @@ const PUBLIC_PREFIXES = [
   '/citizens',
   '/guilds',
   '/multiplayer',
+  '/ancient-terminal',
   '/db-admin',
   '/public/characters',
   '/assets',

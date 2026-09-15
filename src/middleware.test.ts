@@ -43,7 +43,14 @@ describe('public resource routes', () => {
     }
   );
 
+  it.each(['/ancient-terminal', '/ancient-terminal/', '/ancient-terminal/phase/phase_2a'])(
+    'allows Ancient Terminal route %s without the site password', (pathname) => {
+      expect(middleware(new Request(`https://example.test${pathname}`))).toBeUndefined();
+    }
+  );
+
   it('keeps similarly named routes behind the site password', () => {
     expect(middleware(new Request('https://example.test/multiplayer-admin'))?.status).toBe(401);
+    expect(middleware(new Request('https://example.test/ancient-terminal-admin'))?.status).toBe(401);
   });
 });
