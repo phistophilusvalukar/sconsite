@@ -12,8 +12,8 @@
 .loader-messages{width:min(620px,82vw);min-height:150px;padding-top:25px;text-align:left}.loader-messages p{min-height:1.4em;margin:0 0 8px;color:var(--paper);font-size:12px;letter-spacing:.08em}
 .reboot-screen{display:grid;place-items:center;background:#000}
 .reboot-display{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;transform-origin:center;background:#010203}
-.reboot-crash-copy{position:relative;z-index:2;width:min(790px,88vw);min-height:420px;padding:28px;border:1px solid rgba(255,51,77,.58);background:rgba(8,0,2,.91);box-shadow:0 0 42px rgba(255,51,77,.12),inset 0 0 36px rgba(255,0,45,.04);animation:reboot-screen-tear .17s steps(2,end) infinite}
-.reboot-crash-copy p{min-height:1.4em;margin:0 0 12px;color:var(--red);white-space:pre-wrap;text-shadow:0 0 9px rgba(255,51,77,.58)}
+.reboot-crash-copy{position:absolute;inset:0;z-index:2;padding:clamp(28px,6vh,72px) clamp(24px,6vw,92px);overflow:hidden;background:#010203}
+.reboot-crash-copy p{min-height:1.4em;margin:0 0 clamp(12px,1.8vh,22px);color:var(--red);font-size:clamp(13px,1.45vw,20px);line-height:1.45;white-space:pre-wrap;text-shadow:0 0 9px rgba(255,51,77,.58)}
 .reboot-static-field{position:absolute;inset:-15%;z-index:1;opacity:.16;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='turbulence' baseFrequency='.72' numOctaves='4' seed='13' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E"),repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(255,255,255,.24) 4px,transparent 5px);background-size:190px 190px,100% 7px;animation:reboot-static-jump .09s steps(2,end) infinite}
 .reboot-phase-takeover .reboot-display{animation:reboot-takeover-shake 3s steps(1,end) both}
 .reboot-phase-takeover .reboot-static-field,.reboot-phase-collapse .reboot-static-field{opacity:.38;mix-blend-mode:screen;filter:hue-rotate(235deg) contrast(2.4)}
