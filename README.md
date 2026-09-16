@@ -54,6 +54,10 @@ npm run dev
 
 The card-game route is available at `/arcana`. It includes a deterministic local match against an AI opponent using the shared rules engine. Online matches submit authenticated commands through the `match-command` Supabase Edge Function and receive player-private snapshots and events through Supabase Realtime. See `packages/database/README.md` for the transport contract and apply the Supabase migrations before connecting online clients.
 
+## Escape Rooms companion
+
+The `/escape-rooms` route provides an administrator puzzle maker, live GM discovery map, and shared player handouts with 3D props and a text fallback. It supports linear paths, parallel branches, ALL/ANY prerequisites, manual reveals, and code/item locks. Apply `20260916000100_escape_rooms.sql` before use. See [the authoring and setup guide](docs/escape-rooms.md). Foundry automation is a future integration; GMs reveal Foundry discoveries manually in this release.
+
 ## Database Migrations
 
 Migrations live in `supabase/migrations`. The project now uses Supabase Auth user IDs as the application user key via `users.auth_user_id`.

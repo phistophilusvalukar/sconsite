@@ -45,6 +45,7 @@ const MultiplayerLobbyPage = lazy(() => import('./features/multiplayer-lobby/Mul
 const DungeonRelayPage = lazy(() => import('./features/multiplayer-lobby/DungeonRelayPage'));
 const AncientTerminalPage = lazy(() => import('./features/ancient-terminal/AncientTerminalPage'));
 const AncientTerminalPhaseGateway = lazy(() => import('./features/ancient-terminal/AncientTerminalPhaseGateway'));
+const EscapeRoomsPage = lazy(() => import('./features/escape-rooms/EscapeRoomsPage'));
 
 function RouteFallback() {
   return (
@@ -86,6 +87,8 @@ function AppRoutes() {
         <Route path="/schedule" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/schedule/:pollId" element={<PageGate pageKey="schedule"><SchedulePage /></PageGate>} />
         <Route path="/games" element={<PageGate pageKey="games"><GamesPage /></PageGate>} />
+        <Route path="/escape-rooms" element={<MemberPageGate pageKey="escape-rooms"><EscapeRoomsPage /></MemberPageGate>} />
+        <Route path="/escape-rooms/:sessionId" element={<MemberPageGate pageKey="escape-rooms"><EscapeRoomsPage /></MemberPageGate>} />
         <Route path="/marketplace" element={<MemberPageGate pageKey="marketplace"><MarketplacePage /></MemberPageGate>} />
         <Route path="/marketplace/:shopId" element={<MemberPageGate pageKey="marketplace"><ShopPage /></MemberPageGate>} />
         <Route path="/ticket-log" element={<TicketLogsPage />} />

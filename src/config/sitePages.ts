@@ -28,6 +28,7 @@ export type SitePageKey =
   | 'guilds'
   | 'schedule'
   | 'games'
+  | 'escape-rooms'
   | 'marketplace'
   | 'arcana'
   | 'underhaul-contracts'
@@ -52,6 +53,14 @@ export interface SitePageDefinition {
 }
 
 export const sitePages: SitePageDefinition[] = [
+  {
+    key: 'escape-rooms',
+    name: 'Escape Rooms',
+    href: '/escape-rooms',
+    description: 'Puzzle maker, live clue paths, and shared 3D handouts for Foundry games.',
+    icon: GitBranch,
+    routePrefixes: ['/escape-rooms']
+  },
   {
     key: 'home',
     name: 'Home',

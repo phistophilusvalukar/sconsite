@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "escape-room-procedural-props",
+      "source": "Original geometry and canvas textures generated in PropViewer.tsx",
+      "rights": "Original project artwork; no third-party media",
+      "placeholder": false,
+      "models": ["paper", "book", "key", "rod", "chest", "door", "crystal"]
+    },
+    {
+      "id": "astronomer-starter-handouts",
+      "source": "Original adventure text in starter.ts",
+      "rights": "Original project content; no third-party media",
+      "placeholder": false
+    }
+  ],
+  "dependencies": [
+    { "name": "three", "license": "MIT", "source": "https://github.com/mrdoob/three.js" },
+    { "name": "lucide-react", "license": "ISC", "source": "https://github.com/lucide-icons/lucide" }
+  ]
+}
