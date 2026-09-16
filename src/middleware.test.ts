@@ -52,5 +52,12 @@ describe('public resource routes', () => {
   it('keeps similarly named routes behind the site password', () => {
     expect(middleware(new Request('https://example.test/multiplayer-admin'))?.status).toBe(401);
     expect(middleware(new Request('https://example.test/ancient-terminal-admin'))?.status).toBe(401);
+    expect(middleware(new Request('https://example.test/escape-rooms-admin'))?.status).toBe(401);
   });
+
+  it.each(['/escape-rooms', '/escape-rooms/', '/escape-rooms/11111111-1111-4111-8111-111111111111'])(
+    'lets escape room route %s reach the Discord session gate without the site password', (pathname) => {
+      expect(middleware(new Request(`https://example.test${pathname}`))).toBeUndefined();
+    }
+  );
 });
