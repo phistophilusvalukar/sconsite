@@ -3,9 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowDownRight, ArrowRight, CalendarDays, Check, Clock3, Compass, Copy, Flag, HandHeart, Leaf, MapPin, Plus, ShieldCheck, Sparkles, Target, Trophy, Users } from 'lucide-react';
 import type { Command, Contribution, MiniCharacter, Snapshot, WestmarchEvent } from './model';
 import { eventProgress, pendingAssessment, formatDuration } from './rules';
+import { dateLabel } from './format';
 
 export interface PageProps { snapshot: Snapshot; execute: (command: Command) => Promise<boolean>; busy: boolean }
-export const dateLabel = (value: string) => new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 export function BackLink() { return <Link className="wm-back" to="/westmarch"><ArrowDownRight size={16} /> Back to the event board</Link>; }
 export function Help({ title, children }: { title: string; children: React.ReactNode }) { return <details className="wm-help"><summary><Sparkles size={15} />{title}</summary><div>{children}</div></details>; }
 
@@ -43,7 +43,7 @@ export function EventBoard({ snapshot }: PageProps) {
     </section>
     <section className="wm-meta-card"><div className="wm-meta-emblem"><Sparkles size={38} strokeWidth={1} /></div><div><p className="wm-kicker">ONE WORLD. A LARGER STORY.</p><h2>{meta?.definition.title ?? 'The next chapter is on the horizon.'}</h2><p>{meta?.definition.description ?? 'Meta events bring the whole Westmarch together. Event Staff will open the next chapter when the time is right.'}</p></div>{meta && <Link className="wm-button secondary" to={`/westmarch/events/${meta.id}`}>Explore the meta event <ArrowRight size={16} /></Link>}</section>
     <section className="wm-grid wm-board-section"><Link className="wm-feature-link" to="/westmarch/leaderboards"><Trophy size={25} /><div><p className="wm-kicker">THE PEOPLE WHO SHOWED UP</p><h3>Local legends</h3><p>Discover dedicated helpers, talented performers, and memorable rolls.</p></div><ArrowRight /></Link><Link className="wm-feature-link" to="/westmarch/submissions"><Flag size={25} /><div><p className="wm-kicker">GIVE YOUR SETTING A STORY</p><h3>Create an event</h3><p>Bring a region to life. Submit your idea for review and earn a creator code.</p></div><ArrowRight /></Link></section>
-    {completed.length > 0 && <section className="wm-panel"><h2>Stories remembered</h2><div className="wm-stack">{completed.slice(0, 8).map(e => <Link className="wm-history-link" key={e.id} to={`/westmarch/events/${e.id}`}><span>{e.definition.title}</span><span className="wm-badge">{e.outcome?.replaceAll('_', ' ') ?? 'Completed'}</span><ArrowRight size={16} /></Link>)}</div></section>}
+    {completed.length > 0 && <section className="wm-panel"><h2>Stories remembered</h2><div className="wm-stack">{completed.slice(0, 8).map(e => <Link className="wm-history-link" key={e.id} to={`/westmarch/events/${e.id}`}><span>{e.definition.title}</span><span className="wm-badge">{e.outcome?.replace(/_/g, ' ') ?? 'Completed'}</span><ArrowRight size={16} /></Link>)}</div></section>}
     <div className="wm-community"><HandHeart size={18} /><p>Help care for the stories we tell together.</p><Link to="/westmarch/staff/apply">Apply for Event Staff <ArrowRight size={14} /></Link>{snapshot.isStaff && <Link to="/westmarch/controls">Event Controls <ShieldCheck size={14} /></Link>}{snapshot.isAdmin && <Link to="/westmarch/admin">Staff administration</Link>}</div>
   </>;
 }

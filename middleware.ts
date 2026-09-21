@@ -1,4 +1,5 @@
 const PUBLIC_PREFIXES = [
+  '/westmarch',
   '/ticket-log',
   '/ticket-log-archive-data',
   '/rules',

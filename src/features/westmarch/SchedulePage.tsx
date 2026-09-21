@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, CalendarDays, Clock3, Dice5, Plus, Trash2 } from 'lucide-react';
-import { BackLink, dateLabel, Help, RollRecord, type PageProps } from './PlayerPages';
+import { BackLink, Help, RollRecord, type PageProps } from './PlayerPages';
+import { dateLabel } from './format';
 import { formatDuration, overlaps } from './rules';
 
 interface Booking { eventId: string; characterId: string; actionId: string; skill: string; modifier: number; description: string; startsAt: string }

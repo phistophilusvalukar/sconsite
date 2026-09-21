@@ -30,7 +30,7 @@ export const contributionSchema = z.object({
 });
 export const slotSchema = z.object({ id: z.number().int(), kind: z.enum(['minor', 'meta']), eventId: z.string().nullable(), cooldownUntil: z.string().nullable() });
 export const applicationSchema = z.object({ id: z.string(), userId: z.string(), username: z.string(), motivation: z.string(), experience: z.string(), availability: z.string(), status: z.enum(['pending', 'approved', 'declined', 'withdrawn']), createdAt: z.string(), note: z.string().default('') });
-export const logSchema = z.object({ id: z.string(), actorName: z.string(), action: z.string(), eventId: z.string().nullable(), reason: z.string(), createdAt: z.string() });
+export const logSchema = z.object({ id: z.string(), actorName: z.string(), action: z.string(), eventId: z.string().nullable(), reason: z.string(), createdAt: z.string(), details: z.record(z.string(), z.unknown()).default({}) });
 export const rewardSchema = z.object({ id: z.string(), eventId: z.string(), authorId: z.string(), code: z.string(), status: z.enum(['issued', 'redeemed', 'revoked']), createdAt: z.string() });
 export const snapshotSchema = z.object({
   userId: z.string(), isAdmin: z.boolean(), isStaff: z.boolean(), events: z.array(eventSchema), characters: z.array(characterSchema),

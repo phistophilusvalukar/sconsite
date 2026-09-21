@@ -108,7 +108,7 @@ BEGIN
       OR EXISTS(SELECT 1 FROM jsonb_array_elements(a->'skills') s WHERE jsonb_typeof(s) IS DISTINCT FROM 'string')
       OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(a->'skills') s WHERE NOT s=ANY(allowed)) THEN RAISE EXCEPTION 'Invalid permitted checks'; END IF;
   END LOOP;
-  SELECT count(*) INTO n FROM jsonb_array_elements(d->'actions') a WHERE a->>'kind'='main';
+  SELECT count(*) INTO n FROM jsonb_array_elements(d->'actions') AS entry(value) WHERE entry.value->>'kind'='main';
   IF n=0 THEN RAISE EXCEPTION 'Include a main action'; END IF;
 END $$;
 
@@ -251,7 +251,7 @@ BEGIN
     IF action NOT IN ('approve','return','reject') OR action IS NULL THEN RAISE EXCEPTION 'Invalid review decision'; END IF;
     IF action<>'approve' AND length(trim(reason))<3 THEN RAISE EXCEPTION 'Explain the review decision'; END IF;
     UPDATE public.wm_events SET status=CASE action WHEN 'approve' THEN 'queued' WHEN 'return' THEN 'returned' ELSE 'rejected' END,approved_at=CASE WHEN action='approve' THEN now() ELSE NULL END,review_note=reason,revision=revision+1 WHERE id=e.id;
-    IF action='approve' THEN INSERT INTO public.wm_rewards(event_id,author_id) VALUES(e.id,e.author_id) ON CONFLICT(event_id) DO NOTHING; END IF;
+    IF action='approve' THEN INSERT INTO public.wm_rewards(event_id,author_id) VALUES(e.id,e.author_id) ON CONFLICT ON CONSTRAINT wm_rewards_event_id_key DO NOTHING; END IF;
     PERFORM public.wm_log_action(uid,'review_'||action,e.id,reason,jsonb_build_object('reviewedRevision',e.revision));
   ELSIF op='apply_staff' THEN
     IF staff THEN RAISE EXCEPTION 'You already have Event Staff access'; END IF;
@@ -279,7 +279,7 @@ BEGIN
       IF (p_command->>'revision')::integer IS DISTINCT FROM e.revision THEN RAISE EXCEPTION 'Event changed; refresh controls'; END IF;
     END IF;
     IF action IN ('pause','resume') THEN
-      IF event_id IS NULL OR e.status<>CASE WHEN action='pause' THEN 'active' ELSE 'paused' END THEN RAISE EXCEPTION 'Invalid event state'; END IF;
+      IF event_id IS NULL OR e.status<>(CASE WHEN action='pause' THEN 'active' ELSE 'paused' END) THEN RAISE EXCEPTION 'Invalid event state'; END IF;
       UPDATE public.wm_events SET status=CASE WHEN action='pause' THEN 'paused' ELSE 'active' END,revision=revision+1 WHERE id=e.id;
       PERFORM public.wm_log_action(uid,action,e.id,reason);
     ELSIF action='remove' THEN
