@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 export type SitePageKey =
+  | 'planner'
   | 'home'
   | 'about'
   | 'lore'
@@ -53,6 +54,11 @@ export interface SitePageDefinition {
 }
 
 export const sitePages: SitePageDefinition[] = [
+  {
+    key: 'planner', name: 'Planner', href: '/planner',
+    description: 'Private and shared spaces for everyday tasks, lists, and routines.',
+    icon: CalendarDays, routePrefixes: ['/planner']
+  },
   {
     key: 'escape-rooms',
     name: 'Escape Rooms',

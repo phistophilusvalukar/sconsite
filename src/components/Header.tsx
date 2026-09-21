@@ -59,7 +59,7 @@ const navigationGroups: NavigationGroup[] = [
   { name: 'Play', pageKeys: ['schedule', 'games', 'multiplayer-lobby'] },
   { name: 'Arcades', pageKeys: ['arcana', 'underhaul-contracts', 'arcane-locks', 'broken-seals', 'citadel-tactics', 'ancient-terminal'] },
   { name: 'Tactics', pageKeys: ['tactical-puzzles'] },
-  { name: 'Tools', pageKeys: ['skill-checks', 'escape-rooms', 'campaign-objectives', 'event'] }
+  { name: 'Tools', pageKeys: ['planner', 'skill-checks', 'escape-rooms', 'campaign-objectives', 'event'] }
 ];
 
 const Header: React.FC = () => {
