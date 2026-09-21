@@ -12,6 +12,11 @@ export const nodeSchema = z.object({
   reveal: z.enum(['manual', 'automatic']), gate: z.enum(['all', 'any']),
   requires: z.array(z.object({ nodeId: id, state: z.enum(['known', 'used']) })).max(100),
   code: z.string().max(120), keyIds: z.array(id).max(100),
+  hints: z.array(z.string().trim().min(1).max(2000)).max(50).optional(),
+  pickable: z.boolean().optional(),
+  pickDifficulty: z.enum(['Training', 'Standard', 'Expert', 'Master']).optional(),
+  forcePolicy: z.enum(['blocked', 'allowed', 'reinforced']).optional(),
+  forceConsequence: z.string().max(2000).optional(),
 });
 export const blueprintSchema = z.object({
   title: z.string().trim().min(1).max(120), description: z.string().max(2000),
@@ -21,6 +26,13 @@ export type PuzzleNode = z.infer<typeof nodeSchema>;
 export type Blueprint = z.infer<typeof blueprintSchema>;
 export const publicNodeSchema = nodeSchema.pick({ id: true, title: true, kind: true, prop: true, location: true, text: true, backText: true }).extend({
   status: statusSchema, needsCode: z.boolean(), needsItems: z.boolean(),
+  keyhole: z.boolean().default(false), pickable: z.boolean().default(false),
+  pickDifficulty: z.enum(['Training', 'Standard', 'Expert', 'Master']).default('Standard'),
+  forcePolicy: z.enum(['blocked', 'allowed', 'reinforced']).default('blocked'),
+  mechanism: z.object({
+    failures: z.number(), jammed: z.boolean(), picked: z.boolean(), health: z.number(), rotation: z.number(), angle: z.number(),
+    canControl: z.boolean(), occupied: z.boolean(), forcePending: z.boolean(), forceAttempts: z.number(),
+  }).default({ failures: 0, jammed: false, picked: false, health: 100, rotation: 0, angle: 0, canControl: false, occupied: false, forcePending: false, forceAttempts: 0 }),
 });
 export type PublicNode = z.infer<typeof publicNodeSchema>;
 export const sessionSchema = z.object({
@@ -29,6 +41,8 @@ export const sessionSchema = z.object({
   nodes: z.array(publicNodeSchema), memberCount: z.number(),
   definition: blueprintSchema.optional(), states: z.record(z.string(), statusSchema).optional(),
   joinCode: z.string().optional(),
+  partyName: z.string().default('Adventuring party'), hintCount: z.number().default(0), leaderboardEligible: z.boolean().default(true),
+  hints: z.array(z.object({ id: z.string().uuid(), nodeId: z.string().nullable(), title: z.string(), text: z.string().nullable(), requestedAt: z.string(), number: z.number() })).default([]),
   history: z.array(z.object({ action: z.string(), title: z.string(), at: z.string() })),
 });
 export type PuzzleSession = z.infer<typeof sessionSchema>;
@@ -37,6 +51,7 @@ export const librarySchema = z.object({
   sessions: z.array(z.object({ id: z.string().uuid(), title: z.string(), status: z.string(), isGm: z.boolean() })),
 });
 export type Library = z.infer<typeof librarySchema>;
+export const leaderboardSchema = z.array(z.object({ partyName: z.string(), seconds: z.number(), hintCount: z.number(), completedAt: z.string() }));
 export const isLock = (node: Pick<PuzzleNode, 'kind'>) => ['container', 'room', 'puzzle', 'treasure'].includes(node.kind);
 
 /** Authoring diagnostics only; protected server commands repeat validation. */

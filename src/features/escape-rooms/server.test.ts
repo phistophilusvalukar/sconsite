@@ -1,6 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import migration from '../../../supabase/migrations/20260916000100_escape_rooms.sql?raw';
+import interactions from '../../../supabase/migrations/20260916000200_escape_lock_interactions.sql?raw';
 import { sessionSchema } from './model';
 import { starter } from './starter';
 
@@ -31,6 +32,7 @@ beforeAll(async () => {
     GRANT USAGE ON SCHEMA auth TO authenticated;
   `);
   await db.exec(migration);
+  await db.exec(interactions);
   await db.exec('SET ROLE authenticated');
 }, 30000);
 afterAll(async () => { await db.close(); });

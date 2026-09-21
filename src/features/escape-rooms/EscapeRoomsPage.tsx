@@ -4,9 +4,11 @@ import { BookOpen, Box, Check, ChevronRight, Eye, GitBranch, KeyRound, LockKeyho
 import { useAuth } from '../../context/useAuth';
 import { supabase } from '../../config/database';
 import ClueMap from './ClueMap';
+import LockControls from './LockControls';
+import RoomAssistance from './RoomAssistance';
 import PuzzleMaker from './PuzzleMaker';
-import { isLock, newNode, prerequisitesMet, type Blueprint, type Library, type PuzzleSession, type PublicNode } from './model';
-import { getLibrary, getSession, joinSession, saveBlueprint, sendCommand, startSession, type SessionCommand } from './service';
+import { isLock, newNode, prerequisitesMet, type Blueprint, type Library, type PuzzleSession } from './model';
+import { getLibrary, getSession, joinSession, saveBlueprint, sendCommand, startSession, type SessionCommand, type RoomCommand } from './service';
 import { starter } from './starter';
 import './escapeRooms.css';
 
@@ -71,14 +73,17 @@ export default function EscapeRoomsPage() {
     try { await work(); } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
   };
   const command = async (value: SessionCommand) => {
-    if (!session) return;
+    if (!session) return false;
+    let succeeded = false;
     const current = session.id;
     await perform(async () => {
       try {
         const next = await sendCommand(current, session.revision, value);
+        succeeded = true;
         if (scope.current === current) setSession(previous => previous?.id === next.id && previous.revision > next.revision ? previous : next);
       } catch (err) { await refresh(); throw err; }
     });
+    return succeeded;
   };
   return <div className="er-page">
     <header className="er-hero"><div><Link className="er-eyebrow" to="/escape-rooms">THE GAME MASTER’S WORKSHOP</Link><h1>{sessionId ? session?.title ?? 'Escape room' : 'Every clue opens a door.'}</h1><p>{sessionId ? session?.description : 'Build intricate mysteries. Share tangible discoveries. Guide your party from the first hidden note to the final treasure.'}</p></div><div className="er-hero-seal" aria-hidden="true"><KeyRound size={46} /><span>ESCAPE ROOMS</span></div></header>
@@ -89,7 +94,8 @@ export default function EscapeRoomsPage() {
       {session.isGm && <div className="er-tabs"><button className={view === 'gm' ? 'active' : ''} onClick={() => setView('gm')}><GitBranch size={16} /> Puzzle master</button><button className={view === 'player' ? 'active' : ''} onClick={() => setView('player')}><Eye size={16} /> Player view</button></div>}
       {session.status === 'completed' && <div className="er-complete"><Check /> Adventure complete. The party has claimed every treasure.</div>}
       {session.status === 'paused' && <p className="er-notice">The room is paused. You can still inspect your discoveries.</p>}
-      {session.isGm && view === 'gm' ? <MasterView session={session} busy={busy} command={command} /> : <PlayerView session={session} busy={busy} command={command} />}
+      {session.isGm && view === 'gm' ? <MasterView session={session} busy={busy} command={command} /> : <PlayerView session={session} busy={busy} command={command} />} 
+      <RoomAssistance key={session.id} session={session} busy={busy} command={command} gmView={session.isGm && view === 'gm'} />
     </> : <>
       <div className="er-lobby-grid"><section className="er-panel er-join"><span className="er-eyebrow">For adventurers</span><h2>Your party’s shared clue stash</h2><p>Find clues in Foundry, then inspect the papers, books, and curious objects your puzzle master reveals here.</p><form onSubmit={e => { e.preventDefault(); void perform(async () => { const next = await joinSession(joinCode); navigate(`/escape-rooms/${next.id}`); }); }}><label>Room invitation code<input required value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="Paste the code from your GM" autoComplete="off" /></label><button className="er-primary" disabled={busy || !joinCode.trim()}>Join adventure <ChevronRight size={16} /></button></form></section>
       <section className="er-panel"><span className="er-eyebrow">Your adventures</span><h2>Return to the mystery</h2>{!library.sessions.length && <p>No rooms yet. Join with an invitation or launch a blueprint.</p>}<div className="er-session-list">{library.sessions.map(s => <Link key={s.id} to={`/escape-rooms/${s.id}`}><span><strong>{s.title}</strong><small>{s.isGm ? 'Puzzle master' : 'Player'} · {s.status}</small></span><ChevronRight size={18} /></Link>)}</div></section></div>
@@ -106,7 +112,7 @@ export default function EscapeRoomsPage() {
   </div>;
 }
 
-function MasterView({ session, busy, command }: { session: PuzzleSession; busy: boolean; command: (value: SessionCommand) => Promise<void> }) {
+function MasterView({ session, busy, command }: { session: PuzzleSession; busy: boolean; command: RoomCommand }) {
   const [selected, setSelected] = useState('');
   const [copyMessage, setCopyMessage] = useState('');
   const definition = session.definition;
@@ -121,7 +127,7 @@ function MasterView({ session, busy, command }: { session: PuzzleSession; busy: 
   </section>;
 }
 
-function PlayerView({ session, busy, command }: { session: PuzzleSession; busy: boolean; command: (value: SessionCommand) => Promise<void> }) {
+function PlayerView({ session, busy, command }: { session: PuzzleSession; busy: boolean; command: RoomCommand }) {
   const [selected, setSelected] = useState('');
   const [mode, setMode] = useState<'3d' | 'text'>(() => { try { return localStorage.getItem('escape-view-mode') === 'text' ? 'text' : '3d'; } catch { return 'text'; } });
   const [filter, setFilter] = useState('');
@@ -129,16 +135,10 @@ function PlayerView({ session, busy, command }: { session: PuzzleSession; busy: 
   const nodes = session.nodes.filter(n => `${n.title} ${n.location}`.toLowerCase().includes(filter.toLowerCase()));
   return <section><div className="er-section-heading"><div><span className="er-eyebrow">Shared discoveries</span><h2>The party’s evidence table</h2><p>Everyone in this room shares these clues and the same progress.</p></div><div className="er-tabs"><button className={mode === '3d' ? 'active' : ''} onClick={() => { setMode('3d'); try { localStorage.setItem('escape-view-mode', '3d'); } catch { /* Optional preference. */ } }}><Box size={16} /> 3D objects</button><button className={mode === 'text' ? 'active' : ''} onClick={() => { setMode('text'); try { localStorage.setItem('escape-view-mode', 'text'); } catch { /* Optional preference. */ } }}><ScrollText size={16} /> Text mode</button></div></div>
     {!session.nodes.length ? <div className="er-empty"><LockKeyhole size={36} /><h3>The mystery is waiting.</h3><p>Search the room in Foundry. Discoveries appear here when your GM reveals them.</p></div> : <div className="er-player-layout"><aside className="er-stash"><label>Find a discovery<input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Search your stash…" /></label><div className="er-stash-grid">{nodes.map(n => <button key={n.id} className={`er-stash-card ${n.id === node?.id ? 'selected' : ''}`} onClick={() => setSelected(n.id)} aria-pressed={n.id === node?.id}><span className={`er-prop-icon er-${n.status}`}>{n.prop === 'key' ? <KeyRound /> : n.prop === 'book' ? <BookOpen /> : isLock(n) ? <LockKeyhole /> : <ScrollText />}</span><strong>{n.title}</strong><small>{n.kind} · {n.status === 'used' ? 'used / solved' : 'discovered'}</small></button>)}</div>{!nodes.length && <p>No discoveries match that search.</p>}</aside>
-      {node && <article className="er-inspector"><div className="er-inspector-heading"><span className="er-eyebrow">{node.kind} · {node.location}</span><h2>{node.title}</h2></div>{mode === '3d' && <Suspense fallback={<p className="er-empty">Preparing the evidence table…</p>}><PropViewer node={node} /></Suspense>}<div className="er-handout"><h3>Handout</h3><p className="er-handout-text">{node.text || 'There are no visible markings.'}</p>{node.backText && <details><summary>Inspect reverse / inside</summary><p className="er-handout-text">{node.backText}</p></details>}</div>{isLock(node) && <UnlockForm key={node.id} node={node} session={session} busy={busy} command={command} />}</article>}
+      {node && <article className="er-inspector"><div className="er-inspector-heading"><span className="er-eyebrow">{node.kind} · {node.location}</span><h2>{node.title}</h2></div>{mode === '3d' && <Suspense fallback={<p className="er-empty">Preparing the evidence table…</p>}><PropViewer node={node} /></Suspense>}<div className="er-handout"><h3>Handout</h3><p className="er-handout-text">{node.text || 'There are no visible markings.'}</p>{node.backText && <details><summary>Inspect reverse / inside</summary><p className="er-handout-text">{node.backText}</p></details>}</div>{isLock(node) && <LockControls key={node.id} node={node} session={session} busy={busy} command={command} />}</article>}
     </div>}<History session={session} /></section>;
 }
 
-function UnlockForm({ node, session, busy, command }: { node: PublicNode; session: PuzzleSession; busy: boolean; command: (value: SessionCommand) => Promise<void> }) {
-  const [code, setCode] = useState('');
-  const [items, setItems] = useState<string[]>([]);
-  if (node.status === 'used') return <p className="er-complete"><Check size={18} /> {node.kind === 'treasure' ? 'Treasure claimed' : 'Solved / opened by the party'}</p>;
-  return <form className="er-unlock" onSubmit={e => { e.preventDefault(); void command({ type: 'unlock', nodeId: node.id, code, itemIds: items }); }}><h3>{node.kind === 'treasure' ? 'Claim the discovery' : 'Try the lock'}</h3>{node.needsCode && <label>Answer or code<input maxLength={120} value={code} autoComplete="off" onChange={e => setCode(e.target.value)} placeholder="Enter your answer" /></label>}{node.needsItems && <fieldset><legend>Apply items from the shared stash</legend>{session.nodes.filter(n => n.kind === 'item').map(n => <label className="er-checkbox" key={n.id}><input type="checkbox" checked={items.includes(n.id)} onChange={e => setItems(e.target.checked ? [...items, n.id] : items.filter(id => id !== n.id))} />{n.title}</label>)}{!session.nodes.some(n => n.kind === 'item') && <p>No items discovered yet.</p>}</fieldset>}<button className="er-primary" disabled={busy || session.status !== 'active'}>{busy ? 'Checking…' : node.kind === 'treasure' ? 'Claim treasure' : 'Open / solve'}</button></form>;
-}
 function History({ session }: { session: PuzzleSession }) {
   return <details className="er-history"><summary>Party activity · {session.history.length} recent actions</summary><ol>{[...session.history].reverse().map((entry, index) => <li key={`${entry.at}-${index}`}><span>{entry.title}</span><span>{entry.action.replace('_', ' ')} · {new Date(entry.at).toLocaleTimeString()}</span></li>)}</ol></details>;
 }

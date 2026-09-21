@@ -4,6 +4,7 @@ import { CheckCircle2, Copy, Eye, Gauge, Link as LinkIcon, Lock, RotateCcw, Shuf
 import { DATABASE_TABLES } from '../config/database';
 import { useAuth } from '../context/useAuth';
 import { useSupabaseRealtime } from '../hooks/useSupabaseRealtime';
+import LockMechanism from '../features/lockpicking/LockMechanism';
 import PerformanceMelodyGame from '../features/performance-game/PerformanceMelodyGame';
 import LockChallengeService, {
   LockChallenge,
@@ -701,37 +702,11 @@ const LockGame: React.FC<{
     });
   }, [brokenPicks, emitChallengeState, isTesting, isUnlocked, lastResult, mode, noiseLevel, pickAngle, pickHealth, picksRemaining, rotation, status, timerStartedAt, wasAlerted]);
 
-  const centerPositionStyle = {
-    left: `${LOCK_CENTER.x}%`,
-    top: `${LOCK_CENTER.y}%`
-  };
   const activeRotation = rotation + (isTesting && !isUnlocked ? vibration : 0);
-  const rotationStyle = {
-    ...centerPositionStyle,
-    transform: `translate(-50%, -50%) rotate(${activeRotation}deg)`
-  };
-  const rotatingLockFaceStyle = {
-    clipPath: 'ellipse(14.8% 26.4% at 50% 50%)'
-  };
-  const rotatingLockImageStyle = {
-    transform: `rotate(${activeRotation}deg)`,
-    transformOrigin: '50% 50%'
-  };
-  const pickStyle = {
-    ...centerPositionStyle,
-    transform: `translate(-50%, -100%) rotate(${pickAngle}deg)`
-  };
-  const wrenchStyle = {
-    left: `${LOCK_CENTER.x}%`,
-    top: `${LOCK_CENTER.y + 7}%`,
-    transform: `translate(-4%, -50%) rotate(${28 + activeRotation * 0.95}deg)`
-  };
 
   return (
     <section className="overflow-hidden rounded-lg border border-fantasy-700/35 bg-midnight-950/65 shadow-2xl shadow-midnight-950/40">
-      <div
-        ref={lockRef}
-        className={`relative aspect-[16/9] min-h-[360px] select-none overflow-hidden bg-midnight-950 ${isInteractive ? 'touch-none' : ''}`}
+      <LockMechanism elementRef={lockRef} angle={pickAngle} rotation={activeRotation} interactive={isInteractive}
         onPointerMove={event => updatePickFromPointer(event.clientX, event.clientY)}
         onPointerDown={event => {
           updatePickFromPointer(event.clientX, event.clientY);
@@ -748,25 +723,7 @@ const LockGame: React.FC<{
         onPointerUp={() => setIsTesting(false)}
         onPointerCancel={() => setIsTesting(false)}
         onPointerLeave={() => setIsTesting(false)}
-      >
-        <img src="/lockpicking-workbench.png" alt="" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_46%,rgba(2,6,23,0.5)_100%)]" />
-        <div className="absolute inset-0" style={rotatingLockFaceStyle}>
-          <img src="/lockpicking-workbench.png" alt="" className="absolute inset-0 h-full w-full object-cover" draggable={false} style={rotatingLockImageStyle} />
-        </div>
-        <div className="absolute h-[24%] w-[13.5%] rounded-full border border-yellow-100/15 bg-black/10 shadow-[inset_0_0_24px_rgba(0,0,0,0.65)]" style={rotationStyle}>
-          <div className="absolute left-1/2 top-[24%] h-[52%] w-[16%] -translate-x-1/2 rounded-b-full bg-black/55 shadow-[0_0_18px_rgba(0,0,0,0.85)]" />
-          <div className="absolute left-1/2 top-[23%] h-[26%] w-[24%] -translate-x-1/2 rounded-full bg-black/80" />
-        </div>
-        <div className="absolute h-[35%] w-[0.42rem] origin-bottom rounded-full bg-gradient-to-t from-zinc-900 via-zinc-400 to-zinc-100 shadow-[0_0_12px_rgba(245,245,245,0.25)]" style={pickStyle}>
-          <div className="absolute -top-2 left-1/2 h-5 w-3 -translate-x-1/2 rounded-full bg-zinc-100/90" />
-        </div>
-        <div className="absolute h-[0.68rem] w-[35%] origin-left rounded-full bg-gradient-to-r from-stone-200 via-stone-500 to-stone-900 shadow-[0_8px_18px_rgba(0,0,0,0.55)]" style={wrenchStyle}>
-          <div className="absolute -left-2 top-1/2 h-5 w-7 -translate-y-1/2 rounded-sm bg-stone-300 shadow-[inset_0_0_5px_rgba(0,0,0,0.5)] ring-1 ring-stone-100/40" />
-          <div className="absolute right-0 top-1/2 h-8 w-16 -translate-y-1/2 rounded bg-gradient-to-r from-stone-600 to-stone-900 ring-1 ring-stone-300/30" />
-        </div>
-
-      </div>
+      />
       {!hideStats && (
         <div className="grid gap-3 border-t border-fantasy-700/35 bg-midnight-950/85 p-4 sm:grid-cols-2 lg:grid-cols-6">
           <Readout icon={<Gauge className="h-4 w-4" />} label="Turn" value={`${Math.round((rotation / OPEN_ROTATION) * 100)}%`} />
