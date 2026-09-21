@@ -1,6 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import migration from '../../../supabase/migrations/20260917000100_westmarch_events.sql?raw';
+import adminSelfReview from '../../../supabase/migrations/20260921000100_westmarch_admin_self_review.sql?raw';
 import { snapshotSchema, type EventDefinition } from './model';
 
 const db = new PGlite();
@@ -53,6 +54,7 @@ beforeAll(async () => {
     GRANT USAGE ON SCHEMA auth TO authenticated;
   `);
   await db.exec(migration);
+  await db.exec(adminSelfReview);
 }, 30000);
 beforeEach(async () => {
   await db.exec('RESET ROLE');
@@ -63,6 +65,17 @@ beforeEach(async () => {
 afterAll(async () => { await db.close(); });
 
 describe('Westmarch protected PostgreSQL commands', () => {
+  it('allows administrator self-approval and records the override without duplicate rewards', async () => {
+    await asUser(admin);
+    const created = await command({ type: 'save_event', definition, submit: true });
+    const own = created.events.find(e => e.authorId === admin)!;
+    const requestId = crypto.randomUUID();
+    const approval = { type: 'review_event', id: own.id, revision: own.revision, decision: 'approve', reason: 'Testing my event' };
+    const approved = await command(approval, requestId);
+    expect(approved.events.find(e => e.id === own.id)?.status).toBe('active');
+    expect(approved.logs.find(l => l.action === 'review_approve')?.details.selfReview).toBe(true);
+    expect((await command(approval, requestId)).rewards.filter(r => r.eventId === own.id)).toHaveLength(1);
+  });
   it('rejects anonymous, banned and direct table writes; hides drafts and private applications', async () => {
     await asUser(''); await expect(snapshot()).rejects.toThrow('eligible account');
     await submit(); await asUser(player);

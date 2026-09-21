@@ -2,6 +2,8 @@
 
 This checkpoint adds migration `20260917000100_westmarch_events.sql`. It does not deploy to the connected production database.
 
+Administrator testing exception: apply `20260921000100_westmarch_admin_self_review.sql` to let site admins review their own submissions. Event Staff still need a different reviewer. Self-review records `selfReview: true` in the approval log and follows normal event activation and creator-code issuance; it is not a sandbox event. This migration must be applied before the updated approval controls work for an admin's own event.
+
 ## Deploy and activate the worker
 
 Apply existing migrations followed by the Westmarch migration through the normal Supabase release process. The browser calls `wm_snapshot()` and `wm_command(p_request_id, p_command)` as the signed-in user. Never expose the service-role key to the browser.
