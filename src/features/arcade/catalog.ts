@@ -33,5 +33,5 @@ export const arcadeAssetManifest = {
   source: 'Original artwork authored for SCON Retro Arcade',
   license: 'Project-owned',
   placeholder: true,
-  assets: ['console-silhouettes', 'cartridge-silhouettes', 'Pixelify Sans (OFL-1.1 via @fontsource)'],
+  assets: ['console-silhouettes', 'cartridge-silhouettes', 'Departure Mono 1.500 (OFL-1.1, Helena Zhang)'],
 } as const;

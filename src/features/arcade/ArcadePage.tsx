@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import type React from 'react';
-import '@fontsource/pixelify-sans/latin-400.css';
-import '@fontsource/pixelify-sans/latin-700.css';
 import { useAuth } from '../../context/useAuth';
 import { carouselOffset, consoles, wrapCarouselIndex, type ConsoleId } from './catalog';
 import './arcade.css';
