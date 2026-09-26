@@ -48,6 +48,7 @@ const AncientTerminalPhaseGateway = lazy(() => import('./features/ancient-termin
 const EscapeRoomsPage = lazy(() => import('./features/escape-rooms/EscapeRoomsPage'));
 const WestmarchPage = lazy(() => import('./features/westmarch/WestmarchPage'));
 const PlannerPage = lazy(() => import('./features/planner/PlannerPage'));
+const ArcadePage = lazy(() => import('./features/arcade/ArcadePage'));
 
 function RouteFallback() {
   return (
@@ -73,6 +74,7 @@ function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
+        <Route path="/arcade" element={<ArcadePage />} />
         <Route path="/planner" element={<PlannerPage />} />
         <Route path="/westmarch/*" element={<WestmarchPage />} />
         <Route path="/" element={<PageGate pageKey="home"><HomePage /></PageGate>} />
@@ -151,6 +153,7 @@ function AppLayout() {
     || location.pathname.startsWith('/public/characters/');
   const hideFooter = location.pathname === '/';
   const isImmersiveGame = location.pathname.startsWith('/multiplayer/matches/')
+    || location.pathname.replace(/\/$/, '') === '/arcade'
     || location.pathname === '/planner'
     || location.pathname === '/westmarch' || location.pathname.startsWith('/westmarch/')
     || location.pathname.startsWith('/ancient-terminal');

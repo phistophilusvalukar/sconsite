@@ -182,7 +182,7 @@ const CitizenRegistryPage: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={loadRegistry}
+            onClick={() => void loadRegistry(true)}
             className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-fantasy-700 hover:bg-fantasy-600 text-white rounded-lg"
           >
             <ArrowDownUp className="w-4 h-4" />

@@ -628,7 +628,7 @@ function isInsideCombatGrid(position: { q: number; r: number }) {
   return position.q >= combatMinQ && position.q <= combatMaxQ && position.r >= combatMinR && position.r <= combatMaxR;
 }
 
-function getPreferredPosition(unit: Combatant, target: Combatant, intent: 'engage' | 'behind') {
+function getPreferredPosition(_unit: Combatant, target: Combatant, intent: 'engage' | 'behind') {
   if (intent !== 'behind') return target;
   const behind = getBehindPosition(target);
   return isInsideCombatGrid(behind) ? behind : target;

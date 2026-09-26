@@ -38,6 +38,7 @@ import {
 } from '../features/characters/relationshipSentiment';
 import SafeRichText from '../features/guilds/SafeRichText';
 import { DEFAULT_NPC_PLACEHOLDER, abilityLabels, getAbilityScoresFromFoundryJson, normalizeFoundryAvatar } from '../utils/foundryCharacter';
+import type { AbilityKey } from '../utils/foundryCharacter';
 
 type DetailsTab = 'backstory' | 'journal' | 'relationships' | 'foundry';
 
@@ -103,7 +104,9 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
     : activeCompanion?.companionType === 'eidolon' ? 'Eidolon' : 'Animal companion';
   const activeCompanionIsFollower = activeCompanion?.creatureType?.trim().toLowerCase() === 'follower';
   const characterPortrait = activeCompanion?.imageUrl || character.profilePortraitImageUrl || parsedData?.avatar || normalizeFoundryAvatar(character.stats?.avatar) || defaultPortrait;
-  const savedAbilityScores = character.stats?.abilityBoosts?.scores || null;
+  const savedAbilityScores = isAbilityScores(character.stats?.abilityBoosts?.scores)
+    ? character.stats.abilityBoosts.scores
+    : null;
   const abilityScores = activeFoundryJson ? getAbilityScoresFromFoundryJson(activeFoundryJson) : savedAbilityScores;
   const sectionVisibility = character.profileSectionVisibility || defaultCharacterProfileSectionVisibility;
   const visibleTabs: DetailsTab[] = [
@@ -535,9 +538,9 @@ const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                     <Detail label="Heritage" value={character.heritage || 'Unknown'} />
                     <Detail label="Background" value={character.background || 'Unrecorded'} />
                     <Detail label="Status" value={character.status.charAt(0).toUpperCase() + character.status.slice(1)} />
-                    <Detail label="Age" value={parsedData?.age || character.stats?.age || 'Unknown'} />
-                    <Detail label="Height" value={parsedData?.height || character.stats?.height || 'Unknown'} />
-                    <Detail label="Weight" value={parsedData?.weight || character.stats?.weight || 'Unknown'} />
+                    <Detail label="Age" value={displayStat(parsedData?.age ?? character.stats?.age)} />
+                    <Detail label="Height" value={displayStat(parsedData?.height ?? character.stats?.height)} />
+                    <Detail label="Weight" value={displayStat(parsedData?.weight ?? character.stats?.weight)} />
                     <Detail label="Deity" value={parsedData?.deity || 'Unknown'} />
                   </div>}
 
@@ -945,6 +948,16 @@ function AbilityRadarChart({ scores, pageMode = false }: { scores: ReturnType<ty
       )}
     </div>
   );
+}
+
+function isAbilityScores(value: unknown): value is Record<AbilityKey, number | null> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return abilityLabels.every(({ key }) => record[key] === null || typeof record[key] === 'number');
+}
+
+function displayStat(value: unknown): string | number {
+  return typeof value === 'string' || typeof value === 'number' ? value : 'Unknown';
 }
 
 function Detail({ label, value }: { label: string; value: React.ReactNode }) {

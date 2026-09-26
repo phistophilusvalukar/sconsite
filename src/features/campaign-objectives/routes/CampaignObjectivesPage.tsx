@@ -586,7 +586,7 @@ function PartyPage({ details, partyId, service, refresh, isAdmin, isAuthenticate
 
   async function savePartyName(event: FormEvent) {
     event.preventDefault();
-    const response = await service.updateParty(party.id, editingPartyName);
+    const response = await service.updateParty(party!.id, editingPartyName);
     if (response.success) {
       await refresh();
     } else {
@@ -597,7 +597,7 @@ function PartyPage({ details, partyId, service, refresh, isAdmin, isAuthenticate
   async function addMember(event: FormEvent) {
     event.preventDefault();
     if (!memberDraft.name.trim()) return;
-    const response = await service.createPartyMember({ partyId: party.id, ...memberDraft, characterName: memberDraft.characterName || memberDraft.name, profileHref: memberDraft.profileHref || `/characters?search=${encodeURIComponent(memberDraft.characterName || memberDraft.name)}`, artUrl: memberDraft.artUrl || '/npc-placeholder.png' });
+    const response = await service.createPartyMember({ partyId: party!.id, ...memberDraft, characterName: memberDraft.characterName || memberDraft.name, profileHref: memberDraft.profileHref || `/characters?search=${encodeURIComponent(memberDraft.characterName || memberDraft.name)}`, artUrl: memberDraft.artUrl || '/npc-placeholder.png' });
     if (response.success) {
       await refresh();
       setMemberDraft({ name: '', characterName: '', profileHref: '', artUrl: '' });

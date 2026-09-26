@@ -3,6 +3,7 @@ import { DATABASE_TABLES } from '../config/database';
 import {
   ApiResponse,
   Character,
+  CharacterStats,
   GameArchiveComment,
   GameApplication,
   GameApplicationStatus,
@@ -11,6 +12,10 @@ import {
   GameRewardsBonus,
   GameStatus
 } from '../types/database';
+
+function isCharacterStats(value: unknown): value is CharacterStats {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
 
 export interface CreateGameInput {
   title: string;
@@ -556,7 +561,7 @@ class GameService {
       ancestry: String(dbCharacter.ancestry || dbCharacter.race || ''),
       heritage: String(dbCharacter.heritage || ''),
       background: String(dbCharacter.background || ''),
-      stats: dbCharacter.stats,
+      stats: isCharacterStats(dbCharacter.stats) ? dbCharacter.stats : undefined,
       equipment: Array.isArray(dbCharacter.equipment) ? dbCharacter.equipment : [],
       foundryJson: dbCharacter.foundry_json,
       foundryFileName: dbCharacter.foundry_file_name ? String(dbCharacter.foundry_file_name) : undefined,
@@ -587,6 +592,27 @@ class GameService {
       profileBaseColor: String(dbCharacter.profile_base_color || '#18201f'),
       profileAccentColor: String(dbCharacter.profile_accent_color || '#c9954a'),
       profileButtonTextColor: String(dbCharacter.profile_button_text_color || '#111615'),
+      profileBackgroundMode: 'solid',
+      profileGradientColor: '#27302d',
+      profileGradientOrientation: 'diagonal',
+      profileGradientTransitionRate: 100,
+      profileAtmospherePositionX: 50,
+      profileAtmospherePositionY: 35,
+      profileAtmosphereSize: 60,
+      profileAtmosphereOpacity: 35,
+      profileAtmosphereParallax: false,
+      profileForegroundAnchor: 'page',
+      profileForegroundPositionX: 50,
+      profileForegroundPositionY: 50,
+      profileForegroundSize: 50,
+      profileForegroundOpacity: 60,
+      profileForegroundParallax: false,
+      profilePortraitBackgroundScale: 100,
+      profilePortraitBackgroundPositionX: 0,
+      profilePortraitBackgroundPositionY: 0,
+      profilePortraitCutoutScale: 100,
+      profilePortraitCutoutPositionX: 0,
+      profilePortraitCutoutPositionY: 0,
       profileLayoutStyle: (dbCharacter.profile_layout_style || 'chronicle') as Character['profileLayoutStyle'],
       profileSectionVisibility: {
         portrait: true,

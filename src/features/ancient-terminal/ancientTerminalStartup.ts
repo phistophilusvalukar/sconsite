@@ -42,7 +42,7 @@ export function parseStartupPlan(source: string): StartupPlanResult {
       if (!Array.isArray(functions) || functions.some(name => typeof name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name))) {
         return { ok: false, error: `startup entry ${index + 1} requires a list of function names.` };
       }
-      programs.push({ path: path.trim(), functions });
+      programs.push({ path: path.trim(), functions: functions as string[] });
     }
     return { ok: true, programs };
   } catch (error) {

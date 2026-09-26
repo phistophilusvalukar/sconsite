@@ -3,12 +3,12 @@ import type { ProfileDecorationColorSource, ProfileDecorationTheme } from '../fe
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
 
-export interface CharacterStats extends JsonObject {
+export type CharacterStats = JsonObject & {
   avatar?: string;
   abilityBoosts?: JsonObject & {
     scores?: JsonValue;
   };
-}
+};
 
 export type CharacterStatus = 'active' | 'retired' | 'dead';
 

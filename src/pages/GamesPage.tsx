@@ -392,13 +392,14 @@ const GamesPage: React.FC = () => {
 
   const handleApply = async (game: GameListing, characterId: string, note: string) => {
     if (!user?.id || !game._id) return;
+    const gameId = game._id;
     if (!characterId) {
       alert('Pick one character to apply.');
       return;
     }
 
     const result = await gameService.applyToGame({
-      gameId: game._id,
+      gameId,
       userId: user.id,
       displayName: user.username,
       characterIds: [characterId],
@@ -406,8 +407,8 @@ const GamesPage: React.FC = () => {
     });
 
     if (result.success) {
-      setApplicationCharacters(prev => ({ ...prev, [game._id]: [characterId] }));
-      setApplicationNotes(prev => ({ ...prev, [game._id]: note }));
+      setApplicationCharacters(prev => ({ ...prev, [gameId]: [characterId] }));
+      setApplicationNotes(prev => ({ ...prev, [gameId]: note }));
       closeApplicationModal();
       await loadData();
     } else {
@@ -417,6 +418,7 @@ const GamesPage: React.FC = () => {
 
   const handleUpdateApplication = async (application: GameApplication, game: GameListing, characterId: string, note: string) => {
     if (!application._id || !game._id) return;
+    const gameId = game._id;
     if (!characterId) {
       alert('Pick one character.');
       return;
@@ -424,8 +426,8 @@ const GamesPage: React.FC = () => {
 
     const result = await gameService.updateApplication(application._id, [characterId], note);
     if (result.success) {
-      setApplicationCharacters(prev => ({ ...prev, [game._id]: [characterId] }));
-      setApplicationNotes(prev => ({ ...prev, [game._id]: note }));
+      setApplicationCharacters(prev => ({ ...prev, [gameId]: [characterId] }));
+      setApplicationNotes(prev => ({ ...prev, [gameId]: note }));
       closeApplicationModal();
       await loadData();
     } else {

@@ -48,7 +48,8 @@ const RuleBody: React.FC<{ section: RuleSection; query: string }> = ({ section, 
         if (block.type === 'data') return <pre className="rules-data-block" key={index}><LinkedRuleText text={block.text} query={query} currentSectionId={section.id} /></pre>;
         if (block.type === 'subheading') return <h3 className="rules-subheading" key={index}>{block.text}</h3>;
         if (block.type === 'callout') return <aside className={`rules-callout rules-callout-${block.tone}`} key={index}><strong>{block.title}</strong><p><LinkedRuleText text={block.text} query={query} currentSectionId={section.id} /></p></aside>;
-        return <p className={block.type === 'note' ? 'rules-note' : undefined} key={index}><LinkedRuleText text={block.text} query={query} currentSectionId={section.id} /></p>;
+        if (block.type === 'paragraph' || block.type === 'note') return <p className={block.type === 'note' ? 'rules-note' : undefined} key={index}><LinkedRuleText text={block.text} query={query} currentSectionId={section.id} /></p>;
+        return null;
       })}
       {section.references && section.references.length > 0 && <nav className="rules-official-references" aria-label="Official Pathfinder references"><span>Archives of Nethys</span>{section.references.map(reference => <a href={reference.url} target="_blank" rel="noreferrer" key={reference.url}>{reference.label}<ExternalLink /></a>)}</nav>}
     </div>

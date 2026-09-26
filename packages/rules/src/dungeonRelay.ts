@@ -114,7 +114,7 @@ export function allocateDungeonRelayMatches(
       contributionByCardId[card.id] = 0;
       for (const symbol of DUNGEON_RELAY_SYMBOLS) {
         const contribution = Math.min(tokens[symbol], remaining[symbol]);
-        contributionByCardId[card.id] += contribution;
+        contributionByCardId[card.id] = (contributionByCardId[card.id] ?? 0) + contribution;
         matched[symbol] += contribution;
         remaining[symbol] -= contribution;
       }

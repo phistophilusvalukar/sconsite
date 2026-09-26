@@ -1273,6 +1273,17 @@ export class GuildService {
       profileGradientColor: '#27302d',
       profileGradientOrientation: 'diagonal',
       profileGradientTransitionRate: 100,
+      profileAtmospherePositionX: 50,
+      profileAtmospherePositionY: 35,
+      profileAtmosphereSize: 60,
+      profileAtmosphereOpacity: 35,
+      profileAtmosphereParallax: false,
+      profileForegroundAnchor: 'page',
+      profileForegroundPositionX: 50,
+      profileForegroundPositionY: 50,
+      profileForegroundSize: 50,
+      profileForegroundOpacity: 60,
+      profileForegroundParallax: false,
       profileDynamicPortraitEnabled: Boolean(dbCharacter.profile_dynamic_portrait_enabled),
       profilePortraitBackgroundImageUrl: isSafeExternalImageUrl(dbCharacter.profile_portrait_background_url || '')
         ? dbCharacter.profile_portrait_background_url || undefined

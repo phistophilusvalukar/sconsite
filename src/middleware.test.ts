@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import middleware from '../middleware';
 
 describe('public resource routes', () => {
+  it.each(['/arcade', '/arcade/'])('allows %s without the admin password', pathname => {
+    expect(middleware(new Request(`https://example.test${pathname}`))).toBeUndefined();
+  });
+  it('does not expose similarly named arcade paths', () => {
+    expect(middleware(new Request('https://example.test/arcade-admin'))?.status).toBe(401);
+  });
   it.each(['/westmarch', '/westmarch/schedule', '/westmarch/controls', '/westmarch/events/example'])(
     'lets %s reach the shared account gate without the site password', pathname => {
       expect(middleware(new Request(`https://example.test${pathname}`))).toBeUndefined();

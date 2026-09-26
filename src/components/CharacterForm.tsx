@@ -34,6 +34,34 @@ const companionActorSchema = z.object({
   type: z.string().optional()
 }).passthrough();
 
+const foundryCharacterSchema = z.object({
+  name: z.string(),
+  system: z.object({
+    details: z.object({
+      biography: z.object({
+        appearance: z.string().optional(),
+        backstory: z.string().optional()
+      }).passthrough(),
+      age: z.object({ value: z.number().optional() }).optional(),
+      height: z.object({ value: z.string().optional() }).optional(),
+      weight: z.object({ value: z.string().optional() }).optional(),
+      level: z.object({ value: z.number().optional() }).optional()
+    }).passthrough(),
+    attributes: z.object({
+      wealth: z.object({ value: z.number().optional() }).optional()
+    }).passthrough()
+  }).passthrough(),
+  items: z.array(z.object({
+    name: z.string().optional(),
+    type: z.string().optional(),
+    system: z.object({
+      slug: z.string().optional(),
+      level: z.object({ value: z.number().optional() }).optional()
+    }).passthrough().optional()
+  }).passthrough()).optional(),
+  img: z.string().optional()
+}).passthrough();
+
 const CharacterForm: React.FC<CharacterFormProps> = ({
   character,
   onSave,
@@ -91,7 +119,8 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         mainRole: character.mainRole || '',
         roleBadges: character.roleBadges || []
       });
-      setImportedJson(character.foundryJson || null);
+      const savedFoundryJson = foundryCharacterSchema.safeParse(character.foundryJson);
+      setImportedJson(savedFoundryJson.success ? savedFoundryJson.data : null);
       setImportFileName(character.foundryFileName || '');
       if (character._id) {
         void characterService.getCompanionFiles(character._id).then(response => {
@@ -139,7 +168,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
 
     try {
       const fileContent = await readFileAsText(file);
-      const jsonData = JSON.parse(fileContent) as FoundryCharacterData;
+      const jsonData = foundryCharacterSchema.parse(JSON.parse(fileContent)) as FoundryCharacterData;
       const parsedData = characterService.parseFoundryData(jsonData);
 
       setFormData(prev => ({
@@ -151,7 +180,9 @@ const CharacterForm: React.FC<CharacterFormProps> = ({
         heritage: parsedData.heritage || prev.heritage,
         background: parsedData.background || prev.background,
         backstory: parsedData.backstory || prev.backstory,
-        level: parsedData.level || parsedData.stats?.level || prev.level
+        level: typeof parsedData.level === 'number'
+          ? parsedData.level
+          : typeof parsedData.stats?.level === 'number' ? parsedData.stats.level : prev.level
       }));
 
       setImportedJson(jsonData);
