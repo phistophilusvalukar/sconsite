@@ -1,6 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import type React from 'react';
+import '@fontsource/pixelify-sans/latin-400.css';
+import '@fontsource/pixelify-sans/latin-700.css';
 import { useAuth } from '../../context/useAuth';
-import { consoles, type ConsoleId } from './catalog';
+import { carouselOffset, consoles, wrapCarouselIndex, type ConsoleId } from './catalog';
 import './arcade.css';
 
 function ConsoleGlyph({ id }: { id: ConsoleId }) {
@@ -25,6 +28,7 @@ export default function ArcadePage() {
   const [selectedGame, setSelectedGame] = useState(0);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
+  const swipeStartX = useRef<number | null>(null);
   const system = consoles.find(item => item.id === consoleId) ?? consoles[0];
   const game = system.games[selectedGame];
 
@@ -34,6 +38,28 @@ export default function ArcadePage() {
     try { if (isAuthenticated) await logout(); else await login('/arcade'); }
     catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Connection failed. Please try again.'); }
     finally { setBusy(false); }
+  }
+
+  function selectRelative(direction: -1 | 1) {
+    setSelectedGame(current => wrapCarouselIndex(current + direction, system.games.length));
+  }
+
+  function handleCarouselKey(event: KeyboardEvent<HTMLElement>) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    selectRelative(event.key === 'ArrowLeft' ? -1 : 1);
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLElement>) {
+    swipeStartX.current = event.clientX;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerUp(event: PointerEvent<HTMLElement>) {
+    if (swipeStartX.current === null) return;
+    const distance = event.clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(distance) >= 36) selectRelative(distance > 0 ? -1 : 1);
   }
 
   return <div className="retro-arcade" data-console={consoleId}>
@@ -49,7 +75,16 @@ export default function ArcadePage() {
         </aside>
         <section className="ra-library" aria-label={`${system.name} game library`}>
           <div className="ra-library-head"><div><p>ACTIVE_SYSTEM / {system.name}</p><h1>{system.name}</h1><span>{system.description}</span></div><div className="ra-specs"><span>{system.bits}-BIT</span><small>{system.label}<br />{system.detail}</small></div></div>
-          <div className="ra-game-grid">{system.games.map((item, index) => <button key={item.name} className={`ra-game ${selectedGame === index ? 'ra-selected' : ''}`} aria-pressed={selectedGame === index} onClick={() => setSelectedGame(index)}><span className="ra-game-number">{String(index + 1).padStart(2, '0')}</span><Cartridge consoleId={consoleId} title={item.name} number={index + 1} /><span className="ra-game-meta"><strong>{item.name}</strong><small>{item.genre.toUpperCase()} / PENDING</small></span><span className="ra-select-mark" aria-hidden="true">{selectedGame === index ? '[ SELECTED ]' : '[ LOAD ]'}</span></button>)}</div>
+          <section className="ra-carousel" aria-label={`${system.name} cartridges`} tabIndex={0} onKeyDown={handleCarouselKey}>
+            <div className="ra-carousel-top"><span className="ra-tag">CARTRIDGE LIBRARY</span><span>{String(selectedGame + 1).padStart(2, '0')} / {String(system.games.length).padStart(2, '0')}</span></div>
+            <div className="ra-carousel-window" onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} onPointerCancel={() => { swipeStartX.current = null; }}>
+              <div className="ra-carousel-track">{system.games.map((item, index) => {
+                const offset = carouselOffset(index, selectedGame, system.games.length);
+                return <button key={item.name} style={{ '--cart-offset': offset } as React.CSSProperties} className={`ra-game ${offset === 0 ? 'ra-selected' : ''}`} aria-label={`${item.name}, ${item.genre}`} aria-pressed={offset === 0} onClick={() => setSelectedGame(index)}><span className="ra-game-number">{String(index + 1).padStart(2, '0')}</span><Cartridge consoleId={consoleId} title={item.name} number={index + 1} /><span className="ra-game-meta"><strong>{item.name}</strong><span><small className="ra-tag">{item.genre.toUpperCase()}</small><small className="ra-tag ra-tag-dark">COMING SOON</small></span></span></button>;
+              })}</div>
+            </div>
+            <div className="ra-carousel-controls"><button onClick={() => selectRelative(-1)} aria-label="Previous cartridge">←</button><span>SWIPE OR USE <b>←</b> <b>→</b> TO BROWSE</span><button onClick={() => selectRelative(1)} aria-label="Next cartridge">→</button></div>
+          </section>
           <div className="ra-command-panel" aria-live="polite"><Prompt>inspect {game.name.toLowerCase().replaceAll(' ', '_')}</Prompt><div className="ra-command-output"><span>NAME</span><strong>{game.name}</strong><span>TYPE</span><strong>{game.genre.toUpperCase()}</strong><span>STATE</span><strong>IN DEVELOPMENT</strong><p>{game.description}</p><button disabled>[ EXECUTE UNAVAILABLE ]</button></div></div>
         </section>
       </main> : <main className="ra-login">

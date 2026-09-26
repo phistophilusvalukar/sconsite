@@ -1,4 +1,15 @@
 export type ConsoleId = 'x8' | 'x16' | 'x64';
+
+export function wrapCarouselIndex(index: number, itemCount: number) {
+  if (itemCount <= 0) return 0;
+  return ((index % itemCount) + itemCount) % itemCount;
+}
+
+export function carouselOffset(index: number, selectedIndex: number, itemCount: number) {
+  const distance = wrapCarouselIndex(index - selectedIndex, itemCount);
+  return distance > itemCount / 2 ? distance - itemCount : distance;
+}
+
 export const consoles = [
   { id: 'x8', name: 'X8', bits: 8, label: 'POCKET ARCHITECTURE', description: 'Compact programs for monochrome hardware.', detail: '160 × 144 / 4 LEVEL DISPLAY', games: [
     { name: 'MOON MAIL', genre: 'Exploration', art: 'moon', description: 'A tiny courier. A very big moon. A delivery worth taking the long way for.' },
@@ -22,5 +33,5 @@ export const arcadeAssetManifest = {
   source: 'Original artwork authored for SCON Retro Arcade',
   license: 'Project-owned',
   placeholder: true,
-  assets: ['moon', 'forest', 'blocks', 'console-silhouettes'],
+  assets: ['console-silhouettes', 'cartridge-silhouettes', 'Pixelify Sans (OFL-1.1 via @fontsource)'],
 } as const;
